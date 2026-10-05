@@ -91,8 +91,10 @@ const RESPONSES = {
   }
 };
 
+window.__REQS = [];
 window.fetch = async (url, init) => {
   const key = String(url).split('?')[0];
+  window.__REQS.push({ method: (init && init.method) || 'GET', path: key });
   if (key === '/api/gift-codes/claim' && init) {
     const sent = JSON.parse(init.body || '{}');
     if (String(sent.code || '').toUpperCase() === 'ZR-TEST-100') {
@@ -378,6 +380,22 @@ await wait(1400);
     const hasMaintBtn = [...editBtns].some((b) => /Maintenance/i.test(b.textContent || ''));
     if (!hasMaintBtn) failed += 1;
     origError(`${hasMaintBtn ? '✅' : '❌'} template card par Maintenance button`);
+
+    // ── Regression: 'Maintenance' / 'Remove maintenance' click par PATCH jaye
+    //    (pehle api.patch hi missing tha → "T.patch is not a function")
+    window.__REQS.length = 0;
+    const maintBtn = [...body.querySelectorAll('.admin-actions .btn')]
+      .find((b) => /Maintenance/i.test(b.textContent || ''));
+    maintBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(500);
+    const patchReq = window.__REQS.find((r) => r.method === 'PATCH' && /^\/api\/admin\/designs\/\d+$/.test(r.path));
+    if (!patchReq) failed += 1;
+    origError(`${patchReq ? '✅' : '❌'} maintenance toggle PATCH bhejta hai (${patchReq ? patchReq.path : 'koi PATCH nahi'})`);
+
+    const errToast = [...adminHost.querySelectorAll('.toast, [class*=toast]')]
+      .some((t) => /is not a function|not a function/i.test(t.textContent || ''));
+    if (errToast) failed += 1;
+    origError(`${!errToast ? '✅' : '❌'} maintenance toggle par koi JS error nahi`);
 
     const needsMaintenance = [...editBtns].some((b) => /Remove maintenance/i.test(b.textContent || ''));
     if (!needsMaintenance) failed += 1;

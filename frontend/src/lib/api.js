@@ -66,6 +66,8 @@ export const api = {
   post: (p, body, o) => request(p, { ...o, method: 'POST', body }),
   postForm: (p, formData, o) => request(p, { ...o, method: 'POST', formData }),
   put: (p, body, o) => request(p, { ...o, method: 'PUT', body }),
+  // ⚠️ `patch` json bhejta hai, `patchForm` files ke saath (multipart).
+  patch: (p, body, o) => request(p, { ...o, method: 'PATCH', body }),
   patchForm: (p, formData, o) => request(p, { ...o, method: 'PATCH', formData }),
   del: (p, o) => request(p, { ...o, method: 'DELETE' })
 };
