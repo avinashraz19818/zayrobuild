@@ -427,5 +427,32 @@ if (realErrors.length) {
   realErrors.slice(0, 6).forEach((e) => origError('   ' + e.slice(0, 300)));
 }
 
+/* ── Phase 6: /admin deep-link (URL se seedha admin unlock screen) ── */
+RESPONSES['/api/me'] = { ...USER, isAdmin: false };   // normal user (admin nahi)
+window.history.replaceState({}, '', '/admin');
+const deepHost = window.document.createElement('div');
+window.document.body.appendChild(deepHost);
+mount(deepHost);
+await wait(1200);
+{
+  const t = deepHost.textContent || '';
+  const ok = /Admin access|Unlock admin panel/i.test(t);
+  if (!ok) failed += 1;
+  origError(`${ok ? '✅' : '❌'} /admin URL seedha admin unlock screen kholta hai`);
+
+  const urlOk = window.location.pathname === '/admin';
+  if (!urlOk) failed += 1;
+  origError(`${urlOk ? '✅' : '❌'} /admin URL sync (pathname = ${window.location.pathname})`);
+
+  // Wapas home par jane par URL '/' ho jaana chahiye
+  const homeBtn = [...deepHost.querySelectorAll('button')]
+    .find((b) => (b.textContent || '').trim().toLowerCase() === 'home');
+  homeBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(400);
+  const backOk = window.location.pathname === '/';
+  if (!backOk) failed += 1;
+  origError(`${backOk ? '✅' : '❌'} admin se home jaane par URL '/' (pathname = ${window.location.pathname})`);
+}
+
 origError(`\nDOM size: ${html.length} chars · text: ${text.length} chars · failures: ${failed} · errors: ${realErrors.length}`);
 process.exit(failed || realErrors.length ? 1 : 0);

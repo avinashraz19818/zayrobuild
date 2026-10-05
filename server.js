@@ -195,7 +195,14 @@ app.use((req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff');
   next();
 });
-app.use(express.static(path.join(__dirname, 'public')));
+// index.html kabhi cache na ho — warna update ke baad bhi purana panel khulta rehta hai
+// (Telegram WebView aggressive cache karta hai). Hashed assets (index-XXXX.js) long cache
+// ke saath chalte hain, isliye unka naam badalne par naya bundle khud aa jaata hai.
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (/\.html?$/i.test(filePath)) res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  }
+}));
 
 // ── SECURE FILE SERVING ──
 function fileTokenUrl(name) {
