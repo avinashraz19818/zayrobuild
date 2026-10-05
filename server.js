@@ -3745,10 +3745,14 @@ app.get('/api/admin/android-project/status', requireAdmin, (req, res) => {
 // ── Serve frontend pages ──
 // Admin panel ab wahi SPA hai (Admin tab) — pehle yahan public/admin/index.html
 // maanga jaata tha jo repo me hai hi nahi, isliye /admin 404 de raha tha.
+// SPA fallback — index.html kabhi cache na ho (warna update ke baad purana panel khulta hai)
+const noCacheHtml = (res) => res.set('Cache-Control', 'no-cache, must-revalidate');
 app.get('/admin*', (req, res) => {
+  noCacheHtml(res);
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 app.get('*', (req, res) => {
+  noCacheHtml(res);
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
