@@ -137,6 +137,19 @@ bash scripts/deploy-rules.sh                                 # us project me rul
 pm2 restart zayro-panel --update-env && pm2 save
 ```
 
+### Mini App ka URL (bot ke buttons)
+Bot ke saare "Open Panel" button `settings.site_url` use karte hain. Ek command se set karein:
+```bash
+cd ~/zayrobuild
+node scripts/set-site-url.js https://jaiclub5vip.site
+pm2 restart zayro-panel --update-env && pm2 save
+```
+Ye DB setting + `.env` dono update karta hai. Bot restart par **Menu Button bhi apne aap** isi URL
+par set ho jaata hai (BotFather me manually badalne ki zaroorat nahi).
+
+⚠️ Purane `*.trycloudflare.com` / `*.ngrok.io` jaise temporary tunnel links band hone par dead ho
+jaate hain — aise URL ho to panel unhe ignore karke `.env` ka `SITE_URL` use karta hai.
+
 ### Config badalna (PORT, token, etc.)
 ```bash
 nano ~/zayrobuild/.env

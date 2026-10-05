@@ -52,13 +52,43 @@ const PE = {
 
 // Mini App ka URL. Pehle Admin → Settings wali value (taaki panel se hi badal sakein),
 // uske baad .env ka SITE_URL, warna last-resort default.
+// Ye hosts "temporary tunnel" hote hain — band hone par dead ho jaate hain (ERR_NAME_NOT_RESOLVED).
+// Purane trycloudflare/ngrok links DB me pade reh jaate hain, isliye unhe last option rakhte hain.
+const TEMP_TUNNEL_HOSTS = [
+  'trycloudflare.com', 'ngrok.io', 'ngrok-free.app', 'ngrok.app',
+  'loca.lt', 'localtunnel.me', 'serveo.net', 'localhost.run', 'tunnelmole.net'
+];
+
+function isTemporaryTunnel(url) {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return TEMP_TUNNEL_HOSTS.some(t => host === t || host.endsWith('.' + t));
+  } catch (_) {
+    return false;
+  }
+}
+
+function readSetting(key) {
+  try {
+    const v = _db?.prepare('SELECT value FROM settings WHERE key=?').get(key)?.value;
+    return v && String(v).trim() ? String(v).trim().replace(/\/+$/, '') : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+// Mini App ka URL. Pehle Admin → Settings wali value (taaki panel se hi badal sakein),
+// uske baad .env ka SITE_URL, warna default. Temporary tunnel URL ho to usse peeche rakhte hain.
 function getSiteUrl() {
-  const dbUrl = _db?.prepare("SELECT value FROM settings WHERE key='site_url'").get()?.value;
-  if (dbUrl && dbUrl.trim()) return dbUrl.trim().replace(/\/+$/, '');
-  const envUrl = process.env.SITE_URL;
-  if (envUrl && envUrl.trim()) return envUrl.trim().replace(/\/+$/, '');
-  const baseUrl = process.env.BASE_URL;
-  if (baseUrl && baseUrl.trim()) return baseUrl.trim().replace(/\/+$/, '');
+  const candidates = [
+    readSetting('site_url'),
+    String(process.env.SITE_URL || '').trim().replace(/\/+$/, ''),
+    String(process.env.BASE_URL || '').trim().replace(/\/+$/, '')
+  ].filter(Boolean);
+
+  const permanent = candidates.find(u => !isTemporaryTunnel(u));
+  if (permanent) return permanent;
+  if (candidates.length) return candidates[0];
   return 'https://jaiclub5vip.site';
 }
 
@@ -145,6 +175,25 @@ function initBot(token, db) {
 
     bot.getMe().then(me => {
       console.log(`[Telegram Bot] Connected and polling: @${me.username} (${me.first_name}) [ID: ${me.id}]`);
+      // Bot ka Menu Button (left side wala "Open Panel") bhi panel URL par set kar do —
+      // warna BotFather me purana/dead URL pada rehta hai aur Mini App nahi khulta.
+      if (process.env.BOT_DISABLE_MENU_BUTTON !== '1') {
+        const siteUrl = getSiteUrl();
+        if (/^https:\/\//i.test(siteUrl)) {
+          fetch(`https://api.telegram.org/bot${cleanToken}/setChatMenuButton`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              menu_button: { type: 'web_app', text: '🚀 Open Panel', web_app: { url: siteUrl } }
+            }),
+            signal: AbortSignal.timeout(15_000)
+          }).then(async r => {
+            const j = await r.json().catch(() => ({}));
+            if (j && j.ok) console.log(`[Telegram Bot] Menu button set → ${siteUrl}`);
+            else console.log(`[Telegram Bot] Menu button set nahi hua: ${JSON.stringify(j).slice(0, 120)}`);
+          }).catch(e => console.log('[Telegram Bot] Menu button set nahi hua:', e.message));
+        }
+      }
       // Referral link ke liye bot username ko settings me save kar lo
       // (panel isi se t.me/<bot>?start=ref_<code> link banata hai).
       try {

@@ -47,35 +47,44 @@ if [ ! -f "$SA_FILE" ]; then
 fi
 node -e "try{JSON.parse(require('fs').readFileSync('$SA_FILE','utf8'));console.log('   JSON OK ✅')}catch(e){console.log('❌ JSON CORRUPT');process.exit(1)}" || exit 1
 
-echo "[2/4] firebase-tools deploy (pehli baar ~1 min lagta hai)..."
+echo "[2/4] rules deploy (REST API — firebase-tools ko project permission chahiye, REST ko nahi)..."
 cd "$(dirname "$0")/.."   # project root
-GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE" npx --yes firebase-tools@latest deploy \
-  --only database \
-  --project "$PROJECT_ID" \
-  --non-interactive \
-  2>&1 | tail -20
+
+if GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE" FIREBASE_DATABASE_URL="$DB_URL" \
+   node scripts/firebase-rules-rest.js; then
+  echo "   ✓ REST deploy ok"
+else
+  echo "   ⚠️ REST deploy fail — firebase-tools se try kar rahe hain (agar installed ho)..."
+  if command -v firebase >/dev/null 2>&1 || npx --yes firebase-tools --version >/dev/null 2>&1; then
+    GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE" npx --yes firebase-tools@latest deploy \
+      --only database --project "$PROJECT_ID" --non-interactive 2>&1 | tail -12
+  else
+    echo "   (firebase-tools bhi nahi mila)"
+  fi
+fi
+echo ""
 
 echo ""
 echo "[3/4] verify — 3 probe tests:"
 
 # Probe A: panel ka CONFIG — bina auth ke WRITE BLOCK hona chahiye (401)
-CODE_A=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
+CODE_A=$(curl -4 -s -o /dev/null -w "%{http_code}" --max-time 20 \
   -X PUT "$DB_URL/arena_probe/config.json" -d '{"registerUrl":"https://hacker.com"}')
 echo "   probe A (config write, bina auth): HTTP $CODE_A  [401 = taala laga ✅]"
 
 # Probe B: panel ke USERS — bina auth ke ALLOWED (apps ka registration)
-CODE_B=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 \
+CODE_B=$(curl -4 -s -o /dev/null -w "%{http_code}" --max-time 20 \
   -X PUT "$DB_URL/arena_probe/users.json" -d '{"9999999999":{"registered":true}}')
 echo "   probe B (users write, bina auth):  HTTP $CODE_B  [200 = apps chalti hain ✅]"
 
 # Probe C: ROOT read — bina auth ke BLOCK hona chahiye (401/403).
 # Ye naya taala hai: pehle koi bhi .json se PURA DB dump kar leta tha.
-CODE_C=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$DB_URL/.json")
+CODE_C=$(curl -4 -s -o /dev/null -w "%{http_code}" --max-time 20 "$DB_URL/.json")
 echo "   probe C (root read, bina auth):    HTTP $CODE_C  [401 = pura dump band ✅]"
 
 # Cleanup probe junk (users delete allowed hai, baaki silently skip)
-curl -s --max-time 20 -X DELETE "$DB_URL/arena_probe/users.json" > /dev/null
-curl -s --max-time 20 -X DELETE "$DB_URL/arena_probe.json" > /dev/null
+curl -4 -s --max-time 20 -X DELETE "$DB_URL/arena_probe/users.json" > /dev/null
+curl -4 -s --max-time 20 -X DELETE "$DB_URL/arena_probe.json" > /dev/null
 
 echo "[4/4] result:"
 if { [ "$CODE_A" = "401" ] || [ "$CODE_A" = "403" ]; } && { [ "$CODE_C" = "401" ] || [ "$CODE_C" = "403" ]; }; then
