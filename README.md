@@ -140,13 +140,15 @@ pm2 restart zayro-panel --update-env && pm2 save
   isliye tracked rakhne par har `git pull` par conflict aata tha.
 - Repo me `database/apkbuilder.seed.db` hai (aapke 37 designs + settings, users khali).
   Pehli baar server chalne par ye khud `apkbuilder.db` ban jaati hai.
-- **Update lena:**
+- **Update lena (aasan tareeka):**
   ```bash
-  cd ~/zayrobuild
-  git pull
-  pm2 restart zayro-panel --update-env && pm2 save
+  cd ~/zayrobuild && bash scripts/update.sh
   ```
-  Aapka apna data (users, orders, coins) safe rehta hai — pull us file ko chhoota hi nahi.
+  Ye script aapki `.env`, firebase key aur live DB ki backup leta hai, unhe repo-version par
+  reset karta hai (yahi files `git pull` ko rokti thi), pull karta hai, aapki files wapas
+  rakhta hai, aur pm2 restart bhi kar deta hai. Aapka data (users, orders, coins) safe rehta hai.
+  (Manual: `git pull && pm2 restart zayro-panel --update-env && pm2 save` — jab tak koi
+  tracked file local me na badli ho.)
 - Fresh start chahiye to: `pm2 stop zayro-panel && mv database/apkbuilder.db database/apkbuilder.db.purana && pm2 start zayro-panel`
 
 Panel me sabse zaroori settings (Admin → Settings se):
