@@ -50,12 +50,16 @@ const PE = {
   broadcast: '<tg-emoji emoji-id="5256134032852278918">📡</tg-emoji>'
 };
 
+// Mini App ka URL. Pehle Admin → Settings wali value (taaki panel se hi badal sakein),
+// uske baad .env ka SITE_URL, warna last-resort default.
 function getSiteUrl() {
-  const envUrl = process.env.SITE_URL;
-  if (envUrl && envUrl.trim()) return envUrl.trim().replace(/\/+$/, '');
   const dbUrl = _db?.prepare("SELECT value FROM settings WHERE key='site_url'").get()?.value;
   if (dbUrl && dbUrl.trim()) return dbUrl.trim().replace(/\/+$/, '');
-  return 'https://paid-salon-earth-reflected.trycloudflare.com';
+  const envUrl = process.env.SITE_URL;
+  if (envUrl && envUrl.trim()) return envUrl.trim().replace(/\/+$/, '');
+  const baseUrl = process.env.BASE_URL;
+  if (baseUrl && baseUrl.trim()) return baseUrl.trim().replace(/\/+$/, '');
+  return 'https://jaiclub5vip.site';
 }
 
 function toSansBoldItalic(str) {

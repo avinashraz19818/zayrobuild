@@ -91,6 +91,47 @@ Panel me sabse zaroori settings (Admin → Settings se):
 - **Deploy Bot plans** + service ON/OFF
 - Telegram bot token / log channel purane legacy dashboard se manage hote hain
 
+## Apne domain par host karna (jaiclub5vip.site)
+
+Telegram Mini App **HTTPS** maangta hai, isliye panel ko nginx ke peeche apne domain par chalayein.
+
+```bash
+# 1) panel usi port par chalao jahan nginx bhejta hai (yahan 3000)
+#    .env me: PORT=3000   →  pm2 restart zayro-panel && pm2 save
+
+# 2) nginx config
+sudo nano /etc/nginx/sites-available/jaiclub5vip.site
+```
+
+```nginx
+server {
+    listen 80;
+    server_name jaiclub5vip.site;
+
+    client_max_body_size 200M;          # APK / icon / screenshot uploads
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;   # .env ka PORT yahi ho
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;            # APK build lamba chalta hai
+    }
+}
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/jaiclub5vip.site /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d jaiclub5vip.site        # free HTTPS certificate
+```
+
+Phir **Admin → Settings → Site URL** me `https://jaiclub5vip.site` daalein — bot ke "Open Builder Panel"
+button isi URL par jaate hain (ye setting `.env` ke `SITE_URL` se upar chalti hai).
+BotFather me bhi bot ke **Menu Button / Mini App** URL me yahi link rakhein.
+
 ## Telegram bot (mini app) setup
 
 1. `TELEGRAM_BOT_TOKEN` `.env` me daalein.
