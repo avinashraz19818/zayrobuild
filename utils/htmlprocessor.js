@@ -1,4 +1,79 @@
 const fs = require('fs');
+const path = require('path');
+
+/**
+ * Server ka Firebase project — .env / service account se.
+ * Kyun zaroori: agar template ya injected config purane project ka ho aur server
+ * naye project me likhe, to built APK me "live link" update kabhi nahi aata.
+ * (Yahi galti pehle thi — sab kuch hardcoded zayrodev-195f3 par tha.)
+ */
+function serverFirebaseProject() {
+  let databaseURL = String(process.env.FIREBASE_DATABASE_URL || '').trim().replace(/\/+$/, '');
+  let projectId = String(process.env.FIREBASE_PROJECT_ID || '').trim();
+
+  if (!databaseURL) {
+    try {
+      const saPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(__dirname, '..', 'firebase-service-account.json');
+      const sa = JSON.parse(fs.readFileSync(saPath, 'utf8'));
+      if (sa.project_id) databaseURL = `https://${sa.project_id}-default-rtdb.firebaseio.com`;
+    } catch (_) { /* ignore */ }
+  }
+  if (!databaseURL) databaseURL = 'https://zayrodev-195f3-default-rtdb.firebaseio.com';
+
+  if (!projectId) {
+    const m = databaseURL.match(/^https:\/\/([a-z0-9-]+?)(?:-default-rtdb)?(?:\.[a-z0-9-]+)*\.(?:firebaseio\.com|firebasedatabase\.app)$/i);
+    if (m) projectId = m[1];
+  }
+  if (!projectId) {
+    try {
+      const saPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || path.join(__dirname, '..', 'firebase-service-account.json');
+      projectId = JSON.parse(fs.readFileSync(saPath, 'utf8')).project_id || '';
+    } catch (_) { /* ignore */ }
+  }
+  return { databaseURL, projectId: projectId || 'zayrodev-195f3' };
+}
+
+/**
+ * Injected live-links script ke liye Firebase web config.
+ * apiKey RTDB ke public read/write ke liye validate nahi hota (auth ke liye hota hai),
+ * isliye purani project ki apiKey se kaam chalta hai; chahein to .env me
+ * FIREBASE_WEB_API_KEY / FIREBASE_APP_ID / FIREBASE_MESSAGING_SENDER_ID set kar dein.
+ */
+function firebaseWebConfig() {
+  const { databaseURL, projectId } = serverFirebaseProject();
+  const cfg = {
+    apiKey: String(process.env.FIREBASE_WEB_API_KEY || '').trim() || 'AIzaSyDja5Gx4v4sMbx4BM2_od9_bLkdxdEY4do',
+    authDomain: `${projectId}.firebaseapp.com`,
+    projectId,
+    storageBucket: `${projectId}.firebasestorage.app`,
+    databaseURL
+  };
+  const senderId = String(process.env.FIREBASE_MESSAGING_SENDER_ID || '').trim();
+  const appId = String(process.env.FIREBASE_APP_ID || '').trim();
+  if (senderId) cfg.messagingSenderId = senderId;
+  if (appId) cfg.appId = appId;
+  return cfg;
+}
+
+/** Template/injected Firebase web config ko server ke project par le aao. */
+function alignFirebaseConfig(html) {
+  const { databaseURL, projectId } = serverFirebaseProject();
+  let out = html;
+
+  out = out.replace(/databaseURL\s*:\s*(["'])(https:\/\/[^"']+)\1/g, (match, q, current) => (
+    current.replace(/\/+$/, '') === databaseURL ? match : `databaseURL:${q}${databaseURL}${q}`
+  ));
+  out = out.replace(/authDomain\s*:\s*(["'])([^"']+)\1/g, (match, q, current) => (
+    current === `${projectId}.firebaseapp.com` ? match : `authDomain:${q}${projectId}.firebaseapp.com${q}`
+  ));
+  out = out.replace(/storageBucket\s*:\s*(["'])([^"']+)\1/g, (match, q, current) => (
+    current === `${projectId}.firebasestorage.app` ? match : `storageBucket:${q}${projectId}.firebasestorage.app${q}`
+  ));
+  out = out.replace(/projectId\s*:\s*(["'])([^"']+)\1/g, (match, q, current) => (
+    current === projectId ? match : `projectId:${q}${projectId}${q}`
+  ));
+  return out;
+}
 
 /**
  * Extract domain from register URL
@@ -128,6 +203,10 @@ function injectParams(htmlContent, params) {
   } = params;
 
   let html = htmlContent;
+
+  // Template ke andar jo bhi Firebase config likha hai, usko server ke project par
+  // le aao — warna built APK ek database padhegi aur panel doosri me likhega.
+  if (!(params.liveMode === 'server')) html = alignFirebaseConfig(html);
 
   // ── SERVER LIVE MODE (fake / no-Firebase builds) ──
   // Fake APKs me Firebase SDK/config bilkul nahi jaata (security posture).
@@ -311,7 +390,7 @@ function injectParams(htmlContent, params) {
   // so panel states/minimum-deposit changes cannot arrive from Firebase.
   html = html.replace(
     /@secret:GOOGLE_API_KEY/g,
-    'AIzaSyDja5Gx4v4sMbx4BM2_od9_bLkdxdEY4do'
+    firebaseWebConfig().apiKey
   );
 
   // ── FIREBASE LIVE LINKS ──
@@ -333,15 +412,7 @@ function injectParams(htmlContent, params) {
   var autoFrameInjected=${hadGameFrame ? 'false' : 'true'};
   var gameFrame=window.gameFrame||document.getElementById('target-game-frame')||document.getElementById('gameIframe');
   if(gameFrame)window.gameFrame=gameFrame;
-  var firebaseConfig={
-    apiKey:'AIzaSyDja5Gx4v4sMbx4BM2_od9_bLkdxdEY4do',
-    authDomain:'zayrodev-195f3.firebaseapp.com',
-    projectId:'zayrodev-195f3',
-    storageBucket:'zayrodev-195f3.firebasestorage.app',
-    messagingSenderId:'357941061158',
-    appId:'1:357941061158:web:12882185e2fa7f4f5328e7',
-    databaseURL:'https://zayrodev-195f3-default-rtdb.firebaseio.com'
-  };
+  var firebaseConfig=${JSON.stringify(firebaseWebConfig())};
   function valid(u){return typeof u==='string' && /^https?:\\/\\//i.test(u);}
   var firstFirebaseLinkLoad=true;
   function applyLinks(data){

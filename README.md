@@ -122,7 +122,10 @@ Panel ka service account + `.env` ka `FIREBASE_DATABASE_URL` aur built APK ke te
 `databaseURL` — **teeno ka ek hi Firebase project hona chahiye**, warna "live link" feature
 kaam nahi karega (server ek database me likhega, app doosri padhegi).
 
-Kitne templates purane project par hain, dekhne ke liye:
+**Build waqt ye apne aap theek hota hai** — `utils/htmlprocessor.js` template ka
+`databaseURL`/`projectId`/`authDomain`/`storageBucket` aur injected config, sab `.env` wale
+project par align kar deta hai (isliye purane template se build karna bhi safe hai).
+Purane templates ko file-level par bhi saaf karna ho to:
 ```bash
 node scripts/switch-firebase-project.js                      # dry-run (kuch nahi badalta)
 node scripts/switch-firebase-project.js --apply              # .env wale project par le aao

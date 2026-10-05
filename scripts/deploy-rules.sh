@@ -17,9 +17,27 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -u
 
-PROJECT_ID="${FIREBASE_PROJECT_ID:-zayrodev-195f3}"
-SA_FILE="${GOOGLE_APPLICATION_CREDENTIALS:-/root/apkbuilder/firebase-service-account.json}"
-DB_URL="https://${PROJECT_ID}-default-rtdb.firebaseio.com"
+# Project id: FIREBASE_PROJECT_ID env → .env ka FIREBASE_DATABASE_URL → service account
+resolve_project_id() {
+  if [ -n "${FIREBASE_PROJECT_ID:-}" ]; then echo "$FIREBASE_PROJECT_ID"; return; fi
+  local dburl=""
+  if [ -f ".env" ]; then
+    dburl="$(grep -E '^FIREBASE_DATABASE_URL=' .env | head -1 | cut -d= -f2- | tr -d '\r')"
+  fi
+  if [ -n "$dburl" ]; then
+    echo "$dburl" | sed -E 's#^https://##; s#-default-rtdb.*$##; s#\..*$##'
+    return
+  fi
+  echo "zayrodev-195f3"
+}
+
+PROJECT_ID="${FIREBASE_PROJECT_ID:-$(resolve_project_id)}"
+SA_FILE="${GOOGLE_APPLICATION_CREDENTIALS:-$(pwd)/firebase-service-account.json}"
+DB_URL="${FIREBASE_DATABASE_URL:-https://${PROJECT_ID}-default-rtdb.firebaseio.com}"
+DB_URL="${DB_URL%/}"
+echo "Project: ${PROJECT_ID}"
+echo "DB URL : ${DB_URL}"
+echo "SA     : ${SA_FILE}"
 
 echo "═══ FIREBASE RULES DEPLOY ═══"
 echo "[1/4] service account check..."
