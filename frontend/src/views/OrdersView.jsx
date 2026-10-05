@@ -6,6 +6,7 @@ import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 import { EmptyState, Loader, SectionHead, StatusPill } from '../components/ui';
 import { fmtDate } from '../lib/api';
+import { getMediaUrl } from '../utils/media';
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -90,8 +91,10 @@ export default function OrdersView({ onOpenLogs, onOpenLiveLinks, setTab }) {
           {visible.map((order) => (
             <article key={order.id} className="card card-pad stack gap-12">
               <div className="flex-row gap-12" style={{ alignItems: 'flex-start' }}>
-                <span className="row-ico" style={{ width: 44, height: 44, borderRadius: 14 }}>
-                  <Radio size={19} />
+                <span className="row-ico" style={{ width: 44, height: 44, borderRadius: 14, overflow: 'hidden', padding: 0 }}>
+                  {order.icon_file
+                    ? <img src={getMediaUrl(order.icon_file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <Radio size={19} />}
                 </span>
                 <div className="grow">
                   <div className="flex-row gap-8 wrap" style={{ marginBottom: 4 }}>

@@ -3,6 +3,7 @@ import {
   House, Layers, Globe, Package, User, Gift, Shield, Wallet, LogIn, Boxes, Radio
 } from 'lucide-react';
 import { displayName, initials } from '../lib/api';
+import { useStore } from '../context/StoreContext';
 
 export const NAV = [
   { key: 'home', label: 'Home', icon: House },
@@ -27,13 +28,15 @@ export function CoinIco({ size = 14 }) {
 }
 
 export function Brand({ onClick }) {
+  const { config } = useStore();
+  const name = String(config?.site_name || 'Zayro Build').trim() || 'Zayro Build';
   return (
     <div className="brand" onClick={onClick}>
       <div className="brand-logo">
         <Boxes size={20} />
       </div>
       <div style={{ minWidth: 0 }}>
-        <div className="brand-name">Zayro Build</div>
+        <div className="brand-name">{name}</div>
         <div className="brand-sub">Premium APK Marketplace</div>
       </div>
     </div>

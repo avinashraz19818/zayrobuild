@@ -153,11 +153,17 @@ function initBot(token, db) {
       console.error(`[Telegram Bot] Connection error:`, err.message);
     });
 
+    // Network polling errors (server pe outbound TLS block / flaky DNS) hamesha
+    // flood karte hain — isliye max 1 line per minute, warna log spam ho jata hai
+    // aur asli errors chhup jate hain.
+    let _lastFatalLog = 0;
     bot.on('polling_error', (err) => {
-      if (err?.code !== 'EFATAL') {
-        // Minor timeout / network poll flicker, ignorable
-      } else {
-        console.error('[Telegram Bot] Fatal polling error:', err.message);
+      if (err?.code === 'EFATAL') {
+        const now = Date.now();
+        if (now - _lastFatalLog > 60000) {
+          _lastFatalLog = now;
+          console.error('[Telegram Bot] Polling network error (outbound TLS blocked? bot will auto-retry):', err.message);
+        }
       }
     });
 
@@ -503,8 +509,13 @@ Agar aapne payment ki hai to please payment screenshot ke saath <b>Admin Support
       }
     });
 
+    // Doosra duplicate guard — upar wala handler genuine polling failures already
+    // log karta hai (throttled). Yahan sirf real Telegram API errors dikhaye jate
+    // hain, network/TLS noise suppress.
     bot.on('polling_error', (err) => {
-      if (!err.message?.includes('ETELEGRAM')) console.error('Bot polling error:', err.message);
+      const msg = err?.message || '';
+      const isNetworkNoise = /TLS|EFATAL|ECONN|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|socket hang up/i.test(msg);
+      if (!msg.includes('ETELEGRAM') && !isNetworkNoise) console.error('Bot polling error:', msg);
     });
 
   } catch (e) {

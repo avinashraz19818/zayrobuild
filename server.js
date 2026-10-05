@@ -968,8 +968,13 @@ app.get('/api/public-config', (req, res) => {
     };
     const supportUser = String(read('telegram_support_user') || '').trim().replace(/^@/, '');
     const adminId = String(read('telegram_admin_id') || process.env.TELEGRAM_ADMIN_CHAT_ID || '').trim();
+    // 'APK Builder' purana builder-era default hai — usse "set" nahi maana jaata.
+    const storedName = String(read('site_name', '') || '').trim();
+    const brandName = (storedName && storedName.toLowerCase() !== 'apk builder')
+      ? storedName
+      : (String(process.env.SITE_NAME || '').trim() || 'ZAYRO BUILD');
     res.json({
-      site_name: read('site_name', process.env.SITE_NAME || 'ZAYRO BUILD'),
+      site_name: brandName,
       coin_rate: parseFloat(read('coin_rate', '1')) || 1,
       addon_fake_price: parseInt(read('addon_fake_price', '5'), 10) || 5,
       domain_change_price: parseInt(read('domain_change_price', '10'), 10) || 10,
@@ -1416,7 +1421,7 @@ app.post('/api/order', requireAuth, iconUpload.single('icon'), async (req, res) 
 
 app.get('/api/orders', requireAuth, (req, res) => {
   const orders = db.prepare(`
-    SELECT o.id,o.app_name,o.package_name,o.status,o.apk_file,o.fake_apk_file,o.coins_spent,o.created_at,
+    SELECT o.id,o.app_name,o.package_name,o.status,o.apk_file,o.fake_apk_file,o.coins_spent,o.created_at,o.icon_file,
            CASE WHEN o.live_link_enabled=1 THEN 1 ELSE 0 END AS live_link_enabled,
            d.name as design_name
     FROM orders o JOIN designs d ON o.design_id=d.id
