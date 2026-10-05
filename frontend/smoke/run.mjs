@@ -68,8 +68,12 @@ const RESPONSES = {
   '/api/admin/announcements': [
     { id: 1, title: 'UPDATE', message: 'MAAN WIN FAKE WEBSITE is now live. Plans from Rs 699.', button_text: 'Open now', button_url: 'https://t.me/zayrobuild_bot', active: 1, created_at: '2026-10-05 08:09:39' }
   ],
-  '/api/admin/coupons': [
-    { id: 1, code: 'SAVE10', type: 'fixed', value: 10, max_uses: 100, used_count: 12, active: 1, expires_at: '', created_at: '2026-10-01 10:00:00' }
+  '/api/admin/gift-codes': [
+    { id: 1, code: 'ZR-DIWALI-500', coins: 500, max_claims: 100, claimed_count: 12, claims: 12, active: 1, note: 'Diwali promo', expires_at: '', created_at: '2026-10-01 10:00:00' },
+    { id: 2, code: 'ZR-WELCOME-50', coins: 50, max_claims: 0, claimed_count: 240, claims: 240, active: 1, note: '', expires_at: '', created_at: '2026-09-20 10:00:00' }
+  ],
+  '/api/me/gift-claims': [
+    { id: 1, code: 'ZR-WELCOME-50', coins: 50, created_at: '2026-10-02 11:00:00' }
   ],
   '/api/admin/settings': {
     site_name: 'ZAYRO BUILD', site_url: 'https://panel.example.com', upi_id: 'zayro@upi',
@@ -84,8 +88,15 @@ const RESPONSES = {
   }
 };
 
-window.fetch = async (url) => {
+window.fetch = async (url, init) => {
   const key = String(url).split('?')[0];
+  if (key === '/api/gift-codes/claim' && init) {
+    const sent = JSON.parse(init.body || '{}');
+    if (String(sent.code || '').toUpperCase() === 'ZR-TEST-100') {
+      return json({ success: true, code: 'ZR-TEST-100', coins: 100, balance: 520 }, 200);
+    }
+    return json({ error: 'Ye gift code exist nahi karta — spelling check karein' }, 200);
+  }
   const body = RESPONSES[key];
   if (body === undefined) {
     if (key.startsWith('/api/admin/')) return json({ error: 'not admin' }, 403);
@@ -237,7 +248,7 @@ if (card) {
   card.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await wait(600);
   const txt = rootEl.textContent || '';
-  const ok = /App name|Build mode|Name style/i.test(txt);
+  const ok = /App name|Build mode|Name style/i.test(txt) && !/Coupon code/i.test(txt);
   if (!ok) failed += 1;
   origError(`${ok ? '✅' : '❌'} build wizard opens`);
 } else {
@@ -305,7 +316,7 @@ await wait(1200);
 await wait(1400);
 {
   const t = adminHost.textContent || '';
-  const ok = /Admin panel/i.test(t) && /Users/.test(t) && /Deploy Bot/i.test(t) && /Coupons/i.test(t);
+  const ok = /Admin panel/i.test(t) && /Users/.test(t) && /Deploy Bot/i.test(t) && /Gift Codes/i.test(t);
   if (!ok) failed += 1;
   origError(`${ok ? '✅' : '❌'} admin panel unlock + tabs visible`);
 
@@ -324,7 +335,7 @@ await wait(1400);
     ['Users', /Users \(/],
     ['Deploy Bot', /Deploy Bot requests/i],
     ['Announce', /Naya announcement/i],
-    ['Coupons', /Naya coupon/i],
+    ['Gift Codes', /Naya gift code/i],
     ['Settings', /Save all settings/i]
   ];
   for (const [label, re] of adminTabs) {
@@ -345,6 +356,69 @@ await wait(1400);
         `<!doctype html><html><head><meta charset="utf-8"><title>Admin — Settings</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
     }
   }
+}
+
+/* ── Phase 5: Gift code claim (profile → sheet → success popup) ── */
+RESPONSES['/api/me'] = { ...USER, isAdmin: false };
+const giftHost = window.document.createElement('div');
+window.document.body.appendChild(giftHost);
+mount(giftHost);
+await wait(1400);
+// Profile tab kholo (header ke profile chip se)
+giftHost.querySelector('.profile-chip')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+await wait(700);
+{
+  const cta = giftHost.querySelector('.gift-cta');
+  const ctaOk = Boolean(cta) && /Gift Code/i.test(cta.textContent || '');
+  if (!ctaOk) failed += 1;
+  origError(`${ctaOk ? '✅' : '❌'} profile gift code card`);
+
+  cta?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(700);
+  const openTxt = giftHost.textContent || '';
+  const sheetOk = /Redeem your gift code/i.test(openTxt) && /Claim gift code/i.test(openTxt);
+  if (!sheetOk) failed += 1;
+  origError(`${sheetOk ? '✅' : '❌'} gift code sheet khulti hai`);
+
+  const historyOk = /ZR-WELCOME-50/.test(openTxt);
+  if (!historyOk) failed += 1;
+  origError(`${historyOk ? '✅' : '❌'} claim history list dikhti hai`);
+
+  // galat code → error toast
+  const submitClaim = () => {
+    const btn = [...giftHost.querySelectorAll('button')]
+      .find((b) => (b.textContent || '').trim().toLowerCase().startsWith('claim gift'));
+    const form = btn?.closest('form');
+    if (form) form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    else btn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  };
+  const setValue = (el, val) => {
+    if (!el) return;
+    const proto = Object.getPrototypeOf(el);
+    const desc = Object.getOwnPropertyDescriptor(proto, 'value');
+    desc?.set?.call(el, val);
+    el.dispatchEvent(new window.Event('input', { bubbles: true }));
+  };
+  setValue(giftHost.querySelector('.gift-input'), 'ZR-BAD-CODE');
+  await wait(120);
+  submitClaim();
+  await wait(900);
+  const errOk = /exist nahi karta/i.test(giftHost.textContent || '');
+  if (!errOk) failed += 1;
+  origError(`${errOk ? '✅' : '❌'} galat code par error message`);
+
+  // sahi code → success popup
+  setValue(giftHost.querySelector('.gift-input'), 'ZR-TEST-100');
+  await wait(120);
+  submitClaim();
+  await wait(800);
+  const winTxt = giftHost.textContent || '';
+  const winOk = /Gift Code Claimed/i.test(winTxt) && /\+100/.test(winTxt) && /520 coins/i.test(winTxt);
+  if (!winOk) failed += 1;
+  origError(`${winOk ? '✅' : '❌'} claim success popup (+coins + new balance)`);
+
+  fs.writeFileSync('smoke/out/gift.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Gift code claim</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${giftHost.innerHTML}</body></html>`);
 }
 
 const realErrors2 = errors.filter((e) => !/not wrapped in act|ReactDOMTestUtils|Warning: /.test(e));

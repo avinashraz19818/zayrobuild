@@ -1225,6 +1225,147 @@ app.delete('/api/admin/bot-deploys/:id', requireAdmin, (req, res) => {
 });
 
 // ═══════════════════════════════════════════
+// GIFT CODES
+// ═══════════════════════════════════════════
+
+/** ZR-XXXX-XXXX jaisa readable code (0/O/1/I jaise confusing chars nahi). */
+function generateGiftCode(prefix = 'ZR') {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const block = (n) => Array.from({ length: n }, () => alphabet[crypto.randomInt(alphabet.length)]).join('');
+  return `${prefix}-${block(4)}-${block(4)}`;
+}
+
+function giftCodeError(code) {
+  const row = db.prepare('SELECT * FROM gift_codes WHERE code=?').get(code);
+  if (!row) return { error: 'Ye gift code exist nahi karta — spelling check karein' };
+  if (!row.active) return { error: 'Ye gift code band kar diya gaya hai' };
+  if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) return { error: 'Ye gift code expire ho gaya hai' };
+  return { row };
+}
+
+app.post('/api/gift-codes/claim', requireAuth, (req, res) => {
+  if (req.session.isAdmin === true) return res.json({ error: 'Admin gift code claim nahi kar sakta' });
+  const code = String(req.body?.code || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (code.length < 4) return res.json({ error: 'Gift code daalein' });
+
+  const found = giftCodeError(code);
+  if (found.error) return res.json({ error: found.error });
+  const gift = found.row;
+
+  const already = db.prepare('SELECT * FROM gift_code_claims WHERE code_id=? AND user_id=?').get(gift.id, req.session.userId);
+  if (already) return res.json({ error: `Ye code aap already claim kar chuke hain (+${already.coins} coins)` });
+
+  if (gift.max_claims > 0 && gift.claimed_count >= gift.max_claims) {
+    return res.json({ error: 'Is code ke saare claims khatam ho gaye' });
+  }
+
+  try {
+    const applyClaim = db.transaction(() => {
+      db.prepare('INSERT INTO gift_code_claims(code_id,user_id,code,coins) VALUES(?,?,?,?)')
+        .run(gift.id, req.session.userId, code, gift.coins);
+      db.prepare('UPDATE gift_codes SET claimed_count=claimed_count+1 WHERE id=?').run(gift.id);
+      db.prepare('UPDATE users SET coins=coins+? WHERE id=?').run(gift.coins, req.session.userId);
+      return db.prepare('SELECT coins FROM users WHERE id=?').get(req.session.userId);
+    });
+    const after = applyClaim();
+
+    try {
+      sendLogEvent('gift_claimed', {
+        user_id: req.session.userId,
+        code,
+        coins: gift.coins,
+        balance: after?.coins || 0
+      });
+    } catch (_) { /* log channel optional */ }
+
+    res.json({ success: true, code, coins: gift.coins, balance: after?.coins || 0 });
+  } catch (error) {
+    console.error('[gift] claim failed:', error.message);
+    res.status(500).json({ error: 'Claim nahi ho paya — thodi der me try karein' });
+  }
+});
+
+// User ke claimed codes (profile section ke liye)
+app.get('/api/me/gift-claims', requireAuth, (req, res) => {
+  if (req.session.isAdmin === true) return res.json([]);
+  try {
+    const rows = db.prepare(`
+      SELECT c.id, c.code, c.coins, c.created_at
+      FROM gift_code_claims c WHERE c.user_id=? ORDER BY c.id DESC LIMIT 30
+    `).all(req.session.userId);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Could not load gift history' });
+  }
+});
+
+// ── Admin: gift code CRUD ──────────────────────────────────────────────────
+app.get('/api/admin/gift-codes', requireAdmin, (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT g.*, (SELECT COUNT(*) FROM gift_code_claims c WHERE c.code_id=g.id) AS claims
+      FROM gift_codes g ORDER BY g.id DESC LIMIT 200
+    `).all();
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Could not load gift codes' });
+  }
+});
+
+app.post('/api/admin/gift-codes', requireAdmin, (req, res) => {
+  const coins = Math.max(1, parseInt(req.body?.coins, 10) || 0);
+  const maxClaims = Math.max(0, parseInt(req.body?.max_claims, 10) || 1);
+  const note = String(req.body?.note || '').trim().slice(0, 200);
+  const expiresAt = String(req.body?.expires_at || '').trim() || null;
+  let code = String(req.body?.code || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  if (!coins) return res.status(400).json({ error: 'Coins value required' });
+  if (code.length && code.length < 4) return res.status(400).json({ error: 'Custom code kam se kam 4 characters ka ho' });
+
+  // Custom code diya hai to unique hona chahiye; warna auto-generate.
+  if (code && db.prepare('SELECT 1 FROM gift_codes WHERE code=?').get(code)) {
+    return res.status(400).json({ error: 'Ye code already banaya ja chuka hai' });
+  }
+  if (!code) {
+    for (let i = 0; i < 8; i += 1) {
+      const candidate = generateGiftCode();
+      if (!db.prepare('SELECT 1 FROM gift_codes WHERE code=?').get(candidate)) { code = candidate; break; }
+    }
+  }
+  if (!code) return res.status(500).json({ error: 'Code generate nahi hua — dobara try karein' });
+
+  try {
+    const result = db.prepare(`
+      INSERT INTO gift_codes(code,coins,max_claims,note,expires_at,active) VALUES(?,?,?,?,?,1)
+    `).run(code, coins, maxClaims, note, expiresAt);
+    res.json({ success: true, id: result.lastInsertRowid, code, coins, max_claims: maxClaims });
+  } catch (error) {
+    res.status(400).json({ error: 'Gift code create nahi hua' });
+  }
+});
+
+app.patch('/api/admin/gift-codes/:id', requireAdmin, (req, res) => {
+  const row = db.prepare('SELECT * FROM gift_codes WHERE id=?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'Gift code not found' });
+  const active = req.body?.active === true || req.body?.active === 1 || req.body?.active === '1' ? 1 : 0;
+  db.prepare('UPDATE gift_codes SET active=? WHERE id=?').run(active, row.id);
+  res.json({ success: true, active });
+});
+
+app.delete('/api/admin/gift-codes/:id', requireAdmin, (req, res) => {
+  try {
+    const row = db.prepare('SELECT * FROM gift_codes WHERE id=?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Gift code not found' });
+    // Claims history rakho (FK), par code delete — claims ko null mat karo, isliye
+    // pehle claims hata do (audit ke liye gift_code_claims.user_id hi kaafi hai).
+    db.prepare('DELETE FROM gift_code_claims WHERE code_id=?').run(row.id);
+    db.prepare('DELETE FROM gift_codes WHERE id=?').run(row.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Gift code delete nahi hua' });
+  }
+});
+
+// ═══════════════════════════════════════════
 // DESIGN ROUTES
 // ═══════════════════════════════════════════
 

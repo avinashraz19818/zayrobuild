@@ -1,0 +1,18 @@
+# Dependencies (platform-specific binaries — VPS par `npm install` chalayein)
+node_modules/
+frontend/node_modules/
+
+# Runtime junk
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+tmp/
+.cache/
+
+# Startup DB backups (server khud banata hai, repo me rakhne ki zaroorat nahi)
+backups/
+
+# Frontend build scratch
+frontend/smoke/dist/
+frontend/dist/

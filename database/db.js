@@ -229,6 +229,38 @@ db.exec(`
       );
     `);
   } catch(e) {}
+  // ── Gift Codes (admin banata hai, user profile me claim karta hai) ───────
+  // gift_codes       : code + coins value + kitne log claim kar sakte hain
+  // gift_code_claims : kis user ne kya claim kiya (ek code ek user sirf ek baar)
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS gift_codes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,
+        coins INTEGER NOT NULL DEFAULT 0,
+        max_claims INTEGER NOT NULL DEFAULT 1,
+        claimed_count INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        note TEXT DEFAULT '',
+        expires_at TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS gift_code_claims (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        code TEXT NOT NULL,
+        coins INTEGER NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(code_id, user_id),
+        FOREIGN KEY(code_id) REFERENCES gift_codes(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_gift_claims_user ON gift_code_claims(user_id, id DESC);
+    `);
+  } catch(e) {}
+
   // ── Deploy Bot (home page ka welcome-message bot module) ─────────────────
   // User apna bot token + admin telegram id deta hai, admin usse deploy karta
   // hai. Request yahin store hoti hai taaki panel me status dikha sakein.

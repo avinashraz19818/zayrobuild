@@ -1654,3 +1654,187 @@ a { color: var(--brand-2); text-decoration: none; }
 .admin-row-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 10.5px; color: var(--muted); }
 .admin-mini { font-family: var(--font-mono); font-size: 11px; }
 .admin-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   v3.4 — GIFT CODES (profile CTA + claim popup)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Profile ka bada gift-code card */
+.gift-cta {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(110% 150% at 0% 0%, rgba(255, 193, 77, 0.24), transparent 58%),
+    linear-gradient(150deg, rgba(56, 44, 96, 0.9), rgba(18, 16, 36, 0.95));
+  border: 1px solid rgba(255, 193, 77, 0.3);
+  box-shadow: var(--shadow-2);
+  transition: transform var(--mid), box-shadow var(--mid);
+}
+.gift-cta:hover { transform: translateY(-3px); box-shadow: var(--shadow-2), 0 0 40px -18px rgba(255, 193, 77, 0.55); }
+.gift-cta::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -60%;
+  width: 40%; height: 100%;
+  transform: skewX(-14deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  animation: shine 5.2s var(--ease) infinite;
+  pointer-events: none;
+}
+.gift-cta-ico {
+  width: 46px; height: 46px;
+  flex-shrink: 0;
+  border-radius: 15px;
+  display: grid; place-items: center;
+  color: #3b2c00;
+  background: linear-gradient(140deg, var(--gold-2), var(--gold));
+  box-shadow: 0 16px 34px -16px rgba(255, 193, 77, 0.7);
+}
+.gift-cta-title { display: block; font-family: var(--font-display); font-size: 15px; font-weight: 800; color: #fff; }
+.gift-cta-sub { display: block; font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
+.gift-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: var(--r-pill);
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #3b2c00;
+  background: linear-gradient(120deg, var(--gold-2), var(--gold));
+}
+
+/* Sheet ke andar hero strip */
+.gift-hero {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px;
+  border-radius: var(--r-sm);
+  background: linear-gradient(140deg, rgba(255, 193, 77, 0.16), rgba(103, 92, 236, 0.12));
+  box-shadow: inset 0 0 0 1px rgba(255, 193, 77, 0.22);
+}
+.gift-hero-ico {
+  width: 40px; height: 40px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  display: grid; place-items: center;
+  color: #3b2c00;
+  background: linear-gradient(140deg, var(--gold-2), var(--gold));
+}
+.gift-hero-title { font-size: 13.5px; font-weight: 800; color: #fff; }
+.gift-hero-sub { font-size: 11px; color: var(--text-2); margin-top: 2px; line-height: 1.4; }
+
+.gift-input {
+  font-size: 16px;
+  letter-spacing: 0.16em;
+  text-align: center;
+  text-transform: uppercase;
+  padding: 13px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.gift-input:focus { box-shadow: inset 0 0 0 1px var(--brand-2), 0 0 0 4px rgba(103, 92, 236, 0.18); }
+
+/* ── Claim popup (celebrate) ── */
+.gift-win {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  padding: 22px 16px 18px;
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(120% 130% at 50% 0%, rgba(52, 211, 153, 0.24), transparent 60%),
+    linear-gradient(160deg, rgba(29, 35, 71, 0.94), rgba(12, 15, 32, 0.96));
+  border: 1px solid rgba(52, 211, 153, 0.34);
+  animation: pop-in 0.34s var(--ease);
+}
+.gift-burst {
+  position: absolute;
+  inset: -30% -10% auto -10%;
+  height: 70%;
+  background:
+    radial-gradient(20% 40% at 18% 30%, rgba(255, 193, 77, 0.5), transparent 70%),
+    radial-gradient(18% 36% at 82% 24%, rgba(139, 124, 255, 0.5), transparent 70%),
+    radial-gradient(16% 32% at 52% 12%, rgba(56, 189, 248, 0.45), transparent 70%);
+  filter: blur(4px);
+  animation: glow-pulse 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+.gift-win-ico {
+  position: relative;
+  width: 68px; height: 68px;
+  margin: 0 auto 12px;
+  border-radius: 22px;
+  display: grid; place-items: center;
+  color: #05221a;
+  background: linear-gradient(140deg, #6ee7b7, var(--ok));
+  box-shadow: 0 22px 48px -20px rgba(52, 211, 153, 0.7);
+  animation: float-y 2.8s var(--ease) infinite;
+}
+.gift-win-title { position: relative; font-family: var(--font-display); font-size: 19px; font-weight: 800; color: #fff; }
+.gift-win-code {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+  margin-top: 4px;
+}
+.gift-win-coins {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.gift-win-coins b { font-family: var(--font-display); font-size: 34px; font-weight: 800; color: var(--gold); }
+.gift-win-unit { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.gift-win-note { position: relative; font-size: 12px; color: var(--text-2); margin-top: 8px; }
+.gift-win-note b { color: #fff; }
+
+/* ── History list ── */
+.gift-history { margin-top: 16px; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 12px; }
+.gift-history-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.gift-empty { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.gift-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: var(--r-xs);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.gift-row-code { font-size: 12.5px; font-weight: 700; color: var(--text); }
+.gift-row-meta { flex: 1; font-size: 10.5px; color: var(--muted); }
+.gift-row-coins { font-family: var(--font-display); font-size: 13.5px; font-weight: 800; color: var(--ok); }
+
+/* Admin: naya bana code card */
+.gift-created {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border-radius: var(--r-sm);
+  background: linear-gradient(140deg, rgba(255, 193, 77, 0.14), rgba(255, 255, 255, 0.02));
+  box-shadow: inset 0 0 0 1px rgba(255, 193, 77, 0.28);
+  animation: pop-in 0.3s var(--ease);
+}

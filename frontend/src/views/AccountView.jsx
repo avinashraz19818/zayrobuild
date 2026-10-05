@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   User, Wallet, Package, Gift, Globe, Headphones, ShieldCheck, LogOut, ChevronRight,
-  Layers, Sparkles, BadgeCheck, Send, Activity
+  Layers, Sparkles, BadgeCheck, Send, Activity, Ticket
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
 import { EmptyState, SectionHead, Stat } from '../components/ui';
 import { displayName, initials, openTelegramLink, fmtDay } from '../lib/api';
 import TelegramGate from '../components/TelegramGate';
+import GiftCodeSheet from '../components/GiftCodeSheet';
 
 function MenuRow({ icon: Icon, tone, title, sub, trail, onClick }) {
   return (
@@ -26,8 +27,9 @@ function MenuRow({ icon: Icon, tone, title, sub, trail, onClick }) {
 }
 
 export default function AccountView({ setTab, onAddFund }) {
-  const { user, isAdmin, openAuth, logout, refreshUser, telegramUser } = useAuth();
+  const { user, isAdmin, logout, refreshUser, telegramUser } = useAuth();
   const { orders, referral, config } = useStore();
+  const [giftOpen, setGiftOpen] = useState(false);
 
   if (!user) {
     return <TelegramGate botLink={config?.bot_link} />;
@@ -68,6 +70,16 @@ export default function AccountView({ setTab, onAddFund }) {
         </div>
       </section>
 
+      {/* Gift code — claim karne par coins seedha isi account me */}
+      <button className="gift-cta rise-in" onClick={() => setGiftOpen(true)}>
+        <span className="gift-cta-ico"><Gift size={20} /></span>
+        <span className="grow" style={{ textAlign: 'left' }}>
+          <span className="gift-cta-title">Gift Code</span>
+          <span className="gift-cta-sub">Code paste karein aur coins claim karein</span>
+        </span>
+        <span className="gift-cta-btn"><Ticket size={14} /> Claim</span>
+      </button>
+
       <section className="section">
         <SectionHead icon={Activity} title="Account stats" />
         <div className="stat-grid">
@@ -92,7 +104,14 @@ export default function AccountView({ setTab, onAddFund }) {
             trail={referral?.earned_coins ? <span className="chip chip-gold">{referral.earned_coins}</span> : null}
             onClick={() => setTab('refer')}
           />
-          <MenuRow icon={Wallet} tone="gold" title="Add fund" sub="UPI top-up with instant approval" onClick={onAddFund} />
+          <MenuRow
+            icon={Gift}
+            tone="gold"
+            title="Gift code"
+            sub="Code redeem karke coins paayein"
+            onClick={() => setGiftOpen(true)}
+          />
+          <MenuRow icon={Wallet} tone="ok" title="Wallet & deposits" sub="UPI top-up + deposit history" onClick={onAddFund} />
         </div>
       </section>
 
@@ -131,8 +150,10 @@ export default function AccountView({ setTab, onAddFund }) {
       </section>
 
       <div className="center-pad" style={{ paddingTop: 4 }}>
-        <span>ZAYRO BUILD · panel v3 · <button className="btn btn-ghost btn-xs" onClick={refreshUser}>refresh</button></span>
+        <span>{config?.site_name || 'ZAYRO BUILD'} · panel v3 · <button className="btn btn-ghost btn-xs" onClick={refreshUser}>refresh</button></span>
       </div>
+
+      <GiftCodeSheet open={giftOpen} onClose={() => setGiftOpen(false)} />
     </>
   );
 }

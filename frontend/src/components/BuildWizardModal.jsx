@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Sparkles, Upload, Tag, ArrowRight, ArrowLeft, Check, ShieldCheck, Wallet,
+  Sparkles, ArrowRight, ArrowLeft, Check, ShieldCheck, Wallet,
   ImageIcon, Link2, Globe, Layers, BadgeCheck, Info
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -33,9 +33,6 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
   const [fakeRegisterUrl, setFakeRegisterUrl] = useState('');
   const [minDeposit, setMinDeposit] = useState(300);
 
-  const [coupon, setCoupon] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const [couponBusy, setCouponBusy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const fakePrice = Number(design?.fake_price_coins || config?.addon_fake_price || 5);
@@ -47,7 +44,7 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
     return Number(design.price_coins || 0);
   }, [design, mode, fakePrice]);
 
-  const total = Math.max(0, subtotal - discount);
+  const total = subtotal;
   const balance = Number(user?.coins || 0);
   const short = balance < total;
 
@@ -61,8 +58,6 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
     setRegisterUrl('');
     setFakeRegisterUrl('');
     setMinDeposit(300);
-    setCoupon('');
-    setDiscount(0);
   }, [design, isOpen]);
 
   useEffect(() => {
@@ -85,22 +80,6 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
     if (!file) return;
     setIconFile(file);
     setIconPreview(URL.createObjectURL(file));
-  };
-
-  const applyCoupon = async () => {
-    if (!coupon.trim()) return;
-    setCouponBusy(true);
-    try {
-      const res = await ordersApi.coupon(coupon.trim(), { subtotal });
-      // server subtotal param chahiye — api helper ke through bhej rahe hain
-      setDiscount(Number(res?.discount || 0));
-      addToast(`Coupon applied — ${res?.discount || 0} coins off`, 'success');
-    } catch (err) {
-      setDiscount(0);
-      addToast(err.message || 'Invalid coupon', 'error');
-    } finally {
-      setCouponBusy(false);
-    }
   };
 
   const validateStep1 = () => appName.trim().length >= 2;
@@ -130,7 +109,6 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
       if (mode !== 'fake') fd.append('register_url', registerUrl.trim());
       if (mode !== 'real') fd.append('fake_register_url', fakeRegisterUrl.trim());
       if (mode === 'both') fd.append('fake_addon', 'true');
-      if (coupon.trim()) fd.append('coupon_code', coupon.trim());
       if (iconFile) fd.append('icon', iconFile);
 
       const res = await ordersApi.create(fd);
@@ -303,30 +281,13 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
             </div>
             <div className="divider" />
             <div className="flex-row between">
-              <span className="dim">Subtotal</span>
+              <span className="dim">Total</span>
               <b>{subtotal} coins</b>
             </div>
-            {discount > 0 && (
-              <div className="flex-row between">
-                <span className="dim">Coupon discount</span>
-                <b style={{ color: 'var(--ok)' }}>− {discount} coins</b>
-              </div>
-            )}
             <div className="divider" />
             <div className="flex-row between" style={{ fontSize: 16 }}>
               <span style={{ fontWeight: 700 }}>Total payable</span>
               <b style={{ color: 'var(--gold)', fontFamily: 'var(--font-display)' }}>{total} coins</b>
-            </div>
-          </div>
-
-          <div className="field">
-            <span className="label">Coupon code</span>
-            <div className="flex-row gap-8">
-              <input className="input" value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="SAVE10" />
-              <button type="button" className="btn btn-soft" onClick={applyCoupon} disabled={couponBusy || !coupon.trim()}>
-                {couponBusy ? <Spinner /> : <Tag size={14} />}
-                Apply
-              </button>
             </div>
           </div>
 
@@ -370,8 +331,8 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
         )}
       </div>
 
-      {step === 3 && total === 0 && (
-        <Notice tone="ok">Coupon ne poori payment cover kar li — build free me chalega.</Notice>
+      {step === 3 && (
+        <Notice tone="info">Coins kam pad rahe hain to profile me Gift Code claim karein ya wallet me top-up karein.</Notice>
       )}
     </Sheet>
   );

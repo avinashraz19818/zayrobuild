@@ -885,6 +885,29 @@ ${PE.dot} <b>Request ID:</b> <code>#${data.id}</code>`;
       } else {
         await bot.sendMessage(targetChat, text, { parse_mode: 'HTML' });
       }
+    } else if (eventType === 'gift_claimed') {
+      text =
+`╔══════════════════════════════════╗
+║  ${PE.gift} <b>𝐆𝐈𝐅𝐓 𝐂𝐎𝐃𝐄 𝐂𝐋𝐀𝐈𝐌𝐄𝐃</b> ${PE.sparkles}  ║
+╚══════════════════════════════════╝
+
+${PE.user} <b>User ID:</b> <code>#${data.user_id}</code>
+${PE.card} <b>Code:</b> <code>${escapeHtml(data.code)}</code>
+${PE.money} <b>Coins Added:</b> <b>+${data.coins}</b>
+${PE.diamond} <b>New Balance:</b> <code>${data.balance || 0} Coins</code>
+${PE.card} <b>Timestamp:</b> <code>${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</code>`;
+      await bot.sendMessage(targetChat, text, { parse_mode: 'HTML', disable_web_page_preview: true });
+    } else if (eventType === 'deploy_requested') {
+      text =
+`╔══════════════════════════════════╗
+║  ${PE.bot} <b>𝐍𝐄𝐖 𝐃𝐄𝐏𝐋𝐎𝐘 𝐑𝐄𝐐𝐔𝐄𝐒𝐓</b> ${PE.rocket}  ║
+╚══════════════════════════════════╝
+
+${PE.user} <b>User:</b> <code>${escapeHtml(data.username)}</code> (ID: <code>#${data.user_id}</code>)
+${PE.crown} <b>Bot Name:</b> <code>${escapeHtml(data.bot_name)}</code>
+${PE.star} <b>Plan:</b> <b>${escapeHtml(data.plan)}</b> · ₹${data.price}
+${PE.dot} <b>Request ID:</b> <code>#${data.id}</code>`;
+      await bot.sendMessage(targetChat, text, { parse_mode: 'HTML', disable_web_page_preview: true });
     }
   } catch (err) {
     console.error('Telegram sendLogEvent error:', err.message);

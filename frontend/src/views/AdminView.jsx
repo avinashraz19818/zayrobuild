@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Shield, Users, Settings, Coins, Package, Lock, Gauge, Bot, Megaphone, Ticket, Layers, RefreshCw
+  Shield, Users, Settings, Coins, Package, Lock, Gauge, Bot, Megaphone, Gift, Layers, RefreshCw
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +10,7 @@ import { OverviewTab, RequestsTab, OrdersTab, UsersTab } from './admin/AdminTabs
 import TemplatesTab from './admin/TemplatesTab';
 import DeployBotTab from './admin/DeployBotTab';
 import AnnouncementsTab from './admin/AnnouncementsTab';
-import CouponsTab from './admin/CouponsTab';
+import GiftCodesTab from './admin/GiftCodesTab';
 import SettingsTab from './admin/SettingsTab';
 
 const TABS = [
@@ -21,7 +21,7 @@ const TABS = [
   { key: 'users', label: 'Users', icon: Users },
   { key: 'deploy', label: 'Deploy Bot', icon: Bot },
   { key: 'announce', label: 'Announce', icon: Megaphone },
-  { key: 'coupons', label: 'Coupons', icon: Ticket },
+  { key: 'gift', label: 'Gift Codes', icon: Gift },
   { key: 'settings', label: 'Settings', icon: Settings }
 ];
 
@@ -109,7 +109,7 @@ export default function AdminView() {
         <div className="grow">
           <div className="admin-head-title">Admin panel</div>
           <div className="admin-head-sub">
-            Store · templates · deposits · orders · users · deploy bot · announcement · coupons
+            Store · templates · deposits · orders · users · deploy bot · announcement · gift codes
           </div>
         </div>
         <button className="btn btn-soft btn-sm" onClick={loadStats} disabled={loadingStats}>
@@ -142,7 +142,7 @@ export default function AdminView() {
       {tab === 'users' && <UsersTab act={act} />}
       {tab === 'deploy' && <DeployBotTab act={act} />}
       {tab === 'announce' && <AnnouncementsTab act={act} />}
-      {tab === 'coupons' && <CouponsTab act={act} />}
+      {tab === 'gift' && <GiftCodesTab act={act} />}
       {tab === 'settings' && <SettingsTab act={act} />}
     </>
   );

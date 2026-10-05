@@ -52,6 +52,12 @@ async function request(path, { method = 'GET', body, formData, signal } = {}) {
     const msg = (data && (data.error || data.message)) || `Request failed (${res.status})`;
     throw new ApiError(msg, res.status, data);
   }
+  // Kuch endpoints validation failure par bhi HTTP 200 dete hain
+  // (`{ error: '...' }`) — unhe bhi error ki tarah treat karo, warna UI
+  // galat success dikha deta hai.
+  if (data && typeof data === 'object' && !Array.isArray(data) && data.error) {
+    throw new ApiError(String(data.error), res.status, data);
+  }
   return data;
 }
 
@@ -87,11 +93,12 @@ export const orders = {
   status: (id) => api.get(`/api/orders/${id}/status`),
   create: (formData) => api.postForm('/api/order', formData),
   changeDomain: (id, body) => api.post(`/api/orders/${id}/change-domain`, body),
-  coupon: (code, subtotal) => api.post('/api/coupons/validate', { code, subtotal }),
   fakeSites: () => api.get('/api/me/fake-sites')
 };
 
 export const wallet = {
+  claimGift: (code) => api.post('/api/gift-codes/claim', { code }),
+  giftClaims: () => api.get('/api/me/gift-claims'),
   request: ({ coins, utr, screenshot }) => {
     const fd = new FormData();
     fd.append('coins', String(coins));
@@ -122,13 +129,13 @@ export const admin = {
   updateAnnouncement: (id, body) => api.patch(`/api/admin/announcements/${id}`, body),
   deleteAnnouncement: (id) => api.del(`/api/admin/announcements/${id}`),
   broadcastAnnouncement: (id) => api.post(`/api/admin/announcements/${id}/broadcast`, {}),
-  coupons: () => api.get('/api/admin/coupons'),
-  createCoupon: (body) => api.post('/api/admin/coupons', body),
-  setCoupon: (id, active) => api.patch(`/api/admin/coupons/${id}`, { active }),
-  deleteCoupon: (id) => api.del(`/api/admin/coupons/${id}`),
   botDeploys: () => api.get('/api/admin/bot-deploys'),
   setBotDeployStatus: (id, status, note) => api.post(`/api/admin/bot-deploys/${id}`, { status, note }),
-  deleteBotDeploy: (id) => api.del(`/api/admin/bot-deploys/${id}`)
+  deleteBotDeploy: (id) => api.del(`/api/admin/bot-deploys/${id}`),
+  giftCodes: () => api.get('/api/admin/gift-codes'),
+  createGiftCode: (body) => api.post('/api/admin/gift-codes', body),
+  setGiftCode: (id, active) => api.patch(`/api/admin/gift-codes/${id}`, { active }),
+  deleteGiftCode: (id) => api.del(`/api/admin/gift-codes/${id}`)
 };
 
 /* ─────────────────────────  helpers  ───────────────────────── */
