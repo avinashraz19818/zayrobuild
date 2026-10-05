@@ -61,7 +61,7 @@ async function getToken() {
     console.log('❌ TOKEN EXCHANGE FAIL:', JSON.stringify(j).slice(0, 250));
     return null;
   } catch (e) {
-    console.log('❌ TOKEN EXCHANGE ERROR:', e.message);
+    console.log('❌ TOKEN EXCHANGE ERROR:', describeFetchError(e));
     return null;
   }
 }
