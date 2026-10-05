@@ -14,6 +14,13 @@ uploads/, templates/   → design media + popup HTML files (DB me reference hote
 
 ---
 
+## Pehle ye chalayein — health check
+```bash
+cd ~/zayrobuild && bash scripts/doctor.sh
+```
+Ek command me sab check ho jaata hai: pm2 process, port, local panel, public URL, `.env` ki
+zaroori keys, Firebase key + project match, database aur version. Har line par ✅ / ⚠️ / ❌ milta hai.
+
 ## VPS par start karne ka tarika (Ubuntu / Debian)
 
 ```bash
@@ -54,6 +61,8 @@ Panel: `http://<VPS-IP>:3000` · Admin: `http://<VPS-IP>:3000/admin` (Admin tab 
 | `Error: listen EADDRINUSE :::3000` | Port pehle se busy hai. `ss -ltnp \| grep ':3000'` se dekhein, phir `PORT=3001 npm start` karein (ya `.env` me `PORT=3001`) |
 | pm2 me port change nahi hua | `.env` edit karne ke baad `pm2 restart zayro-panel && pm2 save` |
 | `[fb-token] exchange failed with status 400` | Firebase service-account key invalid/disable ho gayi hai. `node scripts/diag-firebase-auth.js` chalayein aur Google Cloud Console se **nayi key** banakar `firebase-service-account.json` replace karein |
+| Purane error logs me phir bhi `fb-token` errors dikhein | `pm2 flush zayro-panel` chalayein — purane logs clear ho jaate hain, phir naye errors hi dikhenge |
+| Mini App me purana/dead URL khul raha hai | `node scripts/set-site-url.js https://jaiclub5vip.site` + `pm2 restart zayro-panel --update-env && pm2 save`. Bot menu button restart par khud set hota hai |
 
 ### Chalu rakhne ke liye (optional)
 
