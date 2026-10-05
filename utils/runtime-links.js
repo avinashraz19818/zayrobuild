@@ -154,7 +154,10 @@ async function _doTokenExchange() {
     }
     return null;
   } catch (e) {
-    console.error('[fb-token] exchange ERROR:', e.message);
+    if (Date.now() - _lastTokenErrorLog > 30 * 60_000) {
+      _lastTokenErrorLog = Date.now();
+      console.error('[fb-token] exchange ERROR:', e.message, '(har 30 min me ek baar warning)');
+    }
     return null;
   }
 }
