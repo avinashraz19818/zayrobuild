@@ -25,15 +25,23 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt in
 # 2) zaroori build tools (better-sqlite3 native module ke liye)
 sudo apt install -y build-essential python3
 
-# 3) repo clone
-git clone https://github.com/avinashraz19818/zayrobuild.git
+# 3) repo clone (shallow clone jaldi ho jaata hai)
+git clone --depth 1 -b arena/e31c7d08-zayrobuild https://github.com/avinashraz19818/zayrobuild.git
 cd zayrobuild
-git checkout arena/e31c7d08-zayrobuild     # (agar main me merge nahi hua ho)
 
 # 4) dependencies
 npm install
+npm --prefix frontend install      # (sirf UI rebuild ke liye; chalta panel already public/ me hai)
 
-# 5) start
+# 5) settings file banayein (repo me .env nahi hai — secrets public repo me nahi jaate)
+cp .env.example .env
+nano .env        # PORT, SESSION_SECRET, TELEGRAM_BOT_TOKEN, ADMIN_PASSWORD_HASH, KEYSTORE_PASSWORD bharein
+node scripts/set-admin-password.js "AapkaNewAdminPassword"     # ADMIN_PASSWORD_HASH isse milega
+
+# 6) firebase-service-account.json apni Google service account key se upload karein
+#    (ye file bhi repo me nahi hai)
+
+# 7) start
 npm start
 # → "APK Builder running on port 3000"
 ```
@@ -60,9 +68,21 @@ pm2 save && pm2 startup
 
 ## Settings / keys
 
-`.env` repo me hai (PORT, SITE_NAME, TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID,
-FIREBASE_*, ADMIN_USERNAME, ADMIN_PASSWORD_HASH, KEYSTORE_*).
-⚠️ Isme secrets hain — GitHub repo private rakhein, warna token leak ho jaayega.
+`cp .env.example .env` karke apni values daalein (PORT, SITE_NAME, SESSION_SECRET,
+TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID, FIREBASE_*, ADMIN_USERNAME,
+ADMIN_PASSWORD_HASH, KEYSTORE_*). `.env` aur `firebase-service-account.json`
+jaan-boojh kar repo se bahar rakhe hain — inme secrets hote hain.
+
+⚠️ **Purana `.env` (aur `firebase-service-account.json`) is repo ke git history me
+pehle se public tha.** Isliye VPS par jaane se pehle ye kaam zaroor karein:
+- Telegram bot token BotFather → `/revoke` se naya lein
+- `SESSION_SECRET` naya random string rakhein
+- Admin password change karein (`node scripts/set-admin-password.js`)
+- Firebase service account key Google Cloud console se delete karke nayi banayein
+
+Isi tarah `.gitignore` me `database/apkbuilder.db` ki lines jaan-boojh kar hata di gayi hain —
+DB me aapke templates, designs, settings aur users hain, aur wahi data clone ke saath aana chahiye.
+(Agar aapko fresh DB chahiye to file delete karke server restart karein.)
 
 Panel me sabse zaroori settings (Admin → Settings se):
 - **Store name + Brand logo** (logo header aur loading screen par dikhta hai)
@@ -102,5 +122,8 @@ npx vite build --ssr smoke/entry.jsx --outDir smoke/dist && node smoke/run.mjs
 - **Wallet** — UPI deposit + screenshot, deposit history
 - **Gift Codes** — admin code banata hai, user profile → Gift Code se claim karta hai (coins turant add)
 - **Deploy Bot** — user request bhejta hai, admin live/reject karta hai (status Telegram par bhi)
-- **Fake Website**, **Refer & Earn**, **Orders + build logs + dynamic links**
+- **Fake Website** (UI + request flow tayar; APK engine aapke bataye steps par banega)
+- **Deploy Bot** (plans, request → admin approve/reject flow ready; actual bot deploy engine baad me)
+- **Refer & Earn** — invite link/code, bonus coins, invited list (live tested)
+- **Orders + build logs + dynamic links**
 - **Admin panel** — Overview · Templates · Deposits · Orders · Users · Deploy Bot · Announce · Gift Codes · Settings

@@ -16,3 +16,14 @@ backups/
 # Frontend build scratch
 frontend/smoke/dist/
 frontend/dist/
+
+# ⚠️ Secrets — repo public ho sakta hai, inse kabhi commit na karein
+.env
+.env.local
+.env.*.local
+firebase-service-account.json
+*service-account*.json
+*.pem
+
+# NOTE: database/apkbuilder.db jaan-boojh kar tracked hai — isi me aapke templates,
+# designs, settings aur users hain, aur VPS clone ke saath yahi data aana chahiye.
