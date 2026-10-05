@@ -25,6 +25,12 @@ firebase-service-account.json
 *service-account*.json
 *.pem
 
+# Purane recovery/backup DB artifacts
+database/*.bak.*
+database/*.old_bak
+database/*.before_recovery_*
+database/apkbuilder_backup*
+
 # SQLite runtime files (WAL/SHM har second badalte hain — DB file hi track hoti hai)
 database/apkbuilder.db-wal
 database/apkbuilder.db-shm
