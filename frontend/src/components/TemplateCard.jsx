@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, Play, Sparkles, Flame, Wrench } from 'lucide-react';
+import { Layers, Play, Sparkles, Flame, Wrench, Clock } from 'lucide-react';
 import { getMediaUrl } from '../utils/media';
 import { CoinIco } from './AppShell';
 
@@ -29,7 +29,7 @@ export default function TemplateCard({ design, onOpen, onPreview, index = 0 }) {
 
   return (
     <article
-      className="tpl-card rise-in"
+      className={`tpl-card rise-in${maint ? ' is-maint-card' : ''}`}
       style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
       onClick={() => { if (!maint) onOpen?.(design); }}
       onKeyDown={(e) => { if (e.key === 'Enter' && !maint) onOpen?.(design); }}
@@ -49,11 +49,6 @@ export default function TemplateCard({ design, onOpen, onPreview, index = 0 }) {
         )}
 
         <div className="tpl-badges">
-          {maint && (
-            <span className="chip chip-warn" style={{ fontSize: 9.5, padding: '3px 8px', fontWeight: 800 }}>
-              <Wrench size={10} /> Maintenance
-            </span>
-          )}
           {discount > 0 && (
             <span className="chip chip-danger" style={{ fontSize: 9.5, padding: '3px 8px', fontWeight: 800 }}>
               <Flame size={10} /> {discount}% OFF
@@ -67,6 +62,16 @@ export default function TemplateCard({ design, onOpen, onPreview, index = 0 }) {
         </div>
 
         <span className="tpl-shine" aria-hidden="true" />
+
+        {/* Maintenance overlay — store par saaf dikhna chahiye ki ye abhi band hai */}
+        {maint && (
+          <div className="tpl-maint-veil" aria-hidden="true">
+            <span className="tpl-maint-badge">
+              <span className="tpl-maint-ico"><Wrench size={17} /></span>
+              <b>UNDER<br />MAINTENANCE</b>
+            </span>
+          </div>
+        )}
 
         {design.preview_video && (
           <button
@@ -95,11 +100,11 @@ export default function TemplateCard({ design, onOpen, onPreview, index = 0 }) {
 
         <button
           type="button"
-          className="btn btn-primary btn-block tpl-build"
+          className={`btn btn-block tpl-build${maint ? ' is-maint' : ' btn-primary'}`}
           disabled={maint}
           onClick={(e) => { e.stopPropagation(); if (!maint) onOpen?.(design); }}
         >
-          {maint ? <><Wrench size={15} /> Maintenance</> : <><Sparkles size={15} /> Create APK</>}
+          {maint ? <><Clock size={15} /> MAINTENANCE</> : <><Sparkles size={15} /> Create APK</>}
         </button>
       </div>
     </article>

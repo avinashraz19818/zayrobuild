@@ -248,13 +248,27 @@ await clickByText('Templates');
   if (!ok) failed += 1;
   origError(`${ok ? '✅' : '❌'} template tile: Create APK button, no category label`);
 
-  // Maintenance template card par badge + disabled button (build block)
+  // Maintenance template card par 'UNDER MAINTENANCE' veil + grey button (build block)
   const maintCard = [...rootEl.querySelectorAll('.tpl-card')]
     .find((c) => /Dhani Win Core/.test(c.textContent || ''));
-  const maintBadge = maintCard ? /Maintenance/i.test(maintCard.textContent || '') : false;
-  const maintDisabled = maintCard ? Boolean(maintCard.querySelector('.tpl-build[disabled]')) : false;
-  if (!maintBadge || !maintDisabled) failed += 1;
-  origError(`${maintBadge && maintDisabled ? '✅' : '❌'} maintenance template: badge + Create APK disabled`);
+  const maintVeil = maintCard ? /UNDER\s*MAINTENANCE/i.test(maintCard.textContent || '') : false;
+  const maintBtn = maintCard ? maintCard.querySelector('.tpl-build.is-maint[disabled]') : null;
+  const maintIcons = maintCard ? Boolean(maintCard.querySelector('.tpl-maint-ico svg')) : false;
+  if (!maintVeil || !maintBtn || !maintIcons) failed += 1;
+  origError(`${maintVeil && maintBtn && maintIcons ? '✅' : '❌'} maintenance card: UNDER MAINTENANCE veil + grey disabled button`);
+
+  // Normal card par ye veil/button NAHI hona chahiye
+  const normalCard = [...rootEl.querySelectorAll('.tpl-card')]
+    .find((c) => /Zayro Apex VIP/.test(c.textContent || ''));
+  const normalClean = normalCard
+    ? (!normalCard.querySelector('.tpl-maint-veil') && /Create APK/i.test(normalCard.textContent || ''))
+    : false;
+  if (!normalClean) failed += 1;
+  origError(`${normalClean ? '✅' : '❌'} normal template par veil nahi, Create APK enabled`);
+
+  // Store templates snapshot (maintenance look review ke liye)
+  fs.writeFileSync('smoke/out/store-templates.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Store templates</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${rootEl.innerHTML}</body></html>`);
 
   // Hidden template store par nahi dikhna chahiye
   const noHidden = !/Red Wings Lite/.test(t);

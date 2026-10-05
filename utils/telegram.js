@@ -49,6 +49,39 @@ const PE = {
   gear: '<tg-emoji emoji-id="5339068773301240682">⚙️</tg-emoji>',
   broadcast: '<tg-emoji emoji-id="5256134032852278918">📡</tg-emoji>'
 };
+// Wahi custom emoji IDs — inline buttons ke `icon_custom_emoji_id` ke liye
+// (buttons me tg-emoji tag nahi chalta, sirf id).
+const PE_ID = {
+  wave: '5413694143601842851',
+  gift: '5449800250032143374',
+  star: '5924870095925942277',
+  fire: '5402406965252989103',
+  crown: '5431505596316665041',
+  diamond: '5427168083074628963',
+  money: '5224257782013769471',
+  check: '5336985409220001678',
+  alert: '5440660757194744323',
+  lock: '5296369303661067030',
+  sparkles: '5463297803235113601',
+  rocket: '5406966974980828470',
+  bell: '5458603043203327669',
+  dot: '5210708311246126137',
+  down: '5192680362114830442',
+  party: '5355129313878353723',
+  bot: '5287684458881756303',
+  stats: '5231200819986047254',
+  phone: '5201990176175299013',
+  arrow: '5397582299640375552',
+  verified: '5206607081334906820',
+  card: '5332724926216428039',
+  telegram: '5364125616801073577',
+  mobile: '5407025283456835913',
+  trophy: '5188344996356448758',
+  user: '6165860934242798778',
+  gear: '5339068773301240682',
+  broadcast: '5256134032852278918'
+};
+
 
 // Ye hosts "temporary tunnel" hote hain — band hone par dead ho jaate hain (ERR_NAME_NOT_RESOLVED).
 // Purane trycloudflare/ngrok links DB me pade reh jaate hain, isliye unhe last option rakhte hain.
@@ -101,6 +134,68 @@ function toSansBoldItalic(str) {
     '0': '0', '1': '1', '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9'
   };
   return String(str || '').split('').map(c => charMap[c] || c).join('');
+}
+
+// Bold digits (𝟎-𝟗) — counters/balance premium dikhein.
+const BOLD_DIGITS = ['𝟎', '𝟏', '𝟐', '𝟑', '𝟒', '𝟓', '𝟔', '𝟕', '𝟖', '𝟗'];
+function boldNum(value) {
+  return String(value === undefined || value === null ? '' : value)
+    .replace(/\d/g, (d) => BOLD_DIGITS[Number(d)]);
+}
+
+// ── Premium inline buttons ──
+// Har button: { text: bold-italic label, emoji, icon, style, ...target }
+//   icon  → Telegram custom (animated) emoji id — icon_custom_emoji_id
+//   emoji → fallback emoji, agar bot owner ke paas Premium/Fragment username na ho
+// Bot premium na hone par Telegram icon reject kar deta hai, isliye teen
+// attempts chalte hain: (icons+style) → (emoji+style) → (emoji, style ke bina).
+function premiumButtonRows(rows, { withIcons = true, withStyle = true } = {}) {
+  return rows.map((row) => row.map((btn) => {
+    const { icon, emoji, ...rest } = btn;
+    const out = { ...rest };
+    if (!withStyle) delete out.style;
+    if (withIcons && icon) out.icon_custom_emoji_id = String(icon);
+    else if (emoji) out.text = `${emoji} ${out.text}`;
+    return out;
+  }));
+}
+
+// Bot owner ke paas Premium / Fragment username na ho to Telegram icon reject
+// karta hai — ek baar fail hone par hamesha ke liye plain-emoji mode par switch.
+let iconsSupported = true;
+
+/**
+ * Kisi bhi send ko premium buttons ke saath bhejo; icon support na hone par
+ * khud-ba-khud (emoji → bina style) fallback ho jaata hai. Message kabhi
+ * silently fail nahi hota.
+ * @param {(reply_markup:object)=>Promise<any>} sendFn
+ */
+async function sendWithFallback(sendFn, rows) {
+  const attempts = [
+    { withIcons: iconsSupported, withStyle: true },
+    { withIcons: false, withStyle: true },
+    { withIcons: false, withStyle: false }
+  ];
+  let lastError = null;
+  for (const opts of attempts) {
+    try {
+      return await sendFn({ inline_keyboard: premiumButtonRows(rows, opts) });
+    } catch (error) {
+      lastError = error;
+      if (opts.withIcons) iconsSupported = false;
+    }
+  }
+  throw lastError;
+}
+
+/** Naya premium message (text + buttons) bhejo. */
+async function sendPremium(chatId, html, rows, extra = {}) {
+  return sendWithFallback((reply_markup) => bot.sendMessage(chatId, html, {
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    ...extra,
+    reply_markup
+  }), rows);
 }
 
 
@@ -159,6 +254,49 @@ function escapeHtml(text) {
     '"': '&quot;',
     "'": '&#39;'
   }[char]));
+}
+
+/**
+ * /start ka premium welcome message.
+ * Content: header → welcome + TG id → engine status/coins/APKs → features.
+ */
+function buildStartMessage({ firstName = 'VIP Member', chatId = '', userCoins = 0, userOrders = 0, referralApplied = false } = {}) {
+  const coinText = boldNum(Number(userCoins || 0).toLocaleString('en-IN'));
+  return `════════════════════
+✌️  𝐙𝐀𝐘𝐑𝐎 𝐁𝐔𝐈𝐋𝐃 • 𝐕𝐈𝐏 𝟐.𝟎 🔖
+════════════════════
+
+${PE.wave}  𝐖𝐞𝐥𝐜𝐨𝐦𝐞, ${escapeHtml(firstName)}  🌟
+📪  𝐓𝐆 𝐔𝐒𝐄𝐑 𝐈𝐃 : <code>${escapeHtml(chatId)}</code>
+
+➡️  𝐁𝐮𝐢𝐥𝐝 𝐄𝐧𝐠𝐢𝐧𝐞 : 🟢  𝐎𝐍𝐋𝐈𝐍𝐄
+${PE.money}  𝐂𝐨𝐢𝐧𝐬 : ${coinText}
+🌿  𝐀𝐏𝐊𝐬 𝐁𝐮𝐢𝐥𝐭 : ${boldNum(userOrders)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔴  𝐁𝐔𝐈𝐋𝐃 𝐘𝐎𝐔𝐑 𝐀𝐏𝐊
+•${PE.check}  𝐅𝐚𝐬𝐭 𝐍𝐚𝐭𝐢𝐯𝐞 𝐁𝐮𝐢𝐥𝐝𝐬    • ${PE.check} 𝐂𝐮𝐬𝐭𝐨𝐦 𝐔𝐈
+•${PE.check}  𝐀𝐩𝐩 𝐏𝐫𝐨𝐭𝐞𝐜𝐭𝐢𝐨𝐧     • ${PE.check}𝐋𝐢𝐯𝐞 𝐔𝐩𝐝𝐚𝐭𝐞𝐬${referralApplied ? `\n\n${PE.gift} 𝐑𝐞𝐟𝐞𝐫𝐫𝐚𝐥 𝐚𝐩𝐩𝐥𝐢𝐞𝐝 — 𝐛𝐨𝐧𝐮𝐬 𝐩𝐚𝐧𝐞𝐥 𝐥𝐨𝐠𝐢𝐧 𝐩𝐚𝐫 𝐜𝐫𝐞𝐝𝐢𝐭 𝐡𝐨𝐠𝐚.` : ''}`;
+}
+
+/**
+ * /start ke premium buttons.
+ * "My Orders" / "Add Coins" buttons jaan-boojh kar nahi hain (user request) —
+ * sirf Builder Panel (+ admin ke liye Admin Panel) aur Support/Channel.
+ */
+function buildStartButtons({ siteUrl, supportUrl, channelUrl, isAdmin = false } = {}) {
+  const rows = [
+    [{ text: toSansBoldItalic('Open Builder Panel'), emoji: '🚀', icon: PE_ID.rocket, web_app: { url: siteUrl }, style: 'success' }]
+  ];
+  if (isAdmin) {
+    rows.push([{ text: toSansBoldItalic('Admin Panel'), emoji: '🛡️', icon: PE_ID.gear, web_app: { url: `${siteUrl}/admin` }, style: 'danger' }]);
+  }
+  rows.push([
+    { text: toSansBoldItalic('Admin Support'), emoji: '👨‍💻', icon: PE_ID.phone, url: supportUrl, style: 'primary' },
+    { text: toSansBoldItalic('Official Channel'), emoji: '📢', icon: PE_ID.broadcast, url: channelUrl, style: 'primary' }
+  ]);
+  return rows;
 }
 
 function initBot(token, db) {
@@ -241,7 +379,7 @@ function initBot(token, db) {
     bot.onText(/\/start/, async (msg) => {
       const chatId    = String(msg.chat.id);
       const rawUsername = msg.from?.username ? msg.from.username.trim() : '';
-      const firstName = escapeHtml(msg.from?.first_name || 'VIP Member');
+      const firstName = msg.from?.first_name || 'VIP Member';   // builder HTML-escape karta hai
       const siteUrl   = getSiteUrl();
       const supportUrl = getSupportUrl();
       const channelUrl = getChannelUrl();
@@ -313,49 +451,15 @@ function initBot(token, db) {
         }
       }
 
-      const welcomeMsg =
-`╔══════════════════════════════════╗
-║  ${PE.diamond} <b>𝐙𝐀𝐘𝐑𝐎 𝐌𝐎𝐃 𝐁𝐔𝐈𝐋𝐃𝐄𝐑 𝐕𝐈𝐏</b> ${PE.diamond}  ║
-╚══════════════════════════════════╝
-
-${PE.wave} <b>Welcome, ${firstName}!</b> ${rawUsername ? `(<code>@${rawUsername}</code>)` : ''}
-
-${PE.bot} <b>System Status:</b> <code>ONLINE</code> ${PE.check}
-${PE.money} <b>Your Balance:</b> <code>${userCoins} Coins</code>
-${PE.trophy} <b>Total Orders:</b> <code>${userOrders} APKs Built</code>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${PE.fire} <b>Next-Gen Sideload & Auto-Bypass Engine:</b>
-• ${PE.lock} <i>100% Antivirus & Phone Manager Safe</i>
-• ${PE.rocket} <i>Universal DhaniWin & Multi-Game Compatible</i>
-• ${PE.broadcast} <i>Live Cloud Sync & Zero-Downtime Builds</i>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${referralApplied ? `\n${PE.gift} <b>Referral applied:</b> <i>invite bonus aapke panel login par credit hoga.</i>\n` : ''}${PE.down} <b>Choose an option below to proceed:</b>`;
-
-      // ── Bot API 9.4+ Colored Inline Buttons (Attached directly to message) ──
-      const reply_markup = {
-        inline_keyboard: [
-          [
-            { text: '🚀 ᴏᴘᴇɴ ʙᴜɪʟᴅᴇʀ ᴘᴀɴᴇʟ', web_app: { url: siteUrl }, style: 'success' }
-          ],
-          [
-            { text: '📦 ᴍʏ ᴏʀᴅᴇʀꜱ', web_app: { url: `${siteUrl}#orders` }, style: 'primary' },
-            { text: '🪙 ᴀᴅᴅ ᴄᴏɪɴꜱ', web_app: { url: `${siteUrl}#wallet` }, style: 'success' }
-          ],
-          [
-            { text: '👨‍💻 24/7 ᴀᴅᴍɪɴ ꜱᴜᴘᴘᴏʀᴛ', url: supportUrl, style: 'primary' },
-            { text: '📢 ᴏꜰꜰɪᴄɪᴀʟ ᴄʜᴀɴɴᴇʟ', url: channelUrl, style: 'primary' }
-          ]
-        ]
-      };
+      const welcomeMsg = buildStartMessage({
+        firstName, chatId, userCoins, userOrders, referralApplied
+      });
+      const startButtons = buildStartButtons({
+        siteUrl, supportUrl, channelUrl, isAdmin: isAdminChat(chatId)
+      });
 
       try {
-        // Send welcome message with inline buttons attached directly
-        await bot.sendMessage(chatId, welcomeMsg, {
-          parse_mode: 'HTML',
-          disable_web_page_preview: true,
-          reply_markup
-        });
+        await sendPremium(chatId, welcomeMsg, startButtons);
       } catch (e) {
         console.error('Bot /start error:', e.message);
       }
@@ -368,21 +472,15 @@ ${referralApplied ? `\n${PE.gift} <b>Referral applied:</b> <i>invite bonus aapke
       if (!isAdminChat(chatId)) return;   // normal users ko kuch nahi milta
       const siteUrl = getSiteUrl();
       try {
-        await bot.sendMessage(chatId,
+        await sendPremium(chatId,
           `${PE.gear} <b>Admin Panel</b>\n\n` +
           `Sirf aapke liye — neeche button dabakar panel kholein aur admin credentials daalein.\n` +
           `<i>URL: ${siteUrl}/admin</i>`,
-          {
-            parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [[
-                { text: '🛡️ Open Admin Panel', web_app: { url: `${siteUrl}/admin` } }
-              ], [
-                { text: '🚀 Open Builder Panel', web_app: { url: siteUrl } }
-              ]]
-            }
-          }
-        );
+          [[
+            { text: toSansBoldItalic('Open Admin Panel'), emoji: '🛡️', icon: PE_ID.gear, web_app: { url: `${siteUrl}/admin` }, style: 'danger' }
+          ], [
+            { text: toSansBoldItalic('Open Builder Panel'), emoji: '🚀', icon: PE_ID.rocket, web_app: { url: siteUrl }, style: 'success' }
+          ]]);
       } catch (error) {
         console.error('[Telegram Bot] /admin reply fail:', error.message);
       }
@@ -396,23 +494,19 @@ ${referralApplied ? `\n${PE.gift} <b>Referral applied:</b> <i>invite bonus aapke
       try {
         const u = _db.prepare('SELECT id, username FROM users WHERE telegram_id=?').get(chatId);
         if (!u) {
-          return bot.sendMessage(chatId, `${PE.alert} <b>Account not found</b>\nTap /start to register automatically.`, {
-            parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '🟢 🚀 Open Builder Panel', web_app: { url: siteUrl } }],
-                ...(isAdminChat(chatId) ? [[{ text: '🛡️ Open Admin Panel', web_app: { url: `${siteUrl}/admin` } }]] : [])
-              ]
-            }
-          });
+          return sendPremium(chatId,
+            `${PE.alert} <b>Account not found</b>\nTap /start to register automatically.`,
+            [
+              [{ text: toSansBoldItalic('Open Builder Panel'), emoji: '🚀', icon: PE_ID.rocket, web_app: { url: siteUrl }, style: 'success' }],
+              ...(isAdminChat(chatId) ? [[{ text: toSansBoldItalic('Admin Panel'), emoji: '🛡️', icon: PE_ID.gear, web_app: { url: `${siteUrl}/admin` }, style: 'danger' }]] : [])
+            ]);
         }
 
         const orders = _db.prepare('SELECT id, app_name, status, created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 5').all(u.id);
         if (!orders.length) {
-          return bot.sendMessage(chatId, `${PE.mobile} <b>No orders yet!</b>\nYou haven't created any APK orders yet. Tap below to create your first app.`, {
-            parse_mode: 'HTML',
-            reply_markup: { inline_keyboard: [[{ text: '🔨 Build First APK', web_app: { url: siteUrl } }]] }
-          });
+          return sendPremium(chatId,
+            `${PE.mobile} <b>No orders yet!</b>\nYou haven't created any APK orders yet. Tap below to create your first app.`,
+            [[{ text: toSansBoldItalic('Build First APK'), emoji: '🛠️', icon: PE_ID.rocket, web_app: { url: siteUrl }, style: 'success' }]]);
         }
 
         let txt = `${PE.mobile} <b>Your Recent Orders (${orders.length}):</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
@@ -422,15 +516,10 @@ ${referralApplied ? `\n${PE.gift} <b>Referral applied:</b> <i>invite bonus aapke
         });
         txt += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
-        await bot.sendMessage(chatId, txt, {
-          parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '📱 ᴍᴀɴᴀɢᴇ ɪɴ ᴡᴇʙ ᴀᴘᴘ', web_app: { url: `${siteUrl}#orders` } }],
-              ...(isAdminChat(chatId) ? [[{ text: '🛡️ ᴀᴅᴍɪɴ ᴘᴀɴᴇʟ', web_app: { url: `${siteUrl}/admin` } }]] : [])
-            ]
-          }
-        });
+        await sendPremium(chatId, txt, [
+          [{ text: toSansBoldItalic('Manage In Web App'), emoji: '📱', icon: PE_ID.mobile, web_app: { url: `${siteUrl}#orders` }, style: 'primary' }],
+          ...(isAdminChat(chatId) ? [[{ text: toSansBoldItalic('Admin Panel'), emoji: '🛡️', icon: PE_ID.gear, web_app: { url: `${siteUrl}/admin` }, style: 'danger' }]] : [])
+        ]);
       } catch (e) {
         console.error('Bot /orders error:', e.message);
       }
@@ -457,14 +546,9 @@ ${upiId ? `${PE.card} <b>UPI ID:</b> <code>${escapeHtml(upiId)}</code>\n` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${PE.fire} <i>Deposit credits instantly to build your modded APKs.</i>`;
 
-        await bot.sendMessage(chatId, txt, {
-          parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '🪙 ᴀᴅᴅ ᴄᴏɪɴꜱ ɴᴏᴡ', web_app: { url: `${siteUrl}#wallet` } }]
-            ]
-          }
-        });
+        await sendPremium(chatId, txt, [
+          [{ text: toSansBoldItalic('Add Coins Now'), emoji: '💰', icon: PE_ID.money, web_app: { url: `${siteUrl}#wallet` }, style: 'success' }]
+        ]);
       } catch (e) {
         console.error('Bot /wallet error:', e.message);
       }
@@ -491,15 +575,10 @@ ${PE.lock} <b>Security Guarantee:</b>
 Our APKs are built with 100% clean architecture, without malicious permissions.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
-      await bot.sendMessage(chatId, helpMsg, {
-        parse_mode: 'HTML',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '👨‍💻 Contact Support', url: getSupportUrl() }],
-            ...(isAdminChat(chatId) ? [[{ text: '🛡️ Open Admin Panel', web_app: { url: `${getSiteUrl()}/admin` } }]] : [])
-          ]
-        }
-      });
+      await sendPremium(chatId, helpMsg, [
+        [{ text: toSansBoldItalic('Contact Support'), emoji: '👨‍💻', icon: PE_ID.phone, url: getSupportUrl(), style: 'primary' }],
+        ...(isAdminChat(chatId) ? [[{ text: toSansBoldItalic('Admin Panel'), emoji: '🛡️', icon: PE_ID.gear, web_app: { url: `${getSiteUrl()}/admin` }, style: 'danger' }]] : [])
+      ]);
     });
 
     // Approve / Reject button callbacks
@@ -561,15 +640,10 @@ ${PE.verified} <b>UTR / Ref:</b> <code>${escapeHtml(row.utr)}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${PE.rocket} <i>Aapka balance update ho chuka hai. Ab aap instant APK build kar sakte hain!</i>`;
 
-              bot.sendMessage(targetUser.telegram_id, userNotice, {
-                parse_mode: 'HTML',
-                reply_markup: {
-                  inline_keyboard: [
-                    [{ text: '🟢 🚀 ᴏᴘᴇɴ ʙᴜɪʟᴅᴇʀ ᴘᴀɴᴇʟ', web_app: { url: getSiteUrl() } }],
-                    [{ text: '📦 ᴍʏ ᴏʀᴅᴇʀꜱ', web_app: { url: `${getSiteUrl()}#orders` } }]
-                  ]
-                }
-              }).catch(() => {});
+              sendPremium(targetUser.telegram_id, userNotice, [
+                [{ text: toSansBoldItalic('Open Builder Panel'), emoji: '🚀', icon: PE_ID.rocket, web_app: { url: getSiteUrl() }, style: 'success' }],
+                [{ text: toSansBoldItalic('Add Coins'), emoji: '💰', icon: PE_ID.money, web_app: { url: `${getSiteUrl()}#wallet` }, style: 'primary' }]
+              ]).catch(() => {});
             }
           } catch(_) {}
         } else {
@@ -600,12 +674,9 @@ ${PE.verified} <b>UTR:</b> <code>${escapeHtml(row.utr)}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Agar aapne payment ki hai to please payment screenshot ke saath <b>Admin Support</b> se contact karein.`;
 
-              bot.sendMessage(targetUser.telegram_id, userNotice, {
-                parse_mode: 'HTML',
-                reply_markup: {
-                  inline_keyboard: [[{ text: '👨‍💻 ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ ꜱᴜᴘᴘᴏʀᴛ', url: getSupportUrl() }]]
-                }
-              }).catch(() => {});
+              sendPremium(targetUser.telegram_id, userNotice, [[
+                { text: toSansBoldItalic('Contact Admin Support'), emoji: '👨‍💻', icon: PE_ID.phone, url: getSupportUrl(), style: 'primary' }
+              ]]).catch(() => {});
             }
           } catch(_) {}
         }
@@ -645,22 +716,20 @@ ${PE.dot} <b>Request ID:</b> <code>#${request.id}</code>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <i>Verify payment and choose action below:</i>`;
 
-  const reply_markup = {
-    inline_keyboard: [[
-      { text: '✅ ᴀᴘᴘʀᴏᴠᴇ (+ᴄᴏɪɴꜱ)', callback_data: `approve_${request.id}`, style: 'success' },
-      { text: '❌ ʀᴇᴊᴇᴄᴛ', callback_data: `reject_${request.id}`, style: 'danger' }
-    ]]
-  };
+  const rows = [[
+    { text: toSansBoldItalic('Approve (+coins)'), emoji: '✅', icon: PE_ID.check, callback_data: `approve_${request.id}`, style: 'success' },
+    { text: toSansBoldItalic('Reject'), emoji: '❌', icon: PE_ID.alert, callback_data: `reject_${request.id}`, style: 'danger' }
+  ]];
 
   try {
-    let sent;
-    if (screenshotPath && fs.existsSync(screenshotPath)) {
-      sent = await bot.sendPhoto(adminChatId, fs.createReadStream(screenshotPath), {
-        caption: msg, parse_mode: 'HTML', reply_markup
-      });
-    } else {
-      sent = await bot.sendMessage(adminChatId, msg, { parse_mode: 'HTML', reply_markup });
-    }
+    const sent = await sendWithFallback((reply_markup) => {
+      if (screenshotPath && fs.existsSync(screenshotPath)) {
+        return bot.sendPhoto(adminChatId, fs.createReadStream(screenshotPath), {
+          caption: msg, parse_mode: 'HTML', reply_markup
+        });
+      }
+      return bot.sendMessage(adminChatId, msg, { parse_mode: 'HTML', reply_markup });
+    }, rows);
     return sent.message_id;
   } catch (e) {
     console.error('Telegram sendCoinRequest error:', e.message);
@@ -768,36 +837,35 @@ ${PE.down} <i>Uploading your APK files now… Please wait.</i>
       ? `${PE.party} <b>All ${sentCount} APK file(s) delivered successfully!</b>\nTap the attached file above to install directly on your phone.`
       : `${PE.alert} <b>${sentCount}/${validApkPaths.length} APK file(s) sent.</b>\nPlease open My Orders to download remaining files.`;
 
-    const deliveryButtons = {
-      inline_keyboard: [
-        [
-          { text: '🔨 ʙᴜɪʟᴅ ᴀɴᴏᴛʜᴇʀ ᴀᴘᴋ', web_app: { url: siteUrl }, style: 'success' }
-        ],
-        [
-          { text: '📦 ᴍʏ ᴏʀᴅᴇʀꜱ', web_app: { url: `${siteUrl}#orders` }, style: 'primary' },
-          { text: '👨‍💻 ꜱᴜᴘᴘᴏʀᴛ', url: supportUrl, style: 'primary' }
-        ]
+    const deliveryButtons = [
+      [
+        { text: toSansBoldItalic('Build Another APK'), emoji: '🛠️', icon: PE_ID.rocket, web_app: { url: siteUrl }, style: 'success' }
+      ],
+      [
+        { text: toSansBoldItalic('My Orders'), emoji: '📱', icon: PE_ID.mobile, web_app: { url: `${siteUrl}#orders` }, style: 'primary' },
+        { text: toSansBoldItalic('Support'), emoji: '👨‍💻', icon: PE_ID.phone, url: supportUrl, style: 'primary' }
       ]
-    };
+    ];
+    const sendDelivery = (fn) => sendWithFallback(fn, deliveryButtons);
 
     if (statusMessage?.message_id) {
       try {
-        await sender.editMessageText(
+        await sendDelivery((reply_markup) => sender.editMessageText(
           `${headerCard}\n\n${completionCard}`,
           {
             chat_id: telegramId,
             message_id: statusMessage.message_id,
             parse_mode: 'HTML',
-            reply_markup: deliveryButtons
+            reply_markup
           }
-        );
+        ));
       } catch (_) {}
     } else {
       try {
-        await sender.sendMessage(telegramId, completionCard, {
+        await sendDelivery((reply_markup) => sender.sendMessage(telegramId, completionCard, {
           parse_mode: 'HTML',
-          reply_markup: deliveryButtons
-        });
+          reply_markup
+        }));
       } catch (_) {}
     }
   }
@@ -862,33 +930,40 @@ ${PE.rocket} <b>Official Portal:</b> <a href="${siteUrl}">${siteUrl}</a>`;
 
   const inlineKeyboard = [];
   if (button_text && button_url) {
-    inlineKeyboard.push([{ text: `✨ ${button_text}`, url: button_url.startsWith('http') ? button_url : `https://${button_url}`, style: 'success' }]);
+    inlineKeyboard.push([{
+      text: toSansBoldItalic(button_text),
+      emoji: '🔗',
+      icon: PE_ID.sparkles,
+      url: button_url.startsWith('http') ? button_url : `https://${button_url}`,
+      style: 'success'
+    }]);
   }
   inlineKeyboard.push([
-    { text: '🚀 ᴏᴘᴇɴ ʙᴜɪʟᴅᴇʀ', web_app: { url: siteUrl }, style: 'success' },
-    { text: '👨‍💻 ꜱᴜᴘᴘᴏʀᴛ', url: supportUrl, style: 'primary' }
+    { text: toSansBoldItalic('Open Builder'), emoji: '🚀', icon: PE_ID.rocket, web_app: { url: siteUrl }, style: 'success' },
+    { text: toSansBoldItalic('Support'), emoji: '👨‍💻', icon: PE_ID.phone, url: supportUrl, style: 'primary' }
   ]);
 
-  const reply_markup = { inline_keyboard: inlineKeyboard };
+  const broadcastRows = inlineKeyboard;
 
   let sent = 0;
   let failed = 0;
 
   for (const u of users) {
     try {
-      if (image_url && image_url.startsWith('http')) {
-        await bot.sendPhoto(u.telegram_id, image_url, {
-          caption: text,
-          parse_mode: 'HTML',
-          reply_markup
-        });
-      } else {
-        await bot.sendMessage(u.telegram_id, text, {
+      await sendWithFallback((reply_markup) => {
+        if (image_url && image_url.startsWith('http')) {
+          return bot.sendPhoto(u.telegram_id, image_url, {
+            caption: text,
+            parse_mode: 'HTML',
+            reply_markup
+          });
+        }
+        return bot.sendMessage(u.telegram_id, text, {
           parse_mode: 'HTML',
           disable_web_page_preview: false,
           reply_markup
         });
-      }
+      }, broadcastRows);
       sent++;
       await wait(40);
     } catch (e) {
@@ -1017,4 +1092,8 @@ ${PE.dot} <b>Request ID:</b> <code>#${data.id}</code>`;
   }
 }
 
-module.exports = { initBot, sendCoinRequest, sendApkReady, broadcastAnnouncement, sendLogEvent, sendUserNotice };
+module.exports = {
+  initBot, sendCoinRequest, sendApkReady, broadcastAnnouncement, sendLogEvent, sendUserNotice,
+  // Tests ke liye pure helpers (bot network ke bina verify ho sake)
+  __test: { buildStartMessage, buildStartButtons, premiumButtonRows, toSansBoldItalic, boldNum, PE, PE_ID }
+};
