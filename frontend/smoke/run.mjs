@@ -651,7 +651,7 @@ await wait(1200);
 
   // sheet band karo, phir Demo accounts kholo
   await clickBtn(/^cancel$/i);
-  await clickBtn(/^demo accounts$/i);
+  await clickBtn(/^add demo account$/i);
   await wait(500);
   const dTxt = olHost.textContent || '';
   const demoOk = /Demo accounts/.test(dTxt) && /10 coins \/ account/.test(dTxt)

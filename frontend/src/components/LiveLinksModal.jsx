@@ -156,9 +156,10 @@ export default function LiveLinksModal({ order, isOpen, onClose, onUpdated, sect
 
   if (!isOpen || !order) return null;
 
-  const priceOf = (t) => Number(config?.[t.priceKey] ?? (t.key === 'domain' ? 10 : 10));
+  const priceOf = (t) => Number(config?.[t.priceKey] ?? 10);
   const active = TYPES.find((t) => t.key === type) || TYPES[0];
   const cost = priceOf(active);
+  const costLabel = cost > 0 ? `${cost} coins` : 'Free';
   const balance = Number(user?.coins || 0);
   const short = balance < cost;
   const demoPrice = Number(config?.demo_user_price ?? 0);
@@ -222,7 +223,7 @@ export default function LiveLinksModal({ order, isOpen, onClose, onUpdated, sect
                   <span className="row-sub">{t.hint}</span>
                 </span>
                 <span className={`chip ${selected ? 'chip-gold' : 'chip-brand'}`} style={{ flexShrink: 0 }}>
-                  <Coins size={11} /> {tCost} coins
+                  <Coins size={11} /> {tCost > 0 ? `${tCost} coins` : 'Free'}
                 </span>
               </button>
             );
@@ -247,13 +248,13 @@ export default function LiveLinksModal({ order, isOpen, onClose, onUpdated, sect
             <Coins size={13} color="var(--gold)" />
             {active.label} change karne ka charge
           </span>
-          <b style={{ color: 'var(--gold)', fontFamily: 'var(--font-display)' }}>{cost} coins</b>
+          <b style={{ color: 'var(--gold)', fontFamily: 'var(--font-display)' }}>{costLabel}</b>
         </div>
 
         {short && (
           <div className="trust-strip" style={{ background: 'var(--danger-soft)', boxShadow: 'inset 0 0 0 1px rgba(251,113,133,.25)' }}>
             <AlertTriangle size={14} color="var(--danger)" />
-            <span>Coins kam hain — <b>{cost} coins</b> chahiye, aapke paas <b>{balance}</b> hain. Wallet me top-up karein.</span>
+            <span>Coins kam hain — <b>{costLabel}</b> chahiye, aapke paas <b>{balance}</b> hain. Wallet me top-up karein.</span>
           </div>
         )}
 
@@ -265,7 +266,7 @@ export default function LiveLinksModal({ order, isOpen, onClose, onUpdated, sect
           <button type="button" className="btn btn-soft" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn btn-primary grow" disabled={busy || short}>
             {busy ? <RefreshCw size={15} className="animate-spin" /> : <Radio size={15} />}
-            {busy ? 'Updating…' : short ? `Coins kam hain (${cost} chahiye)` : `Update live link · ${cost} coins`}
+            {busy ? 'Updating…' : short ? `Coins kam hain (${cost} chahiye)` : `Update live link · ${costLabel}`}
           </button>
         </div>
       </form>

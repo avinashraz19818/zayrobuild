@@ -126,7 +126,7 @@ export default function OrdersView({ onOpenLogs, onOpenLiveLinks, onOpenDemoUser
                   onClick={() => (onOpenDemoUsers || onOpenLiveLinks)?.(order)}
                   title="App me test/login karne ke liye demo account add karein"
                 >
-                  <Users size={14} /> Demo accounts
+                  <Users size={14} /> Add demo account
                 </button>
               </div>
 
