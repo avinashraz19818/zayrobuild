@@ -463,6 +463,8 @@ app.post('/api/register', registerLimiter, async (req, res) => {
       coins: 0,
       ip: getClientIp(req)
     });
+    // Referral link se aaya tha to bonus credit karo (best-effort).
+    creditReferral({ id: result.lastInsertRowid }, req.body?.referral);
     return res.status(201).json({
       success: true,
       message: 'Account created. You can now log in.'
@@ -783,6 +785,8 @@ app.post('/api/auth/telegram-webapp', loginLimiter, async (req, res) => {
     isAdmin: false,
     sessionVersion: Number(user.session_version || 0)
   });
+  // Referral claim — pending bot click ya start_param dono handle hote hain.
+  creditReferral(user, req.body?.start_param || req.body?.referral);
   res.json({
     success: true,
     user: {
@@ -855,6 +859,87 @@ app.get('/auth/tg', async (req, res) => {
   res.redirect(targetPath);
 });
 
+// ═══════════════════════════════════════════
+// REFERRAL (Refer & Earn)
+// ═══════════════════════════════════════════
+function referralBonusCoins() {
+  const raw = db.prepare("SELECT value FROM settings WHERE key='referral_bonus'").get()?.value;
+  const v = parseInt(raw ?? '10', 10);
+  return Number.isFinite(v) && v >= 0 ? v : 10;
+}
+
+function ensureReferralCode(user) {
+  if (!user) return null;
+  if (user.referral_code) return user.referral_code;
+  let code = null;
+  for (let i = 0; i < 25 && !code; i++) {
+    const candidate = 'ZR' + crypto.randomBytes(3).toString('hex').toUpperCase();
+    if (!db.prepare('SELECT 1 FROM users WHERE referral_code=?').get(candidate)) code = candidate;
+  }
+  if (!code) return null;
+  try {
+    db.prepare('UPDATE users SET referral_code=? WHERE id=?').run(code, user.id);
+    return code;
+  } catch (e) {
+    return null;
+  }
+}
+
+function getBotUsername() {
+  const fromDb = db.prepare("SELECT value FROM settings WHERE key='telegram_bot_username'").get()?.value;
+  return String(fromDb || process.env.TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, '');
+}
+
+function referralLinkFor(code) {
+  const botUsername = getBotUsername();
+  if (!botUsername || !code) return null;
+  return `https://t.me/${botUsername}?start=ref_${code}`;
+}
+
+/**
+ * Naya user referral link se aaya to bonus credit karo.
+ * Idempotent hai — ek user sirf ek hi baar count hota hai (UNIQUE + referred_by check).
+ */
+function creditReferral(newUser, codeInput) {
+  try {
+    if (!newUser) return null;
+    const fresh = db.prepare('SELECT id, telegram_id, referred_by FROM users WHERE id=?').get(newUser.id);
+    if (!fresh || fresh.referred_by) return null;
+
+    let code = String(codeInput || '').trim().replace(/^ref[_-]/i, '').toUpperCase();
+    let referrer = code ? db.prepare('SELECT id, coins, username FROM users WHERE UPPER(referral_code)=?').get(code) : null;
+
+    if (!referrer && fresh.telegram_id) {
+      const pending = db.prepare('SELECT * FROM referral_pending WHERE chat_id=?').get(String(fresh.telegram_id));
+      if (pending) {
+        referrer = db.prepare('SELECT id, coins, username FROM users WHERE id=?').get(pending.referrer_id);
+        code = pending.code;
+      }
+    }
+    if (!referrer || Number(referrer.id) === Number(fresh.id)) return null;
+
+    const bonus = referralBonusCoins();
+    const inserted = db.prepare(
+      'INSERT OR IGNORE INTO referrals(referrer_id,referred_user_id,code,bonus) VALUES(?,?,?,?)'
+    ).run(referrer.id, fresh.id, code || '', bonus);
+    if (!inserted.changes) return null;
+
+    db.prepare('UPDATE users SET referred_by=? WHERE id=? AND referred_by IS NULL').run(referrer.id, fresh.id);
+    if (bonus > 0) {
+      db.prepare('UPDATE users SET coins = coins + ?, referral_earned = COALESCE(referral_earned,0) + ? WHERE id=?')
+        .run(bonus, bonus, referrer.id);
+    }
+    if (fresh.telegram_id) db.prepare('DELETE FROM referral_pending WHERE chat_id=?').run(String(fresh.telegram_id));
+
+    sendLogEvent('referral_credited', { referrer_id: referrer.id, referred_user_id: fresh.id, code, bonus })
+      .catch?.(() => {});
+    return { referrer_id: referrer.id, bonus, code };
+  } catch (error) {
+    console.error('[referral] credit failed:', error.message);
+    return null;
+  }
+}
+
 app.get('/api/me', requireAuth, (req, res) => {
   if (req.session.isAdmin === true) return res.json({ isAdmin: true, username: req.session.username || 'admin' });
   const user = db.prepare(`
@@ -872,6 +957,106 @@ app.post('/api/me/telegram', requireAuth, (req, res) => {
   if (!telegram_id) return res.json({ error: 'telegram_id required' });
   db.prepare('UPDATE users SET telegram_id=? WHERE id=?').run(String(telegram_id), req.session.userId);
   res.json({ success: true });
+});
+
+// ── Panel ke liye public config (sirf safe/branding keys) ──
+app.get('/api/public-config', (req, res) => {
+  try {
+    const read = (key, fallback = '') => {
+      const v = db.prepare('SELECT value FROM settings WHERE key=?').get(key)?.value;
+      return (v === undefined || v === null || v === '') ? fallback : v;
+    };
+    const supportUser = String(read('telegram_support_user') || '').trim().replace(/^@/, '');
+    const adminId = String(read('telegram_admin_id') || process.env.TELEGRAM_ADMIN_CHAT_ID || '').trim();
+    res.json({
+      site_name: read('site_name', process.env.SITE_NAME || 'ZAYRO BUILD'),
+      coin_rate: parseFloat(read('coin_rate', '1')) || 1,
+      addon_fake_price: parseInt(read('addon_fake_price', '5'), 10) || 5,
+      domain_change_price: parseInt(read('domain_change_price', '10'), 10) || 10,
+      invite_code_change_price: parseInt(read('invite_code_change_price', '10'), 10) || 10,
+      referral_bonus: referralBonusCoins(),
+      support_url: supportUser ? `https://t.me/${supportUser}` : (adminId ? `tg://user?id=${adminId}` : ''),
+      channel_url: String(read('telegram_channel_url') || '').trim(),
+      bot_username: getBotUsername()
+    });
+  } catch (error) {
+    res.json({});
+  }
+});
+
+// ── User ka apna deposit history ──
+app.get('/api/me/coin-requests', requireAuth, (req, res) => {
+  if (req.session.isAdmin === true) return res.json([]);
+  try {
+    const rows = db.prepare(`
+      SELECT id, coins_requested, amount_paid, utr, status, screenshot_file, created_at
+      FROM coin_requests WHERE user_id=? ORDER BY id DESC LIMIT 40
+    `).all(req.session.userId);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Could not load deposit history' });
+  }
+});
+
+// ── Refer & Earn stats ──
+app.get('/api/me/referral', requireAuth, (req, res) => {
+  if (req.session.isAdmin === true) {
+    return res.json({ code: null, link: null, invited_count: 0, pending_count: 0, earned_coins: 0, recent: [], bonus: referralBonusCoins() });
+  }
+  try {
+    const user = db.prepare('SELECT id, telegram_id, referral_code, referral_earned FROM users WHERE id=?').get(req.session.userId);
+    if (!user) return res.status(401).json({ error: 'Login required' });
+    const code = ensureReferralCode(user);
+    const recent = db.prepare(`
+      SELECT r.code, r.bonus, r.created_at,
+             COALESCE(NULLIF(u.first_name,''), NULLIF(u.tg_username,''), NULLIF(u.username,''), 'User') AS name
+      FROM referrals r JOIN users u ON u.id=r.referred_user_id
+      WHERE r.referrer_id=? ORDER BY r.id DESC LIMIT 10
+    `).all(user.id);
+    const totals = db.prepare(`
+      SELECT COUNT(*) AS invited, COALESCE(SUM(bonus),0) AS earned FROM referrals WHERE referrer_id=?
+    `).get(user.id);
+    const pending = db.prepare('SELECT COUNT(*) AS c FROM referral_pending WHERE referrer_id=?').get(user.id);
+    res.json({
+      code,
+      link: referralLinkFor(code),
+      invited_count: Number(totals.invited || 0),
+      pending_count: Number(pending.c || 0),
+      earned_coins: Number(user.referral_earned || totals.earned || 0),
+      bonus: referralBonusCoins(),
+      recent: recent.map(r => ({ name: r.name, bonus: r.bonus, created_at: r.created_at }))
+    });
+  } catch (error) {
+    console.error('[referral] stats failed:', error.message);
+    res.status(500).json({ error: 'Could not load referral data' });
+  }
+});
+
+// ── User ke apne fake builds (primary fake + extra fake sites) ──
+app.get('/api/me/fake-sites', requireAuth, (req, res) => {
+  if (req.session.isAdmin === true) return res.json([]);
+  try {
+    const primary = db.prepare(`
+      SELECT o.id, o.id AS order_id, o.app_name, o.status, o.created_at,
+             o.fake_register_url AS register_url, o.fake_apk_file AS apk_file, 'primary' AS kind
+      FROM orders o
+      WHERE o.user_id=? AND (o.fake_apk_file IS NOT NULL OR o.fake_register_url IS NOT NULL)
+      ORDER BY o.id DESC
+    `).all(req.session.userId);
+
+    const extra = db.prepare(`
+      SELECT fs.id, fs.order_id, o.app_name, fs.status, fs.created_at,
+             fs.register_url, fs.apk_file, 'extra' AS kind
+      FROM order_fake_sites fs JOIN orders o ON o.id=fs.order_id
+      WHERE o.user_id=?
+      ORDER BY fs.id DESC
+    `).all(req.session.userId);
+
+    res.json([...primary, ...extra]);
+  } catch (error) {
+    console.error('[fake-site] list failed:', error.message);
+    res.status(500).json({ error: 'Could not load fake builds' });
+  }
 });
 
 // ═══════════════════════════════════════════
@@ -1007,9 +1192,10 @@ for (const m of ['put', 'patch', 'delete']) {
 
 app.get('/api/designs', (req, res) => {
   const designs = db.prepare(`
-    SELECT id,name,description,price_coins,original_price_coins,fake_price_coins,
-           category,preview_image,preview_video
-    FROM designs WHERE active=1 ORDER BY id DESC
+    SELECT d.id,d.name,d.description,d.price_coins,d.original_price_coins,d.fake_price_coins,
+           d.category,d.preview_image,d.preview_video,
+           (SELECT COUNT(*) FROM orders o WHERE o.design_id=d.id) AS orders_count
+    FROM designs d WHERE d.active=1 ORDER BY d.id DESC
   `).all().map(d => tokenizeDesignMedia(withPreviewImages(d)));
   res.json(designs);
 });
@@ -3279,8 +3465,10 @@ app.get('/api/admin/android-project/status', requireAdmin, (req, res) => {
 });
 
 // ── Serve frontend pages ──
+// Admin panel ab wahi SPA hai (Admin tab) — pehle yahan public/admin/index.html
+// maanga jaata tha jo repo me hai hi nahi, isliye /admin 404 de raha tha.
 app.get('/admin*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

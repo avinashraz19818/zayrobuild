@@ -1,527 +1,336 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import {
+  Shield, Users, CheckCircle, XCircle, RefreshCw, Settings, Coins, Package, Lock,
+  Gauge, TrendingUp, Save, Plus, RotateCcw, Server, Bell
+} from 'lucide-react';
 import { useToast } from '../components/Toast';
-import { Shield, Users, CheckCircle, XCircle, RefreshCw, Settings, Coins, Box, Check, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { EmptyState, Loader, Notice, SectionHead, Sheet, Stat, StatusPill } from '../components/ui';
+import { admin, api, fmtDate, displayName } from '../lib/api';
 
-export default function AdminView() {
+const TABS = [
+  { key: 'overview', label: 'Overview', icon: Gauge },
+  { key: 'requests', label: 'Coin requests', icon: Coins },
+  { key: 'orders', label: 'Orders', icon: Package },
+  { key: 'users', label: 'Users', icon: Users },
+  { key: 'settings', label: 'Settings', icon: Settings }
+];
+
+const SETTING_FIELDS = [
+  { key: 'site_name', label: 'Store name', type: 'text' },
+  { key: 'site_url', label: 'Site URL', type: 'text' },
+  { key: 'upi_id', label: 'UPI ID', type: 'text' },
+  { key: 'coin_rate', label: 'Coin rate (₹ per coin)', type: 'text' },
+  { key: 'addon_fake_price', label: 'Fake addon price (coins)', type: 'text' },
+  { key: 'domain_change_price', label: 'Domain change price (coins)', type: 'text' },
+  { key: 'invite_code_change_price', label: 'Invite change price (coins)', type: 'text' },
+  { key: 'telegram_support_user', label: 'Support username', type: 'text' },
+  { key: 'telegram_channel_url', label: 'Channel URL', type: 'text' }
+];
+
+function AdminLogin({ onDone }) {
   const { addToast } = useToast();
-  const [activeTab, setActiveTab] = useState('requests'); // 'requests' | 'users' | 'orders' | 'settings'
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const [stats, setStats] = useState(null);
-  const [requests, setRequests] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [settings, setSettings] = useState({});
-  const [loading, setLoading] = useState(false);
-
-  // Coin Adjustment Modal
-  const [coinModalUser, setCoinModalUser] = useState(null);
-  const [coinAmount, setCoinAmount] = useState(100);
-
-  const fetchStats = async () => {
-    try {
-      const res = await fetch('/api/admin/dashboard');
-      if (res.ok) {
-        const data = await res.json();
-        setStats(data);
-      }
-    } catch (_) {}
-  };
-
-  const fetchRequests = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/admin/coin-requests');
-      if (res.ok) {
-        const data = await res.json();
-        setRequests(data.requests || data || []);
-      }
-    } catch (_) {}
-    finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/admin/users');
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data.users || data || []);
-      }
-    } catch (_) {}
-    finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchOrders = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/admin/orders');
-      if (res.ok) {
-        const data = await res.json();
-        setOrders(data.orders || data || []);
-      }
-    } catch (_) {}
-    finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSettings = async () => {
-    try {
-      const res = await fetch('/api/admin/settings');
-      if (res.ok) {
-        const data = await res.json();
-        setSettings(data.settings || data || {});
-      }
-    } catch (_) {}
-  };
-
-  useEffect(() => {
-    fetchStats();
-    if (activeTab === 'requests') fetchRequests();
-    if (activeTab === 'users') fetchUsers();
-    if (activeTab === 'orders') fetchOrders();
-    if (activeTab === 'settings') fetchSettings();
-  }, [activeTab]);
-
-  const handleApproveRequest = async (id) => {
-    try {
-      const res = await fetch(`/api/admin/coin-requests/${id}/approve`, { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to approve request');
-      addToast('Coin request approved successfully!', 'success');
-      fetchRequests();
-      fetchStats();
-    } catch (err) {
-      addToast(err.message, 'error');
-    }
-  };
-
-  const handleRejectRequest = async (id) => {
-    try {
-      const res = await fetch(`/api/admin/coin-requests/${id}/reject`, { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to reject request');
-      addToast('Coin request rejected', 'info');
-      fetchRequests();
-      fetchStats();
-    } catch (err) {
-      addToast(err.message, 'error');
-    }
-  };
-
-  const handleAdjustCoins = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!coinModalUser) return;
+    setBusy(true);
     try {
-      const res = await fetch(`/api/admin/users/${coinModalUser.id}/coins`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: parseInt(coinAmount, 10) })
-      });
-      if (!res.ok) throw new Error('Failed to adjust coins');
-      addToast(`Adjusted ${coinAmount} coins for ${coinModalUser.username}`, 'success');
-      setCoinModalUser(null);
-      fetchUsers();
+      await api.post('/api/admin/login', { username: username.trim(), password });
+      addToast('Admin session started', 'success');
+      onDone?.();
     } catch (err) {
-      addToast(err.message, 'error');
-    }
-  };
-
-  const handleRebuildOrder = async (id) => {
-    try {
-      const res = await fetch(`/api/admin/orders/${id}/rebuild`, { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to trigger rebuild');
-      addToast('Build queue triggered with Flutter Engine!', 'success');
-      fetchOrders();
-    } catch (err) {
-      addToast(err.message, 'error');
-    }
-  };
-
-  const handleSaveSettings = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await fetch('/api/admin/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
-      });
-      if (!res.ok) throw new Error('Failed to save settings');
-      addToast('System settings saved successfully!', 'success');
-    } catch (err) {
-      addToast(err.message, 'error');
-    }
+      addToast(err.message || 'Invalid credentials', 'error');
+    } finally { setBusy(false); }
   };
 
   return (
-    <div style={{ maxWidth: 1300, margin: '0 auto', padding: '32px 24px' }}>
-      {/* Admin Title */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            background: 'rgba(255, 84, 112, 0.15)',
-            border: '1px solid rgba(255, 84, 112, 0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--danger)'
-          }}>
-            <Shield size={24} />
-          </div>
-          <div>
-            <h2 style={{ fontSize: 24, fontWeight: 800, color: '#fff' }}>
-              Admin Control Center
-            </h2>
-            <p style={{ fontSize: 13, color: 'var(--dim)' }}>
-              Manage users, approve payments, and control build queues
-            </p>
-          </div>
+    <div className="card card-pad stack gap-12" style={{ maxWidth: 420, margin: '30px auto' }}>
+      <span className="row-ico danger" style={{ width: 46, height: 46, borderRadius: 15 }}><Lock size={20} /></span>
+      <div>
+        <div className="sheet-title">Admin access</div>
+        <div className="sheet-sub">Sirf admin credentials se panel khulega.</div>
+      </div>
+      <form className="stack gap-12" onSubmit={submit}>
+        <div className="field">
+          <span className="label">Username</span>
+          <input className="input" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
         </div>
+        <div className="field">
+          <span className="label">Password</span>
+          <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+        </div>
+        <button className="btn btn-primary btn-block" disabled={busy}>{busy ? 'Checking…' : 'Unlock admin panel'}</button>
+      </form>
+    </div>
+  );
+}
 
-        {/* Tab selector */}
-        <div style={{
-          display: 'flex',
-          background: 'rgba(10, 8, 24, 0.8)',
-          padding: 4,
-          borderRadius: 12,
-          border: '1px solid var(--border)'
-        }}>
-          {[
-            { key: 'requests', label: 'Payment Queue', icon: Coins },
-            { key: 'users', label: 'Users', icon: Users },
-            { key: 'orders', label: 'Build Orders', icon: Box },
-            { key: 'settings', label: 'Settings', icon: Settings }
-          ].map(t => {
-            const Icon = t.icon;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setActiveTab(t.key)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '8px 14px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: activeTab === t.key ? 'var(--violet)' : 'transparent',
-                  color: activeTab === t.key ? '#fff' : 'var(--dim)',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <Icon size={14} />
-                <span>{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
+export default function AdminView() {
+  const { addToast } = useToast();
+  const { isAdmin, refreshUser } = useAuth();
+  const [tab, setTab] = useState('overview');
+  const [unlocked, setUnlocked] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [recent, setRecent] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [settings, setSettings] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [coinUser, setCoinUser] = useState(null);
+  const [coinDelta, setCoinDelta] = useState(100);
+  const [settingsDraft, setSettingsDraft] = useState({});
+
+  const loadStats = async () => {
+    try {
+      const data = await admin.dashboard();
+      setStats(data?.stats || null);
+      setRecent(data?.recent_orders || []);
+      setUnlocked(true);
+    } catch (_) { setUnlocked(false); }
+  };
+
+  const loadTab = async (which) => {
+    setLoading(true);
+    try {
+      if (which === 'requests') {
+        const data = await admin.coinRequests();
+        setRequests(data?.requests || data || []);
+      } else if (which === 'orders') {
+        const data = await admin.orders();
+        setOrders(data?.orders || data || []);
+      } else if (which === 'users') {
+        const data = await admin.users();
+        setUsers(data?.users || data || []);
+      } else if (which === 'settings') {
+        const data = await admin.settings();
+        const flat = data?.settings || data || {};
+        setSettings(flat);
+        setSettingsDraft(flat);
+      }
+    } catch (err) {
+      addToast(err.message || 'Load failed', 'error');
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { if (isAdmin) loadStats(); /* eslint-disable-next-line */ }, [isAdmin]);
+  useEffect(() => { if (isAdmin) loadTab(tab); /* eslint-disable-next-line */ }, [tab, isAdmin]);
+
+  if (!isAdmin) {
+    return (
+      <EmptyState
+        icon={Shield}
+        title="Admin panel locked"
+        text="Ye area sirf admin ke liye hai. Neeche admin credentials se unlock karein."
+        action={<AdminLogin onDone={() => { refreshUser(); setTimeout(loadStats, 300); }} />}
+      />
+    );
+  }
+
+  const act = async (fn, okMsg) => {
+    try { await fn(); addToast(okMsg, 'success'); } catch (err) { addToast(err.message || 'Action failed', 'error'); }
+  };
+
+  const saveAllSettings = async () => {
+    const keys = SETTING_FIELDS.map((f) => f.key);
+    try {
+      const payload = {};
+      keys.forEach((k) => { if (settingsDraft[k] !== undefined) payload[k] = settingsDraft[k]; });
+      await api.post('/api/admin/settings', payload);
+      addToast('Settings saved', 'success');
+      loadTab('settings');
+    } catch (err) { addToast(err.message || 'Save failed', 'error'); }
+  };
+
+  return (
+    <>
+      <SectionHead
+        icon={Shield}
+        title="Admin panel"
+        sub="Store, users, orders aur payments — sab ek jagah"
+        action={<button className="btn btn-soft btn-sm" onClick={() => { loadStats(); loadTab(tab); }}><RefreshCw size={13} />Refresh</button>}
+      />
+
+      <div className="pill-row">
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          return (
+            <button key={t.key} className={`pill ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>
+              <Icon size={13} /> {t.label}
+              {t.key === 'requests' && stats?.pending_coin_requests > 0 && <span className="chip chip-danger" style={{ padding: '1px 6px' }}>{stats.pending_coin_requests}</span>}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Tab: Coin Requests */}
-      {activeTab === 'requests' && (
-        <div className="glass-panel" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>Pending Coin Top-Up Requests</h3>
-            <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={fetchRequests}>
-              <RefreshCw size={13} /> Refresh
-            </button>
+      {loading && <Loader label="Data load ho raha hai…" />}
+
+      {tab === 'overview' && stats && (
+        <>
+          <div className="stat-grid">
+            <Stat value={stats.total_users} label="Users" />
+            <Stat value={stats.users_today} label="New today" />
+            <Stat value={stats.total_orders} label="Orders" />
+            <Stat value={stats.completed_orders} label="Completed" />
+            <Stat value={stats.pending_orders + stats.building_orders} label="In queue" />
+            <Stat value={stats.failed_orders} label="Failed" />
+            <Stat value={stats.total_apks_built} label="APKs built" />
+            <Stat value={stats.fake_apks_built} label="Fake APKs" />
+            <Stat value={stats.total_user_coins} label="Coins in wallets" />
+            <Stat value={stats.coins_spent_total} label="Coins spent" />
+            <Stat value={stats.pending_coin_requests} label="Pending deposits" />
+            <Stat value={`₹${stats.pending_coin_amount}`} label="Amount pending" />
           </div>
 
-          {requests.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--dim)' }}>
-              No pending coin requests in queue.
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--dim)' }}>
-                    <th style={{ padding: '12px 8px' }}>User ID</th>
-                    <th style={{ padding: '12px 8px' }}>Coins</th>
-                    <th style={{ padding: '12px 8px' }}>Amount (INR)</th>
-                    <th style={{ padding: '12px 8px' }}>UTR / Reference</th>
-                    <th style={{ padding: '12px 8px' }}>Screenshot</th>
-                    <th style={{ padding: '12px 8px' }}>Status</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map(r => (
-                    <tr key={r.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '14px 8px', color: '#fff', fontWeight: 600 }}>#{r.user_id}</td>
-                      <td style={{ padding: '14px 8px', color: 'var(--gold)', fontWeight: 700 }}>+{r.coins_requested}</td>
-                      <td style={{ padding: '14px 8px' }}>₹{r.amount_paid}</td>
-                      <td style={{ padding: '14px 8px', fontFamily: "'JetBrains Mono', monospace" }}>{r.utr}</td>
-                      <td style={{ padding: '14px 8px' }}>
-                        {r.screenshot_file ? (
-                          <a href={`/uploads/${r.screenshot_file}`} target="_blank" rel="noreferrer" style={{ color: 'var(--cyan)' }}>
-                            View Proof
-                          </a>
-                        ) : 'None'}
-                      </td>
-                      <td style={{ padding: '14px 8px' }}>
-                        <span style={{
-                          padding: '3px 8px',
-                          borderRadius: 8,
-                          background: r.status === 'approved' ? 'rgba(77,245,180,0.15)' : r.status === 'rejected' ? 'rgba(255,84,112,0.15)' : 'rgba(255,203,92,0.15)',
-                          color: r.status === 'approved' ? 'var(--ok)' : r.status === 'rejected' ? 'var(--danger)' : 'var(--gold)',
-                          fontWeight: 600
-                        }}>
-                          {r.status?.toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px 8px', textAlign: 'right' }}>
-                        {r.status === 'pending' && (
-                          <div style={{ display: 'inline-flex', gap: 6 }}>
-                            <button
-                              onClick={() => handleApproveRequest(r.id)}
-                              style={{
-                                background: 'rgba(77, 245, 180, 0.2)',
-                                border: '1px solid var(--ok)',
-                                borderRadius: 8,
-                                padding: '6px 12px',
-                                color: 'var(--ok)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                fontSize: 12,
-                                fontWeight: 600
-                              }}
-                            >
-                              <Check size={14} /> Approve
-                            </button>
-                            <button
-                              onClick={() => handleRejectRequest(r.id)}
-                              style={{
-                                background: 'rgba(255, 84, 112, 0.2)',
-                                border: '1px solid var(--danger)',
-                                borderRadius: 8,
-                                padding: '6px 12px',
-                                color: 'var(--danger)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                fontSize: 12,
-                                fontWeight: 600
-                              }}
-                            >
-                              <X size={14} /> Reject
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Tab: Users */}
-      {activeTab === 'users' && (
-        <div className="glass-panel" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>User Accounts ({users.length})</h3>
-            <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={fetchUsers}>
-              <RefreshCw size={13} /> Refresh
-            </button>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--dim)' }}>
-                  <th style={{ padding: '12px 8px' }}>ID</th>
-                  <th style={{ padding: '12px 8px' }}>Username</th>
-                  <th style={{ padding: '12px 8px' }}>Email</th>
-                  <th style={{ padding: '12px 8px' }}>Coin Balance</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '14px 8px', color: 'var(--dim)' }}>#{u.id}</td>
-                    <td style={{ padding: '14px 8px', color: '#fff', fontWeight: 600 }}>{u.username}</td>
-                    <td style={{ padding: '14px 8px', color: 'var(--dim)' }}>{u.email}</td>
-                    <td style={{ padding: '14px 8px', color: 'var(--gold)', fontWeight: 700 }}>{u.coins} Coins</td>
-                    <td style={{ padding: '14px 8px', textAlign: 'right' }}>
-                      <button
-                        onClick={() => {
-                          setCoinModalUser(u);
-                          setCoinAmount(100);
-                        }}
-                        className="btn-secondary"
-                        style={{ padding: '6px 12px', fontSize: 12 }}
-                      >
-                        Adjust Coins
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Tab: Orders */}
-      {activeTab === 'orders' && (
-        <div className="glass-panel" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>All Build Orders ({orders.length})</h3>
-            <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={fetchOrders}>
-              <RefreshCw size={13} /> Refresh
-            </button>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--dim)' }}>
-                  <th style={{ padding: '12px 8px' }}>ID</th>
-                  <th style={{ padding: '12px 8px' }}>App Name</th>
-                  <th style={{ padding: '12px 8px' }}>User</th>
-                  <th style={{ padding: '12px 8px' }}>Package</th>
-                  <th style={{ padding: '12px 8px' }}>Status</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map(o => (
-                  <tr key={o.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '14px 8px', color: 'var(--dim)' }}>#{o.id}</td>
-                    <td style={{ padding: '14px 8px', color: '#fff', fontWeight: 600 }}>{o.app_name}</td>
-                    <td style={{ padding: '14px 8px' }}>User #{o.user_id}</td>
-                    <td style={{ padding: '14px 8px', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{o.package_name}</td>
-                    <td style={{ padding: '14px 8px' }}>
-                      <span style={{
-                        padding: '3px 8px',
-                        borderRadius: 8,
-                        background: o.status === 'ready' ? 'rgba(77,245,180,0.15)' : 'rgba(255,203,92,0.15)',
-                        color: o.status === 'ready' ? 'var(--ok)' : 'var(--gold)',
-                        fontWeight: 600
-                      }}>
-                        {o.status?.toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 8px', textAlign: 'right' }}>
-                      <button
-                        onClick={() => handleRebuildOrder(o.id)}
-                        className="btn-primary"
-                        style={{ padding: '6px 12px', fontSize: 12 }}
-                      >
-                        Rebuild
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Tab: Settings */}
-      {activeTab === 'settings' && (
-        <div className="glass-panel" style={{ padding: 28, maxWidth: 600 }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 18 }}>System Configuration</h3>
-          <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--dim)', marginBottom: 6 }}>
-                UPI ID FOR PAYMENTS
-              </label>
-              <input
-                type="text"
-                className="input-field"
-                value={settings.upi_id || ''}
-                onChange={(e) => setSettings({ ...settings, upi_id: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--dim)', marginBottom: 6 }}>
-                COIN CONVERSION RATE (INR PER COIN)
-              </label>
-              <input
-                type="number"
-                className="input-field"
-                value={settings.coin_rate || '1'}
-                onChange={(e) => setSettings({ ...settings, coin_rate: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--dim)', marginBottom: 6 }}>
-                TELEGRAM BOT TOKEN
-              </label>
-              <input
-                type="text"
-                className="input-field"
-                value={settings.telegram_bot_token || ''}
-                onChange={(e) => setSettings({ ...settings, telegram_bot_token: e.target.value })}
-              />
-            </div>
-
-            <button type="submit" className="btn-primary" style={{ padding: 12, marginTop: 8 }}>
-              Save System Settings
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Coin Adjustment Modal */}
-      {coinModalUser && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(0,0,0,0.75)',
-          backdropFilter: 'blur(8px)',
-          padding: 16
-        }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: 400, padding: 24 }}>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>
-              Adjust Coins: {coinModalUser.username}
-            </h3>
-            <p style={{ fontSize: 13, color: 'var(--dim)', marginBottom: 16 }}>
-              Current balance: {coinModalUser.coins} Coins. Enter positive amount to add, negative to deduct.
-            </p>
-            <form onSubmit={handleAdjustCoins} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <input
-                type="number"
-                className="input-field"
-                value={coinAmount}
-                onChange={(e) => setCoinAmount(e.target.value)}
-                required
-              />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                <button type="button" className="btn-secondary" onClick={() => setCoinModalUser(null)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-gold">
-                  Update Coins
-                </button>
+          <SectionHead icon={TrendingUp} title="Recent orders" />
+          <div className="stack gap-8">
+            {recent.length === 0 && <Notice tone="info">Abhi koi order nahi aaya.</Notice>}
+            {recent.map((o) => (
+              <div key={o.id} className="row-item">
+                <span className="row-ico"><Package size={16} /></span>
+                <span className="row-main">
+                  <span className="row-title truncate">{o.app_name}</span>
+                  <span className="row-sub truncate">{o.user_name} · {o.design_name} · {fmtDate(o.created_at)}</span>
+                </span>
+                <span className="flex-row gap-6">
+                  <span className="chip">{o.apk_count} APK</span>
+                  <StatusPill status={o.status} />
+                </span>
               </div>
-            </form>
+            ))}
           </div>
+        </>
+      )}
+
+      {tab === 'requests' && (
+        <div className="stack gap-10">
+          {requests.length === 0 && !loading && <EmptyState icon={Coins} title="Koi coin request nahi" text="Users jab UPI payment submit karte hain, requests yahan aati hain." />}
+          {requests.map((r) => (
+            <article key={r.id} className="card card-pad stack gap-10">
+              <div className="flex-row between wrap gap-10">
+                <div>
+                  <div className="row-title">{r.coins_requested} coins · ₹{r.amount_paid}</div>
+                  <div className="row-sub">User #{r.user_id} · UTR {r.utr} · {fmtDate(r.created_at)}</div>
+                </div>
+                <StatusPill status={r.status === 'approved' ? 'done' : r.status === 'rejected' ? 'failed' : 'pending'} />
+              </div>
+              {r.screenshot_file && (
+                <a className="btn btn-soft btn-xs" href={`/api/files/${encodeURIComponent(r.screenshot_file)}`} target="_blank" rel="noreferrer">
+                  View payment screenshot
+                </a>
+              )}
+              {r.status === 'pending' && (
+                <div className="btn-group">
+                  <button className="btn btn-primary btn-sm" onClick={() => act(async () => { await admin.approve(r.id); await Promise.all([loadTab('requests'), loadStats()]); }, 'Request approved')}>
+                    <CheckCircle size={14} /> Approve
+                  </button>
+                  <button className="btn btn-soft btn-sm" onClick={() => act(async () => { await admin.reject(r.id); await Promise.all([loadTab('requests'), loadStats()]); }, 'Request rejected')}>
+                    <XCircle size={14} /> Reject
+                  </button>
+                </div>
+              )}
+            </article>
+          ))}
         </div>
       )}
-    </div>
+
+      {tab === 'orders' && (
+        <div className="stack gap-8">
+          {orders.length === 0 && !loading && <EmptyState icon={Package} title="Koi order nahi" text="Store se pehla order aate hi yahan list dikhegi." />}
+          {orders.map((o) => (
+            <div key={o.id} className="row-item">
+              <span className="row-ico"><Package size={16} /></span>
+              <span className="row-main">
+                <span className="row-title truncate">{o.app_name} <span className="muted">#{o.id}</span></span>
+                <span className="row-sub truncate">
+                  {o.user_name || o.username || `User #${o.user_id}`} · {o.design_name || 'Template'} · {fmtDate(o.created_at)}
+                </span>
+              </span>
+              <span className="flex-row gap-6">
+                {o.apk_file && <a className="btn btn-soft btn-xs" href={`/api/orders/${o.id}/download`}>APK</a>}
+                <button className="btn btn-ghost btn-xs" title="Rebuild" onClick={() => act(async () => { await admin.rebuild(o.id); }, 'Rebuild queued')}>
+                  <RotateCcw size={13} />
+                </button>
+                <StatusPill status={o.status} />
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'users' && (
+        <div className="stack gap-8">
+          {users.length === 0 && !loading && <EmptyState icon={Users} title="Koi user nahi" text="Telegram se pehla user aate hi list dikhegi." />}
+          {users.map((u) => (
+            <div key={u.id} className="row-item">
+              <span className="row-ico gold">{Number(u.coins || 0)}</span>
+              <span className="row-main">
+                <span className="row-title truncate">{displayName(u)} <span className="muted">@{u.username}</span></span>
+                <span className="row-sub truncate">
+                  {u.telegram_id ? `TG ${u.telegram_id}` : u.email} · {fmtDate(u.created_at)}
+                </span>
+              </span>
+              <button className="btn btn-soft btn-xs" onClick={() => { setCoinUser(u); setCoinDelta(100); }}>
+                <Plus size={12} /> Coins
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'settings' && (
+        <div className="card card-pad stack gap-12">
+          <div className="flex-row gap-8">
+            <Server size={15} color="var(--info)" />
+            <span className="row-title">Store settings</span>
+          </div>
+          {SETTING_FIELDS.map((f) => (
+            <div className="field" key={f.key}>
+              <span className="label">{f.label}</span>
+              <input
+                className="input"
+                value={settingsDraft[f.key] ?? ''}
+                placeholder={settings[f.key] ? '' : 'not set'}
+                onChange={(e) => setSettingsDraft((prev) => ({ ...prev, [f.key]: e.target.value }))}
+              />
+            </div>
+          ))}
+          <div className="flex-row gap-8">
+            <Bell size={13} color="var(--muted)" />
+            <span className="hint">Bot token, QR image aur announcements admin ke purane dashboard se manage hote hain.</span>
+          </div>
+          <button className="btn btn-primary" onClick={saveAllSettings}><Save size={15} /> Save settings</button>
+        </div>
+      )}
+
+      <Sheet
+        open={Boolean(coinUser)}
+        onClose={() => setCoinUser(null)}
+        icon={Coins}
+        title={coinUser ? `Adjust coins · ${displayName(coinUser)}` : ''}
+        subtitle="Positive number add karega, negative number kaatega"
+      >
+        <div className="field">
+          <span className="label">Coins delta</span>
+          <input className="input" type="number" value={coinDelta} onChange={(e) => setCoinDelta(parseInt(e.target.value, 10) || 0)} />
+        </div>
+        <div className="sheet-foot">
+          <button className="btn btn-soft" onClick={() => setCoinUser(null)}>Cancel</button>
+          <button
+            className="btn btn-primary grow"
+            onClick={() => act(async () => {
+              await admin.setCoins(coinUser.id, coinDelta);
+              await loadTab('users');
+              setCoinUser(null);
+            }, 'Coins updated')}
+          >
+            Apply {coinDelta >= 0 ? '+' : ''}{coinDelta} coins
+          </button>
+        </div>
+      </Sheet>
+    </>
   );
 }

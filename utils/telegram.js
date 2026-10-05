@@ -13,6 +13,12 @@ let apkDeliveryQueue = Promise.resolve();
 let _db  = null;
 
 // ── Telegram Premium Custom Emojis ──
+// NOTE (Telegram limitation): custom emoji entities sirf MESSAGE TEXT me chalte
+// hain — inline-keyboard button labels aur answerCallbackQuery toasts me nahi.
+// Isliye buttons ke andar plain emoji rakhe gaye hain, baaki sab message text me
+// PE.* (premium custom emoji) use hota hai. Custom emoji bhejne ke liye bot ke
+// naam par Fragment username hona chahiye; warna Telegram khud fallback emoji
+// (tg-emoji ke andar likha normal emoji) dikha deta hai — message fail nahi hota.
 const PE = {
   wave: '<tg-emoji emoji-id="5413694143601842851">👋</tg-emoji>',
   gift: '<tg-emoji emoji-id="5449800250032143374">🎁</tg-emoji>',
@@ -135,6 +141,14 @@ function initBot(token, db) {
 
     bot.getMe().then(me => {
       console.log(`[Telegram Bot] Connected and polling: @${me.username} (${me.first_name}) [ID: ${me.id}]`);
+      // Referral link ke liye bot username ko settings me save kar lo
+      // (panel isi se t.me/<bot>?start=ref_<code> link banata hai).
+      try {
+        if (me?.username && _db) {
+          _db.prepare("INSERT INTO settings(key,value) VALUES('telegram_bot_username',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")
+            .run(String(me.username));
+        }
+      } catch (_) {}
     }).catch(err => {
       console.error(`[Telegram Bot] Connection error:`, err.message);
     });
@@ -155,6 +169,29 @@ function initBot(token, db) {
       const siteUrl   = getSiteUrl();
       const supportUrl = getSupportUrl();
       const channelUrl = getChannelUrl();
+
+      // ── Referral capture: /start ref_<code> ──
+      // Yahan sirf pending record hota hai; coins tab credit hote hain jab ye
+      // user pehli baar panel (Mini App) me login karta hai (server side).
+      let referralApplied = false;
+      const startMatch = /^\/start(?:@\w+)?\s+(\S+)/.exec(String(msg.text || '').trim());
+      const startPayload = startMatch ? startMatch[1] : '';
+      if (startPayload && /^ref[_-]/i.test(startPayload) && _db) {
+        try {
+          const code = startPayload.replace(/^ref[_-]/i, '').toUpperCase();
+          const referrer = _db.prepare('SELECT id, telegram_id FROM users WHERE UPPER(referral_code)=?').get(code);
+          if (referrer && String(referrer.telegram_id || '') !== chatId) {
+            _db.prepare(`
+              INSERT INTO referral_pending(chat_id,referrer_id,code,created_at)
+              VALUES(?,?,?,CURRENT_TIMESTAMP)
+              ON CONFLICT(chat_id) DO UPDATE SET referrer_id=excluded.referrer_id, code=excluded.code
+            `).run(chatId, referrer.id, code);
+            referralApplied = true;
+          }
+        } catch (e) {
+          console.error('[referral] start capture error:', e.message);
+        }
+      }
 
       let userCoins = 0;
       let userOrders = 0;
@@ -217,7 +254,7 @@ ${PE.fire} <b>Next-Gen Sideload & Auto-Bypass Engine:</b>
 • ${PE.rocket} <i>Universal DhaniWin & Multi-Game Compatible</i>
 • ${PE.broadcast} <i>Live Cloud Sync & Zero-Downtime Builds</i>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${PE.down} <b>Choose an option below to proceed:</b>`;
+${referralApplied ? `\n${PE.gift} <b>Referral applied:</b> <i>invite bonus aapke panel login par credit hoga.</i>\n` : ''}${PE.down} <b>Choose an option below to proceed:</b>`;
 
       // ── Bot API 9.4+ Colored Inline Buttons (Attached directly to message) ──
       const reply_markup = {
@@ -273,7 +310,7 @@ ${PE.down} <b>Choose an option below to proceed:</b>`;
 
         let txt = `${PE.mobile} <b>Your Recent Orders (${orders.length}):</b>\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
         orders.forEach(o => {
-          const st = o.status === 'done' ? `${PE.check} Ready` : o.status === 'failed' ? `❌ Failed` : `⏳ Building`;
+          const st = o.status === 'done' ? `${PE.check} Ready` : o.status === 'failed' ? `${PE.alert} Failed` : `${PE.dot} Building`;
           txt += `${PE.dot} <b>#${o.id} - ${escapeHtml(o.app_name)}</b>\n  Status: ${st} | ${PE.card} <code>${new Date(o.created_at).toLocaleDateString()}</code>\n\n`;
         });
         txt += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
@@ -782,7 +819,7 @@ ${PE.card} <b>Timestamp:</b> <code>${new Date().toLocaleString('en-IN', { timeZo
 ${PE.user} <b>User:</b> <code>${escapeHtml(data.username)}</code> (#${data.user_id})
 ${PE.crown} <b>App:</b> <code>${escapeHtml(data.app_name)}</code> (Order: <code>#${data.order_id}</code>)
 ${PE.lock} <b>Security:</b> <b>100% Antivirus Clean • Dex Protect X Hardened</b>
-${PE.check} <b>Status:</b> <b>Compiled & Archived ✅</b>
+${PE.check} <b>Status:</b> <b>Compiled & Archived</b> ${PE.check}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📦 <i>APK file(s) attached below for archive.</i>`;

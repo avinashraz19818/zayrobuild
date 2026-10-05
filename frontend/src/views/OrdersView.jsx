@@ -1,256 +1,149 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
+import {
+  Package, Download, Terminal, Radio, RefreshCw, ShieldCheck, Layers, Box, Globe, Lock
+} from 'lucide-react';
+import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
-import { Box, Download, Terminal, Radio, RefreshCw, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { EmptyState, Loader, SectionHead, StatusPill } from '../components/ui';
+import { fmtDate } from '../lib/api';
 
-export default function OrdersView({ onOpenLogs, onOpenLiveLinks, onViewCatalog }) {
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'done', label: 'Ready' },
+  { key: 'building', label: 'Building' },
+  { key: 'failed', label: 'Failed' }
+];
+
+export default function OrdersView({ onOpenLogs, onOpenLiveLinks, setTab }) {
+  const { orders, loading, refreshOrders } = useStore();
   const { user, openAuth } = useAuth();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [busy, setBusy] = useState(false);
 
-  const fetchOrders = async () => {
-    try {
-      const res = await fetch('/api/orders');
-      if (res.ok) {
-        const data = await res.json();
-        setOrders(data.orders || data || []);
-      }
-    } catch (_) {}
-    finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchOrders();
-      const interval = setInterval(fetchOrders, 4000);
-      return () => clearInterval(interval);
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
+  const visible = useMemo(() => {
+    if (filter === 'all') return orders;
+    if (filter === 'building') return orders.filter((o) => o.status === 'pending' || o.status === 'building');
+    return orders.filter((o) => o.status === filter);
+  }, [orders, filter]);
 
   if (!user) {
     return (
-      <div style={{ maxWidth: 800, margin: '80px auto', textAlign: 'center', padding: 24 }}>
-        <div style={{
-          width: 60,
-          height: 60,
-          borderRadius: 16,
-          background: 'rgba(139, 124, 255, 0.15)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 20px',
-          color: 'var(--violet)'
-        }}>
-          <Box size={28} />
-        </div>
-        <h2 style={{ fontSize: 24, fontWeight: 700, color: '#fff', marginBottom: 8 }}>
-          Sign In to Access Your Builds
-        </h2>
-        <p style={{ color: 'var(--dim)', marginBottom: 24 }}>
-          Log in with your account to view generated Flutter APKs, monitor live build logs, and manage dynamic link redirection.
-        </p>
-        <button className="btn-primary" onClick={() => openAuth('login')}>
-          Sign In Now
-        </button>
-      </div>
+      <EmptyState
+        icon={Lock}
+        title="Sign in to see your builds"
+        text="Telegram se open kiya hai to panel auto-login ho jaata hai. Warna username/password se sign in karein."
+        action={<button className="btn btn-primary" onClick={() => openAuth('login')}>Sign in</button>}
+      />
     );
   }
 
-  return (
-    <div style={{ maxWidth: 1300, margin: '0 auto', padding: '32px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-        <div>
-          <h2 style={{ fontSize: 26, fontWeight: 800, color: '#fff' }}>
-            My Generated Builds
-          </h2>
-          <p style={{ fontSize: 14, color: 'var(--dim)', marginTop: 4 }}>
-            Manage and download your signed Flutter APK binaries
-          </p>
-        </div>
+  const reload = async () => {
+    setBusy(true);
+    await refreshOrders();
+    setBusy(false);
+  };
 
-        <button
-          onClick={fetchOrders}
-          className="btn-secondary"
-          style={{ padding: '8px 14px', fontSize: 13 }}
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          <span>Refresh</span>
-        </button>
+  return (
+    <>
+      <SectionHead
+        icon={Package}
+        title="My Orders"
+        sub="Build status, live logs aur APK downloads — sab yahan"
+        action={
+          <button className="btn btn-soft btn-sm" onClick={reload} disabled={busy}>
+            <RefreshCw size={13} className={busy ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        }
+      />
+
+      <div className="pill-row">
+        {FILTERS.map((f) => (
+          <button key={f.key} className={`pill ${filter === f.key ? 'active' : ''}`} onClick={() => setFilter(f.key)}>
+            {f.label}
+            {f.key !== 'all' && (
+              <span style={{ opacity: 0.75 }}>
+                {f.key === 'building'
+                  ? orders.filter((o) => o.status === 'pending' || o.status === 'building').length
+                  : orders.filter((o) => o.status === f.key).length}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {loading && orders.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--dim)' }}>
-          Loading your build records...
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="glass-panel" style={{ textAlign: 'center', padding: '60px 24px' }}>
-          <Box size={40} color="var(--dim)" style={{ margin: '0 auto 16px' }} />
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 6 }}>
-            No Builds Generated Yet
-          </h3>
-          <p style={{ fontSize: 14, color: 'var(--dim)', maxWidth: 450, margin: '0 auto 20px' }}>
-            Choose a design template from our catalog and compile your first customized Flutter app.
-          </p>
-          <button className="btn-primary" onClick={onViewCatalog}>
-            Browse Templates
-          </button>
-        </div>
+      {loading ? (
+        <Loader label="Orders load ho rahe hain…" />
+      ) : visible.length === 0 ? (
+        <EmptyState
+          icon={Box}
+          title={orders.length === 0 ? 'Abhi koi build nahi hai' : 'Is filter me kuch nahi'}
+          text={orders.length === 0
+            ? 'Ek template choose karke apna pehla signed APK banayein — build queue me chala jaata hai.'
+            : 'Doosra filter try karein.'}
+          action={orders.length === 0
+            ? <button className="btn btn-primary" onClick={() => setTab('templates')}><Layers size={14} />Browse templates</button>
+            : null}
+        />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {orders.map(order => {
-            const isReady = order.status === 'ready';
-            const isBuilding = order.status === 'building' || order.status === 'pending';
-            const isFailed = order.status === 'failed';
-
-            return (
-              <div key={order.id} className="glass-panel" style={{ padding: 22 }}>
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 16
-                }}>
-                  {/* Left: App Info */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{
-                      width: 50,
-                      height: 50,
-                      borderRadius: 12,
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid var(--border)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      overflow: 'hidden'
-                    }}>
-                      {order.icon_file ? (
-                        <img src={`/uploads/${order.icon_file}`} alt="App Icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <Box size={24} color="var(--violet)" />
-                      )}
-                    </div>
-
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <h3 style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>
-                          {order.app_name}
-                        </h3>
-                        {/* Status Badge */}
-                        {isReady && (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            padding: '3px 8px',
-                            borderRadius: 12,
-                            background: 'rgba(77, 245, 180, 0.15)',
-                            color: 'var(--ok)',
-                            fontSize: 11,
-                            fontWeight: 700
-                          }}>
-                            <CheckCircle2 size={12} /> READY
-                          </span>
-                        )}
-                        {isBuilding && (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            padding: '3px 8px',
-                            borderRadius: 12,
-                            background: 'rgba(255, 203, 92, 0.15)',
-                            color: 'var(--gold)',
-                            fontSize: 11,
-                            fontWeight: 700
-                          }}>
-                            <RefreshCw size={12} className="animate-spin" /> COMPILING
-                          </span>
-                        )}
-                        {isFailed && (
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            padding: '3px 8px',
-                            borderRadius: 12,
-                            background: 'rgba(255, 84, 112, 0.15)',
-                            color: 'var(--danger)',
-                            fontSize: 11,
-                            fontWeight: 700
-                          }}>
-                            <AlertCircle size={12} /> FAILED
-                          </span>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 4, fontSize: 12, color: 'var(--dim)' }}>
-                        <span>Package: <strong style={{ color: '#fff' }}>{order.package_name}</strong></span>
-                        <span>•</span>
-                        <span>Engine: <strong style={{ color: 'var(--ok)' }}>Flutter</strong></span>
-                        <span>•</span>
-                        <span>Created: {new Date(order.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
+        <div className="stack gap-12">
+          {visible.map((order) => (
+            <article key={order.id} className="card card-pad stack gap-12">
+              <div className="flex-row gap-12" style={{ alignItems: 'flex-start' }}>
+                <span className="row-ico" style={{ width: 44, height: 44, borderRadius: 14 }}>
+                  <Radio size={19} />
+                </span>
+                <div className="grow">
+                  <div className="flex-row gap-8 wrap" style={{ marginBottom: 4 }}>
+                    <strong style={{ fontSize: 15, fontWeight: 800 }}>{order.app_name}</strong>
+                    <StatusPill status={order.status} />
+                    {order.live_link_enabled ? <span className="chip chip-ok"><ShieldCheck size={11} />Live link</span> : null}
                   </div>
-
-                  {/* Right Actions */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                    {/* Console Log Button */}
-                    <button
-                      className="btn-secondary"
-                      style={{ padding: '8px 14px', fontSize: 13 }}
-                      onClick={() => onOpenLogs(order.id)}
-                    >
-                      <Terminal size={14} />
-                      <span>Console Logs</span>
-                    </button>
-
-                    {/* Live Links Button */}
-                    <button
-                      className="btn-secondary"
-                      style={{ padding: '8px 14px', fontSize: 13 }}
-                      onClick={() => onOpenLiveLinks(order)}
-                    >
-                      <Radio size={14} color="var(--cyan)" />
-                      <span>Dynamic Links</span>
-                    </button>
-
-                    {/* Download Real APK */}
-                    {order.apk_file && (
-                      <a
-                        href={`/api/orders/${order.id}/download`}
-                        className="btn-primary"
-                        style={{ padding: '8px 16px', fontSize: 13, textDecoration: 'none' }}
-                        download
-                      >
-                        <Download size={14} />
-                        <span>Download APK</span>
-                      </a>
-                    )}
-
-                    {/* Download Fake APK */}
-                    {order.fake_apk_file && (
-                      <a
-                        href={`/api/orders/${order.id}/download-fake`}
-                        className="btn-secondary"
-                        style={{ padding: '8px 14px', fontSize: 13, textDecoration: 'none', borderColor: 'var(--cyan)', color: 'var(--cyan)' }}
-                        download
-                      >
-                        <Download size={14} />
-                        <span>Fake APK</span>
-                      </a>
-                    )}
+                  <div className="row-sub truncate">
+                    #{order.id} · {order.design_name || 'Template'} · {fmtDate(order.created_at)}
+                  </div>
+                  <div className="row-sub truncate mono" style={{ marginTop: 3, fontSize: 11 }}>
+                    {order.package_name}
                   </div>
                 </div>
+                <span className="chip chip-gold">{order.coins_spent} coins</span>
               </div>
-            );
-          })}
+
+              <div className="btn-group">
+                {order.apk_file && (
+                  <a className="btn btn-primary btn-sm" href={`/api/orders/${order.id}/download`} download>
+                    <Download size={14} /> Download APK
+                  </a>
+                )}
+                {order.fake_apk_file && (
+                  <a className="btn btn-soft btn-sm" href={`/api/orders/${order.id}/download-fake`} download>
+                    <Globe size={14} /> Fake APK
+                  </a>
+                )}
+                <button className="btn btn-soft btn-sm" onClick={() => onOpenLogs(order.id)}>
+                  <Terminal size={14} /> Logs
+                </button>
+                <button className="btn btn-outline btn-sm" onClick={() => onOpenLiveLinks(order)}>
+                  <Radio size={14} /> Dynamic links
+                </button>
+              </div>
+
+              {(order.status === 'pending' || order.status === 'building') && (
+                <div className="trust-strip" style={{ background: 'var(--warn-soft)', boxShadow: 'inset 0 0 0 1px rgba(251,191,36,.22)' }}>
+                  <RefreshCw size={14} className="animate-spin" color="var(--warn)" />
+                  <span>Build queue me hai — ready hone par yahin download button aa jaayega.</span>
+                </div>
+              )}
+              {order.status === 'failed' && (
+                <div className="trust-strip" style={{ background: 'var(--danger-soft)', boxShadow: 'inset 0 0 0 1px rgba(251,113,133,.25)' }}>
+                  <Terminal size={14} color="var(--danger)" />
+                  <span>Build fail hua — logs check karein ya support se contact karein.</span>
+                </div>
+              )}
+            </article>
+          ))}
         </div>
       )}
-    </div>
+    </>
   );
 }

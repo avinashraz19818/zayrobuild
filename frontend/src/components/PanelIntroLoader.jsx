@@ -1,42 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, Zap, Terminal, Activity, CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Boxes, ShieldCheck, Zap } from 'lucide-react';
+
+const STEPS = [
+  { at: 12, text: 'Store front load ho raha hai…' },
+  { at: 38, text: 'Templates sync ho rahe hain…' },
+  { at: 62, text: 'Wallet & session check…' },
+  { at: 86, text: 'Secure build engine ready…' },
+  { at: 100, text: 'Welcome to ZAYRO BUILD' }
+];
 
 export default function PanelIntroLoader({ onComplete }) {
   const [progress, setProgress] = useState(0);
-  const [statusText, setStatusText] = useState('INITIALIZING ZAYRO PROTOCOLS...');
-  const [fadeOut, setFadeOut] = useState(false);
+  const [status, setStatus] = useState(STEPS[0].text);
+  const [fade, setFade] = useState(false);
 
   useEffect(() => {
-    const statuses = [
-      { at: 15, text: 'BOOTING COMPILER SUBSYSTEMS...' },
-      { at: 40, text: 'SYNCHRONIZING CLOUD RTDB NODES...' },
-      { at: 65, text: 'CHECKING AES-256 NATIVE SECURITY...' },
-      { at: 88, text: 'CALIBRATING APPLICATION TEMPLATES...' },
-      { at: 99, text: 'SYSTEM READY // ACCESS GRANTED' }
-    ];
-
     let current = 0;
-    const interval = setInterval(() => {
-      current += Math.floor(Math.random() * 8) + 3;
+    const timer = setInterval(() => {
+      current = Math.min(100, current + Math.floor(Math.random() * 9) + 4);
+      setProgress(current);
+      const step = STEPS.filter((s) => current >= s.at).pop();
+      if (step) setStatus(step.text);
       if (current >= 100) {
-        current = 100;
-        setProgress(100);
-        setStatusText('SYSTEM READY // ACCESS GRANTED');
-        clearInterval(interval);
+        clearInterval(timer);
         setTimeout(() => {
-          setFadeOut(true);
-          setTimeout(() => {
-            if (onComplete) onComplete();
-          }, 500);
-        }, 300);
-      } else {
-        setProgress(current);
-        const match = statuses.filter(s => current >= s.at).pop();
-        if (match) setStatusText(match.text);
+          setFade(true);
+          setTimeout(() => onComplete?.(), 380);
+        }, 260);
       }
-    }, 45);
-
-    return () => clearInterval(interval);
+    }, 70);
+    return () => clearInterval(timer);
   }, [onComplete]);
 
   return (
@@ -44,141 +37,62 @@ export default function PanelIntroLoader({ onComplete }) {
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 99999,
-        background: '#070103',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        transition: 'opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s ease',
-        opacity: fadeOut ? 0 : 1,
-        pointerEvents: fadeOut ? 'none' : 'all',
-        transform: fadeOut ? 'scale(1.03)' : 'scale(1)'
+        zIndex: 500,
+        display: 'grid',
+        placeItems: 'center',
+        background: 'radial-gradient(900px 520px at 20% 0%, rgba(103,92,236,.32), transparent 60%), linear-gradient(180deg,#0d1024,#090b1c)',
+        transition: 'opacity .4s ease, transform .4s ease',
+        opacity: fade ? 0 : 1,
+        transform: fade ? 'scale(1.02)' : 'scale(1)',
+        pointerEvents: fade ? 'none' : 'auto'
       }}
     >
-      {/* Background Animated Cyber Grid */}
-      <div className="cyber-grid-bg" style={{ position: 'absolute', inset: 0, opacity: 0.25, pointerEvents: 'none' }} />
-
-      {/* Ambient Red Glow Spotlight */}
-      <div style={{
-        position: 'absolute',
-        width: 500,
-        height: 500,
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(239, 68, 68, 0.22) 0%, transparent 70%)',
-        filter: 'blur(50px)',
-        pointerEvents: 'none',
-        animation: 'pulse-slow 2.5s ease-in-out infinite'
-      }} />
-
-      {/* Center Radar / Reactor Core */}
-      <div style={{ position: 'relative', width: 140, height: 140, marginBottom: 32 }}>
-        {/* Outer Rotating Ring */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: '50%',
-          border: '2px dashed rgba(239, 68, 68, 0.4)',
-          animation: 'spin 8s linear infinite'
-        }} />
-
-        {/* Counter-Rotating Middle Ring */}
-        <div style={{
-          position: 'absolute',
-          inset: 12,
-          borderRadius: '50%',
-          border: '2px solid transparent',
-          borderTopColor: '#ef4444',
-          borderRightColor: '#ef4444',
-          boxShadow: '0 0 25px rgba(239, 68, 68, 0.5)',
-          animation: 'spin 3s linear infinite reverse'
-        }} />
-
-        {/* Central Core Shield Icon */}
-        <div style={{
-          position: 'absolute',
-          inset: 26,
-          borderRadius: 18,
-          background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.35) 0%, rgba(127, 29, 29, 0.5) 100%)',
-          border: '1px solid rgba(239, 68, 68, 0.6)',
-          backdropFilter: 'blur(10px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 0 30px rgba(239, 68, 68, 0.6), inset 0 0 15px rgba(239, 68, 68, 0.3)'
-        }}>
-          <Shield size={38} color="#ffffff" style={{ filter: 'drop-shadow(0 0 8px #ef4444)' }} />
+      <div style={{ textAlign: 'center', padding: 24, maxWidth: 380 }}>
+        <div
+          className="float-y"
+          style={{
+            width: 78,
+            height: 78,
+            margin: '0 auto 18px',
+            borderRadius: 24,
+            display: 'grid',
+            placeItems: 'center',
+            background: 'linear-gradient(140deg, var(--brand-2), var(--brand-3))',
+            boxShadow: '0 24px 60px -22px var(--brand-glow), inset 0 1px 0 rgba(255,255,255,.4)',
+            color: '#fff'
+          }}
+        >
+          <Boxes size={34} />
         </div>
-      </div>
 
-      {/* Brand Title */}
-      <div style={{ textAlign: 'center', marginBottom: 20, zIndex: 2 }}>
-        <h1 style={{
-          fontFamily: "'Orbitron', sans-serif",
-          fontSize: 26,
-          fontWeight: 900,
-          letterSpacing: '0.18em',
-          background: 'linear-gradient(135deg, #ffffff 40%, #fca5a5 70%, #ef4444 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          marginBottom: 6,
-          textShadow: '0 0 30px rgba(239, 68, 68, 0.4)'
-        }}>
-          ZAYRO BUILD
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
+          Zayro Build
         </h1>
-        <p style={{
-          fontSize: 11,
-          fontFamily: "'JetBrains Mono', monospace",
-          letterSpacing: '0.22em',
-          color: 'rgba(255, 200, 200, 0.7)',
-          textTransform: 'uppercase'
-        }}>
-          ADVANCED APPLICATION COMPILER
+        <p style={{ fontSize: 10.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 22 }}>
+          Premium APK Marketplace
         </p>
-      </div>
 
-      {/* Progress Bar Container */}
-      <div style={{
-        width: 320,
-        height: 6,
-        background: 'rgba(255, 255, 255, 0.08)',
-        borderRadius: 4,
-        overflow: 'hidden',
-        border: '1px solid rgba(239, 68, 68, 0.3)',
-        position: 'relative',
-        marginBottom: 16,
-        zIndex: 2,
-        boxShadow: '0 0 15px rgba(239, 68, 68, 0.2)'
-      }}>
-        <div style={{
-          height: '100%',
-          width: `${progress}%`,
-          background: 'linear-gradient(90deg, #dc2626 0%, #ef4444 70%, #f87171 100%)',
-          borderRadius: 4,
-          boxShadow: '0 0 15px #ef4444',
-          transition: 'width 0.08s ease-out'
-        }} />
-      </div>
+        <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,.08)', overflow: 'hidden', border: '1px solid var(--line)' }}>
+          <div
+            style={{
+              height: '100%',
+              width: `${progress}%`,
+              borderRadius: 99,
+              background: 'linear-gradient(90deg, var(--brand-3), var(--brand-2), var(--info))',
+              boxShadow: '0 0 16px var(--brand-glow)',
+              transition: 'width .1s linear'
+            }}
+          />
+        </div>
 
-      {/* Percentage & Status Text */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        width: 320,
-        fontSize: 12,
-        fontFamily: "'JetBrains Mono', monospace",
-        color: '#f87171',
-        zIndex: 2
-      }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: 0.9 }}>
-          <Activity size={13} className="animate-spin" />
-          <span style={{ letterSpacing: '0.05em' }}>{statusText}</span>
-        </span>
-        <span style={{ fontWeight: 700, color: '#ffffff', minWidth: 42, textAlign: 'right' }}>
-          {progress}%
-        </span>
+        <div className="flex-row between" style={{ marginTop: 10, fontSize: 11.5, color: 'var(--dim)' }}>
+          <span className="flex-row gap-6"><Zap size={12} color="var(--brand-2)" />{status}</span>
+          <b style={{ color: '#fff' }}>{progress}%</b>
+        </div>
+
+        <div className="flex-row gap-6" style={{ justifyContent: 'center', marginTop: 18, fontSize: 11, color: 'var(--muted)' }}>
+          <ShieldCheck size={12} color="var(--ok)" /> Secure session · AES-256 builds
+        </div>
       </div>
     </div>
   );

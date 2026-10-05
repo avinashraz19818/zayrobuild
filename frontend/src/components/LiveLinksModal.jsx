@@ -1,160 +1,101 @@
 import React, { useState } from 'react';
+import { Radio, Globe, Link2, ShieldCheck, RefreshCw } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
-import { X, Globe, Radio, Save, AlertCircle } from 'lucide-react';
+import { Sheet, Notice } from './ui';
+import { orders as ordersApi } from '../lib/api';
+
+const TYPES = [
+  { key: 'domain', label: 'Main domain', hint: 'Sirf domain badalna hai, register URL ka baaki part same rahega' },
+  { key: 'invite', label: 'Full invite code', hint: 'Poora register URL / invite code replace hoga' }
+];
 
 export default function LiveLinksModal({ order, isOpen, onClose, onUpdated }) {
+  const { refreshUser } = useAuth();
   const { addToast } = useToast();
-  const [newUrl, setNewUrl] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [type, setType] = useState('domain');
+  const [value, setValue] = useState('');
+  const [busy, setBusy] = useState(false);
 
   if (!isOpen || !order) return null;
 
-  const handleSubmit = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!newUrl.trim()) {
-      addToast('Please enter the new domain or register URL', 'error');
-      return;
-    }
-
-    setSubmitting(true);
+    if (!value.trim()) { addToast('Naya domain ya URL daalein', 'error'); return; }
+    setBusy(true);
     try {
-      const res = await fetch(`/api/orders/${order.id}/change-domain`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new_domain: newUrl.trim() })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update live links');
-
-      addToast('Live link updated! All installed APKs will switch dynamically.', 'success');
-      onUpdated();
-      onClose();
+      const res = await ordersApi.changeDomain(order.id, { new_register_url: value.trim(), change_type: type });
+      addToast(res?.message || 'Live links update ho gaye — installed APKs turant switch ho jaayenge.', 'success');
+      await refreshUser();
+      onUpdated?.(res);
+      setValue('');
+      onClose?.();
     } catch (err) {
-      addToast(err.message, 'error');
+      addToast(err.message || 'Link update failed', 'error');
     } finally {
-      setSubmitting(false);
+      setBusy(false);
     }
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 9999,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'rgba(0, 0, 0, 0.8)',
-      backdropFilter: 'blur(8px)',
-      padding: 16
-    }}>
-      <div className="glass-panel" style={{
-        width: '100%',
-        maxWidth: 480,
-        padding: 26,
-        position: 'relative'
-      }}>
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: 20,
-            right: 20,
-            background: 'rgba(255,255,255,0.06)',
-            border: 'none',
-            borderRadius: 8,
-            width: 32,
-            height: 32,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#aaa',
-            cursor: 'pointer'
-          }}
-        >
-          <X size={16} />
-        </button>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div style={{
-            width: 38,
-            height: 38,
-            borderRadius: 10,
-            background: 'rgba(110, 195, 255, 0.15)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--cyan)'
-          }}>
-            <Radio size={20} />
-          </div>
-          <div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>
-              Live Dynamic Links
-            </h3>
-            <p style={{ fontSize: 12, color: 'var(--dim)' }}>
-              App: {order.app_name}
-            </p>
-          </div>
-        </div>
-
-        <div style={{
-          background: 'rgba(110, 195, 255, 0.08)',
-          border: '1px solid rgba(110, 195, 255, 0.2)',
-          borderRadius: 12,
-          padding: 12,
-          display: 'flex',
-          gap: 10,
-          marginBottom: 18
-        }}>
-          <AlertCircle size={18} color="var(--cyan)" style={{ flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 12, color: '#c4e5ff', lineHeight: 1.5 }}>
-            <strong>Zero Re-install:</strong> Changing this updates the destination in all previously distributed APKs via Realtime Database!
-          </div>
-        </div>
-
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 12, color: 'var(--dim)', marginBottom: 4 }}>CURRENT DOMAIN / URL</div>
-          <div style={{
-            background: 'rgba(0,0,0,0.5)',
-            padding: '10px 12px',
-            borderRadius: 8,
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 13,
-            color: '#fff',
-            wordBreak: 'break-all'
-          }}>
-            {order.domain || order.register_url}
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--dim)', marginBottom: 6 }}>
-              NEW REGISTER URL OR DOMAIN
-            </label>
-            <input
-              type="text"
-              className="input-field"
-              placeholder="e.g. newdomain.com or https://newdomain.com/register"
-              value={newUrl}
-              onChange={(e) => setNewUrl(e.target.value)}
-              required
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
-            <button type="button" className="btn-secondary" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              <Save size={15} />
-              <span>{submitting ? 'Updating...' : 'Update Links Now'}</span>
-            </button>
-          </div>
-        </form>
+    <Sheet
+      open={isOpen}
+      onClose={onClose}
+      icon={Radio}
+      title="Dynamic live links"
+      subtitle={`Order #${order.id} · ${order.app_name}`}
+    >
+      <div className="trust-strip">
+        <ShieldCheck size={14} color="var(--ok)" />
+        <span>Link badalne ke baad <b>purane installed APKs bhi naya link use karte hain</b> — dobara build ki zaroorat nahi.</span>
       </div>
-    </div>
+
+      <div className="field">
+        <span className="label">Change type</span>
+        <div className="stack gap-8">
+          {TYPES.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className="row-item"
+              style={type === t.key ? { boxShadow: 'inset 0 0 0 1px var(--line-2)', background: 'var(--brand-soft)' } : undefined}
+              onClick={() => setType(t.key)}
+            >
+              <span className="row-ico">{t.key === 'domain' ? <Globe size={16} /> : <Link2 size={16} />}</span>
+              <span className="row-main">
+                <span className="row-title">{t.label}</span>
+                <span className="row-sub">{t.hint}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <form className="stack gap-12" onSubmit={submit}>
+        <div className="field">
+          <span className="label">{type === 'domain' ? 'Naya domain' : 'Naya register URL'}</span>
+          <input
+            className="input"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={type === 'domain' ? 'newdomain.com' : 'https://site.com/register?ref=abc'}
+            inputMode="url"
+          />
+          <span className="hint">Change karne par admin setting ke hisaab se coins kat-te hain.</span>
+        </div>
+
+        <Notice tone="info">
+          Current register link: <span className="mono">{order.register_url || '—'}</span>
+        </Notice>
+
+        <div className="sheet-foot" style={{ padding: 0 }}>
+          <button type="button" className="btn btn-soft" onClick={onClose}>Cancel</button>
+          <button type="submit" className="btn btn-primary grow" disabled={busy}>
+            {busy ? <RefreshCw size={15} className="animate-spin" /> : <Radio size={15} />}
+            {busy ? 'Updating…' : 'Update live link'}
+          </button>
+        </div>
+      </form>
+    </Sheet>
   );
 }

@@ -197,6 +197,40 @@ db.exec(`
   try { db.exec("ALTER TABLE users ADD COLUMN google_id TEXT"); } catch(e) {}
   try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)"); } catch(e) {}
   try { db.exec("ALTER TABLE orders ADD COLUMN app_name_style TEXT DEFAULT 'normal'"); } catch(e) {}
+
+  // ── Referral system (Refer & Earn) ───────────────────────────────────────
+  // users.referral_code: har user ka apna invite code (shareable link me jaata hai)
+  // users.referred_by  : jis user ne invite kiya tha
+  // users.referral_earned: total coins jo referrals se kamaye
+  try { db.exec("ALTER TABLE users ADD COLUMN referral_code TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN referred_by INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN referral_earned INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
+  try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code) WHERE referral_code IS NOT NULL"); } catch(e) {}
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS referrals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        referrer_id INTEGER NOT NULL,
+        referred_user_id INTEGER NOT NULL UNIQUE,
+        code TEXT NOT NULL,
+        bonus INTEGER NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(referrer_id) REFERENCES users(id),
+        FOREIGN KEY(referred_user_id) REFERENCES users(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id, id DESC);
+
+      -- Bot /start ref_<code> se aaya click — user ke pehle login par claim hota hai
+      CREATE TABLE IF NOT EXISTS referral_pending (
+        chat_id TEXT PRIMARY KEY,
+        referrer_id INTEGER NOT NULL,
+        code TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+  } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('referral_bonus','10')"); } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('telegram_bot_username','')"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('site_url','')"); } catch(e) {}
   // Canonical design category. Legacy type/java_type/variant columns remain for
   // build compatibility, but the admin now manages one clear category only.

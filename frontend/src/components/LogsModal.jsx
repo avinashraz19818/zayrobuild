@@ -1,181 +1,77 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Terminal, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Terminal, RefreshCw, Download, CheckCircle2, CircleAlert, Loader2 } from 'lucide-react';
+import { Sheet, StatusPill } from './ui';
+import { orders as ordersApi, fmtDate } from '../lib/api';
 
 export default function LogsModal({ orderId, isOpen, onClose }) {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(false);
   const logRef = useRef(null);
 
-  const fetchStatus = async () => {
-    if (!orderId) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/orders/${orderId}/status`);
-      if (res.ok) {
-        const data = await res.json();
-        setOrder(data.order || data);
-      }
-    } catch (_) {}
-    finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (isOpen && orderId) {
-      fetchStatus();
-      const interval = setInterval(fetchStatus, 3000);
-      return () => clearInterval(interval);
-    }
+    if (!isOpen || !orderId) return undefined;
+    let alive = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await ordersApi.status(orderId);
+        if (alive) setOrder(data?.order || data);
+      } catch (_) { /* silent */ }
+      finally { if (alive) setLoading(false); }
+    };
+    load();
+    const t = setInterval(load, 3000);
+    return () => { alive = false; clearInterval(t); };
   }, [isOpen, orderId]);
 
   useEffect(() => {
-    if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
-    }
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [order?.build_log]);
 
   if (!isOpen) return null;
 
-  const isReady = order?.status === 'ready';
-  const isFailed = order?.status === 'failed';
-  const isBuilding = order?.status === 'building' || order?.status === 'pending';
+  const building = order && (order.status === 'building' || order.status === 'pending');
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 9999,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'rgba(0, 0, 0, 0.8)',
-      backdropFilter: 'blur(8px)',
-      padding: 16
-    }}>
-      <div className="glass-panel" style={{
-        width: '100%',
-        maxWidth: 720,
-        height: '80vh',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: 24,
-        position: 'relative'
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingBottom: 16,
-          borderBottom: '1px solid var(--border)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 34,
-              height: 34,
-              borderRadius: 8,
-              background: 'rgba(139, 124, 255, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--violet)'
-            }}>
-              <Terminal size={18} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>
-                Build Console: {order?.app_name || `Build #${orderId}`}
-              </h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginTop: 2 }}>
-                <span style={{ color: 'var(--dim)' }}>Status:</span>
-                {isBuilding && (
-                  <span style={{ color: 'var(--gold)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <RefreshCw size={12} className="animate-spin" /> Compiling...
-                  </span>
-                )}
-                {isReady && (
-                  <span style={{ color: 'var(--ok)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <CheckCircle2 size={13} /> Complete & Signed
-                  </span>
-                )}
-                {isFailed && (
-                  <span style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <AlertCircle size={13} /> Build Failed
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button
-              onClick={fetchStatus}
-              disabled={loading}
-              title="Refresh Logs"
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                border: 'none',
-                borderRadius: 8,
-                width: 32,
-                height: 32,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#aaa',
-                cursor: 'pointer'
-              }}
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            </button>
-            <button
-              onClick={onClose}
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                border: 'none',
-                borderRadius: 8,
-                width: 32,
-                height: 32,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#aaa',
-                cursor: 'pointer'
-              }}
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Terminal output */}
-        <div
-          ref={logRef}
-          style={{
-            flex: 1,
-            marginTop: 16,
-            background: 'rgba(4, 3, 10, 0.95)',
-            border: '1px solid rgba(139, 124, 255, 0.15)',
-            borderRadius: 12,
-            padding: 16,
-            overflowY: 'auto',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 12,
-            lineHeight: 1.6,
-            color: '#b3b0d6',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-all'
-          }}
-        >
-          {order?.build_log ? (
-            order.build_log
-          ) : (
-            <div style={{ color: 'var(--dim)', fontStyle: 'italic' }}>
-              Waiting for build worker output...
-            </div>
+    <Sheet
+      open={isOpen}
+      onClose={onClose}
+      icon={Terminal}
+      title={`Build logs · #${orderId}`}
+      subtitle={order ? `Updated ${fmtDate(Date.now())}` : 'Connecting…'}
+      wide
+    >
+      <div className="flex-row between wrap gap-10">
+        {order ? <StatusPill status={order.status} /> : <span className="chip"><Loader2 size={12} className="animate-spin" /> Loading</span>}
+        <div className="flex-row gap-8">
+          <button className="btn btn-soft btn-xs" onClick={() => setLoading(true)} disabled={loading}>
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+          {order?.apk_file && (
+            <a className="btn btn-primary btn-xs" href={`/api/orders/${orderId}/download`} download>
+              <Download size={12} /> Download APK
+            </a>
           )}
         </div>
       </div>
-    </div>
+
+      <div className="console" ref={logRef}>
+        {order?.build_log ? order.build_log : (building ? 'Build queue me hai… logs aate hi yahan dikhenge.' : 'Koi log available nahi.')}
+        {building && <span className="cursor" />}
+      </div>
+
+      {order?.status === 'done' && (
+        <div className="trust-strip">
+          <CheckCircle2 size={14} color="var(--ok)" />
+          <span>Build complete — <b>APK download</b> button se file le lein.</span>
+        </div>
+      )}
+      {order?.status === 'failed' && (
+        <div className="trust-strip" style={{ background: 'var(--danger-soft)', boxShadow: 'inset 0 0 0 1px rgba(251,113,133,.25)' }}>
+          <CircleAlert size={14} color="var(--danger)" />
+          <span>Build fail hua — coins auto-refund ho jaate hain. Dobara try karein ya support se baat karein.</span>
+        </div>
+      )}
+    </Sheet>
   );
 }

@@ -1,508 +1,360 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Sparkles, Upload, Tag, ArrowRight, ArrowLeft, Check, ShieldCheck, Wallet,
+  ImageIcon, Link2, Globe, Layers, BadgeCheck, Info
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useStore } from '../context/StoreContext';
 import { useToast } from './Toast';
-import { X, Sparkles, Upload, Tag, ArrowRight, ArrowLeft, Check, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Sheet, Notice, Spinner } from './ui';
+import { orders as ordersApi, store } from '../lib/api';
+import { getMediaUrl } from '../utils/media';
 
-const FONT_STYLES = [
-  { key: 'bold', label: 'Bold', preview: '𝗕𝗢𝗟𝗗' },
-  { key: 'sansbold', label: 'Bold Sans', preview: 'Bold Sans' },
-  { key: 'smallcaps', label: 'Small Caps', preview: 'sᴍᴀʟʟ ᴄᴀᴘs' },
-  { key: 'sans', label: 'Sans Serif', preview: 'Sans Serif' },
-  { key: 'mono', label: 'Monospace', preview: '𝙼𝚘𝚗𝚘' }
+const MODES = [
+  { key: 'real', label: 'Real app', hint: 'Primary APK — aapke register link ke saath' },
+  { key: 'both', label: 'Real + Fake', hint: 'Dono APK — main + backup fake build' },
+  { key: 'fake', label: 'Fake only', hint: 'Sirf backup APK — main link ko chhupane ke liye' }
 ];
 
 export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreated, onOpenWallet }) {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const { config, refreshOrders } = useStore();
   const { addToast } = useToast();
 
   const [step, setStep] = useState(1);
   const [appName, setAppName] = useState('');
+  const [brandTitle, setBrandTitle] = useState('');
   const [fontStyle, setFontStyle] = useState('bold');
+  const [fonts, setFonts] = useState([]);
   const [iconFile, setIconFile] = useState(null);
   const [iconPreview, setIconPreview] = useState(null);
 
-  const [mode, setMode] = useState('real'); // 'real' | 'fake' | 'both'
+  const [mode, setMode] = useState('real');
   const [registerUrl, setRegisterUrl] = useState('');
   const [fakeRegisterUrl, setFakeRegisterUrl] = useState('');
   const [minDeposit, setMinDeposit] = useState(300);
 
-  const [couponCode, setCouponCode] = useState('');
-  const [couponDiscount, setCouponDiscount] = useState(0);
-  const [couponChecking, setCouponChecking] = useState(false);
+  const [coupon, setCoupon] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [couponBusy, setCouponBusy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const fakePrice = Number(design?.fake_price_coins || config?.addon_fake_price || 5);
+
+  const subtotal = useMemo(() => {
+    if (!design) return 0;
+    if (mode === 'fake') return fakePrice;
+    if (mode === 'both') return Number(design.price_coins || 0) + fakePrice;
+    return Number(design.price_coins || 0);
+  }, [design, mode, fakePrice]);
+
+  const total = Math.max(0, subtotal - discount);
+  const balance = Number(user?.coins || 0);
+  const short = balance < total;
+
   useEffect(() => {
-    if (design) {
-      setStep(1);
-      setAppName('');
-      setIconFile(null);
-      setIconPreview(null);
-      setRegisterUrl('');
-      setFakeRegisterUrl('');
-      setMinDeposit(300);
-      setCouponCode('');
-      setCouponDiscount(0);
-    }
-  }, [design]);
+    if (!isOpen || !design) return;
+    setStep(1);
+    setAppName('');
+    setBrandTitle('');
+    setIconFile(null);
+    setIconPreview(null);
+    setMode('real');
+    setRegisterUrl('');
+    setFakeRegisterUrl('');
+    setMinDeposit(300);
+    setCoupon('');
+    setDiscount(0);
+  }, [design, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    store.fontStyles(appName || 'App Name')
+      .then((rows) => {
+        if (Array.isArray(rows) && rows.length) {
+          setFonts(rows);
+          if (!rows.some((r) => r.key === fontStyle)) setFontStyle(rows[0].key);
+        }
+      })
+      .catch(() => setFonts([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, appName]);
 
   if (!isOpen || !design) return null;
 
-  const handleIconChange = (e) => {
+  const onIcon = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setIconFile(file);
-      setIconPreview(URL.createObjectURL(file));
-    }
+    if (!file) return;
+    setIconFile(file);
+    setIconPreview(URL.createObjectURL(file));
   };
 
-  const handleValidateCoupon = async () => {
-    if (!couponCode.trim()) return;
-    setCouponChecking(true);
+  const applyCoupon = async () => {
+    if (!coupon.trim()) return;
+    setCouponBusy(true);
     try {
-      const res = await fetch('/api/coupons/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponCode, design_id: design.id })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Invalid coupon');
-      setCouponDiscount(data.discount || 0);
-      addToast(`Coupon applied! Saved ${data.discount} coins`, 'success');
+      const res = await ordersApi.coupon(coupon.trim(), { subtotal });
+      // server subtotal param chahiye — api helper ke through bhej rahe hain
+      setDiscount(Number(res?.discount || 0));
+      addToast(`Coupon applied — ${res?.discount || 0} coins off`, 'success');
     } catch (err) {
-      setCouponDiscount(0);
-      addToast(err.message, 'error');
+      setDiscount(0);
+      addToast(err.message || 'Invalid coupon', 'error');
     } finally {
-      setCouponChecking(false);
+      setCouponBusy(false);
     }
   };
 
-  // Pricing calculation
-  const basePrice = mode === 'fake'
-    ? (design.fake_price_coins || 5)
-    : mode === 'both'
-    ? (design.price_coins || 10) + (design.fake_price_coins || 5)
-    : (design.price_coins || 10);
+  const validateStep1 = () => appName.trim().length >= 2;
+  const validateStep2 = () => {
+    if (mode === 'fake') return fakeRegisterUrl.trim().length > 4;
+    if (!registerUrl.trim()) return false;
+    if (mode === 'both') return fakeRegisterUrl.trim().length > 4;
+    return true;
+  };
 
-  const finalCost = Math.max(0, basePrice - couponDiscount);
-  const userCoins = user?.coins || 0;
-  const hasEnoughCoins = userCoins >= finalCost;
-
-  const handleCreateOrder = async () => {
-    if (!hasEnoughCoins) {
-      addToast('Insufficient coin balance. Please recharge.', 'error');
-      if (onOpenWallet) onOpenWallet();
+  const submit = async () => {
+    if (short) {
+      addToast('Coins kam hain — wallet me add fund karein', 'error');
+      onOpenWallet?.();
       return;
     }
-
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('design_id', design.id);
-      formData.append('app_name', appName.trim() || 'App');
-      formData.append('app_name_style', fontStyle);
-      formData.append('register_url', registerUrl.trim());
-      formData.append('min_deposit', minDeposit);
-      formData.append('build_engine', 'flutter'); // Trigger modern Flutter engine
+      const fd = new FormData();
+      fd.append('design_id', design.id);
+      fd.append('app_name', appName.trim());
+      fd.append('app_name_style', fontStyle);
+      fd.append('brand_title', (brandTitle.trim() || appName.trim()));
+      fd.append('min_deposit', String(parseInt(minDeposit, 10) || 300));
+      fd.append('build_mode', mode);
+      if (mode !== 'fake') fd.append('register_url', registerUrl.trim());
+      if (mode !== 'real') fd.append('fake_register_url', fakeRegisterUrl.trim());
+      if (mode === 'both') fd.append('fake_addon', 'true');
+      if (coupon.trim()) fd.append('coupon_code', coupon.trim());
+      if (iconFile) fd.append('icon', iconFile);
 
-      if (mode === 'both' || mode === 'fake') {
-        formData.append('fake_register_url', fakeRegisterUrl.trim() || registerUrl.trim());
-      }
-      if (couponCode.trim()) {
-        formData.append('coupon_code', couponCode.trim());
-      }
-      if (iconFile) {
-        formData.append('icon', iconFile);
-      }
-
-      const res = await fetch('/api/order', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to start build');
-
-      addToast('Build submitted successfully! Compiling Flutter APK...', 'success');
-      onOrderCreated(data.order_id || data.id);
-      onClose();
+      const res = await ordersApi.create(fd);
+      addToast('Build queue me chala gaya — ready hone par download milega', 'success');
+      onOrderCreated?.(res?.orderId || res?.order_id || res?.id);
+      await Promise.all([refreshUser(), refreshOrders()]);
+      onClose?.();
     } catch (err) {
-      addToast(err.message, 'error');
+      addToast(err.message || 'Build start nahi ho paya', 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const activeFont = fonts.find((f) => f.key === fontStyle);
+
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 9999,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'rgba(0, 0, 0, 0.8)',
-      backdropFilter: 'blur(10px)',
-      padding: 16
-    }}>
-      <div className="glass-panel" style={{
-        width: '100%',
-        maxWidth: 580,
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        padding: 28,
-        position: 'relative'
-      }}>
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: 20,
-            right: 20,
-            background: 'rgba(255,255,255,0.06)',
-            border: 'none',
-            borderRadius: 8,
-            width: 32,
-            height: 32,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#aaa',
-            cursor: 'pointer'
-          }}
-        >
-          <X size={18} />
-        </button>
+    <Sheet
+      open={isOpen}
+      onClose={onClose}
+      icon={Sparkles}
+      title={`Build ${design.name}`}
+      subtitle="3 easy steps — app details, register link, payment"
+      wide
+    >
+      <div className="steps">
+        {[1, 2, 3].map((s) => <span key={s} className={`step ${step >= s ? 'done' : ''}`} />)}
+      </div>
 
-        {/* Wizard Header */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--violet)', fontSize: 12, fontWeight: 700 }}>
-            <Sparkles size={14} />
-            <span>FLUTTER APK BUILD WIZARD — STEP {step} OF 3</span>
+      {/* ── Step 1 ── */}
+      {step === 1 && (
+        <div className="stack gap-12">
+          <div className="flex-row gap-12">
+            <span className="row-ico" style={{ width: 54, height: 54, borderRadius: 16, overflow: 'hidden', background: 'rgba(0,0,0,.35)' }}>
+              {iconPreview || design.preview_image
+                ? <img src={iconPreview || getMediaUrl(design.preview_image)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <Layers size={22} />}
+            </span>
+            <div>
+              <div className="row-title">{design.name}</div>
+              <div className="row-sub">
+                Real {design.price_coins} coins · Fake {fakePrice} coins
+              </div>
+            </div>
           </div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginTop: 4 }}>
-            Build: {design.name}
-          </h2>
+
+          <div className="field">
+            <span className="label">App name *</span>
+            <input className="input" value={appName} onChange={(e) => setAppName(e.target.value)} placeholder="e.g. MAAN WIN VIP" maxLength={28} />
+            <span className="hint">Launcher par yahi naam dikhega. {appName ? `Preview: ${activeFont?.sample || appName}` : ''}</span>
+          </div>
+
+          {fonts.length > 0 && (
+            <div className="field">
+              <span className="label">Name style</span>
+              <div className="pill-row" style={{ flexWrap: 'wrap', overflow: 'visible' }}>
+                {fonts.map((f) => (
+                  <button key={f.key} type="button" className={`pill ${fontStyle === f.key ? 'active' : ''}`} onClick={() => setFontStyle(f.key)}>
+                    {f.sample}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="field">
+            <span className="label">Brand title (optional)</span>
+            <input className="input" value={brandTitle} onChange={(e) => setBrandTitle(e.target.value)} placeholder="App ke andar dikhne wala title" maxLength={28} />
+          </div>
+
+          <div className="field">
+            <span className="label">App icon</span>
+            <input className="input" type="file" accept="image/png,image/jpeg,image/webp" onChange={onIcon} />
+            <span className="hint"><ImageIcon size={11} style={{ display: 'inline', verticalAlign: -1 }} /> PNG/JPG — square 512×512 best rehta hai. Blank chhodo to template ka default icon lagega.</span>
+          </div>
         </div>
+      )}
 
-        {/* Step 1: App Identity */}
-        {step === 1 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--dim)', marginBottom: 6 }}>
-                APP NAME (DISPLAY NAME)
-              </label>
-              <input
-                type="text"
-                className="input-field"
-                placeholder="e.g. Thunder Win, Mega Predictor"
-                value={appName}
-                onChange={(e) => setAppName(e.target.value)}
-                maxLength={30}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--dim)', marginBottom: 8 }}>
-                LAUNCHER FONT STYLE (HOMESCREEN)
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 8 }}>
-                {FONT_STYLES.map(fs => (
-                  <div
-                    key={fs.key}
-                    onClick={() => setFontStyle(fs.key)}
-                    style={{
-                      padding: '10px 8px',
-                      borderRadius: 10,
-                      background: fontStyle === fs.key ? 'rgba(139, 124, 255, 0.22)' : 'rgba(255,255,255,0.04)',
-                      border: fontStyle === fs.key ? '1px solid var(--violet)' : '1px solid var(--border)',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{fs.preview}</div>
-                    <div style={{ fontSize: 11, color: 'var(--dim)', marginTop: 4 }}>{fs.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--dim)', marginBottom: 8 }}>
-                APP ICON (PNG / JPG)
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 14,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px dashed var(--border)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden'
-                }}>
-                  {iconPreview ? (
-                    <img src={iconPreview} alt="Icon Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <Upload size={20} color="var(--dim)" />
-                  )}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <input
-                    type="file"
-                    accept="image/png, image/jpeg"
-                    id="wizard-icon-input"
-                    style={{ display: 'none' }}
-                    onChange={handleIconChange}
-                  />
-                  <label htmlFor="wizard-icon-input" className="btn-secondary" style={{ padding: '8px 14px', fontSize: 13 }}>
-                    Choose App Icon
-                  </label>
-                  <p style={{ fontSize: 11, color: 'var(--dim)', marginTop: 4 }}>
-                    Auto-resized to HDPI, XHDPI, XXHDPI, XXXHDPI
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => {
-                  if (!appName.trim()) {
-                    addToast('Please enter an app name', 'error');
-                    return;
-                  }
-                  setStep(2);
-                }}
-              >
-                <span>Continue to Links</span>
-                <ArrowRight size={16} />
-              </button>
+      {/* ── Step 2 ── */}
+      {step === 2 && (
+        <div className="stack gap-12">
+          <div className="field">
+            <span className="label">Build mode</span>
+            <div className="stack gap-8">
+              {MODES.map((m) => (
+                <button
+                  key={m.key}
+                  type="button"
+                  className="row-item"
+                  style={mode === m.key ? { boxShadow: 'inset 0 0 0 1px var(--line-2)', background: 'var(--brand-soft)' } : undefined}
+                  onClick={() => setMode(m.key)}
+                >
+                  <span className={`row-ico ${m.key === 'fake' ? 'info' : m.key === 'both' ? 'gold' : ''}`}>
+                    {m.key === 'real' ? <BadgeCheck size={17} /> : <Globe size={17} />}
+                  </span>
+                  <span className="row-main">
+                    <span className="row-title">{m.label}</span>
+                    <span className="row-sub">{m.hint}</span>
+                  </span>
+                  {mode === m.key && <Check size={16} color="var(--brand-2)" />}
+                </button>
+              ))}
             </div>
           </div>
-        )}
 
-        {/* Step 2: Game Links & Rules */}
-        {step === 2 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            {/* Mode selection */}
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--dim)', marginBottom: 8 }}>
-                TARGET APK TYPE
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                {[
-                  { key: 'real', title: 'Real APK', price: design.price_coins || 10 },
-                  { key: 'fake', title: 'Fake APK', price: design.fake_price_coins || 5 },
-                  { key: 'both', title: 'Both APKs', price: (design.price_coins || 10) + (design.fake_price_coins || 5) }
-                ].map(m => (
-                  <div
-                    key={m.key}
-                    onClick={() => setMode(m.key)}
-                    style={{
-                      padding: 12,
-                      borderRadius: 12,
-                      background: mode === m.key ? 'rgba(139, 124, 255, 0.2)' : 'rgba(255,255,255,0.03)',
-                      border: mode === m.key ? '1px solid var(--violet)' : '1px solid var(--border)',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>{m.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--gold)', marginTop: 4 }}>{m.price} Coins</div>
-                  </div>
-                ))}
+          {mode !== 'fake' && (
+            <div className="field">
+              <span className="label">Register URL *</span>
+              <div className="search-wrap">
+                <Link2 size={15} className="ico" />
+                <input className="input" value={registerUrl} onChange={(e) => setRegisterUrl(e.target.value)} placeholder="https://site.com/register?ref=..." inputMode="url" />
               </div>
+              <span className="hint">Isi link se app ke andar register button kaam karega. http(s) zaroori hai.</span>
             </div>
+          )}
 
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--dim)', marginBottom: 6 }}>
-                REGISTER / INVITE URL
-              </label>
-              <input
-                type="url"
-                className="input-field"
-                placeholder="https://example.com/#/register?inviteCode=..."
-                value={registerUrl}
-                onChange={(e) => setRegisterUrl(e.target.value)}
-                required
-              />
-              <p style={{ fontSize: 11, color: 'var(--dim)', marginTop: 4 }}>
-                Supports Dhani Win, TS777, Wingo, and all custom platforms
-              </p>
+          {mode !== 'real' && (
+            <div className="field">
+              <span className="label">Fake register URL *</span>
+              <div className="search-wrap">
+                <Globe size={15} className="ico" />
+                <input className="input" value={fakeRegisterUrl} onChange={(e) => setFakeRegisterUrl(e.target.value)} placeholder="https://backup-site.com/register?ref=..." inputMode="url" />
+              </div>
+              <span className="hint">Fake build ka apna firebase path hota hai — data mix nahi hota.</span>
             </div>
+          )}
 
-            {(mode === 'fake' || mode === 'both') && (
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--dim)', marginBottom: 6 }}>
-                  FAKE SITE REGISTER URL (OPTIONAL)
-                </label>
-                <input
-                  type="url"
-                  className="input-field"
-                  placeholder="https://fakesite.com/register (optional)"
-                  value={fakeRegisterUrl}
-                  onChange={(e) => setFakeRegisterUrl(e.target.value)}
-                />
+          <div className="field">
+            <span className="label">Minimum deposit (₹)</span>
+            <input className="input" type="number" min={0} value={minDeposit} onChange={(e) => setMinDeposit(e.target.value)} />
+            <span className="hint">App ke andar deposit page par minimum amount yahi dikhega.</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 3 ── */}
+      {step === 3 && (
+        <div className="stack gap-12">
+          <div className="card card-pad stack gap-10">
+            <div className="flex-row between">
+              <span className="dim">Template</span>
+              <b>{design.name}</b>
+            </div>
+            <div className="flex-row between">
+              <span className="dim">Build mode</span>
+              <b>{MODES.find((m) => m.key === mode)?.label}</b>
+            </div>
+            <div className="flex-row between">
+              <span className="dim">App name</span>
+              <b className="truncate" style={{ maxWidth: '60%' }}>{appName}</b>
+            </div>
+            <div className="divider" />
+            <div className="flex-row between">
+              <span className="dim">Subtotal</span>
+              <b>{subtotal} coins</b>
+            </div>
+            {discount > 0 && (
+              <div className="flex-row between">
+                <span className="dim">Coupon discount</span>
+                <b style={{ color: 'var(--ok)' }}>− {discount} coins</b>
               </div>
             )}
-
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--dim)', marginBottom: 6 }}>
-                MINIMUM DEPOSIT GATE (₹)
-              </label>
-              <input
-                type="number"
-                className="input-field"
-                value={minDeposit}
-                onChange={(e) => setMinDeposit(parseInt(e.target.value, 10) || 100)}
-                min={50}
-              />
+            <div className="divider" />
+            <div className="flex-row between" style={{ fontSize: 16 }}>
+              <span style={{ fontWeight: 700 }}>Total payable</span>
+              <b style={{ color: 'var(--gold)', fontFamily: 'var(--font-display)' }}>{total} coins</b>
             </div>
+          </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
-              <button type="button" className="btn-secondary" onClick={() => setStep(1)}>
-                <ArrowLeft size={16} />
-                <span>Back</span>
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => {
-                  if (!registerUrl.trim()) {
-                    addToast('Please enter the register URL', 'error');
-                    return;
-                  }
-                  setStep(3);
-                }}
-              >
-                <span>Continue to Summary</span>
-                <ArrowRight size={16} />
+          <div className="field">
+            <span className="label">Coupon code</span>
+            <div className="flex-row gap-8">
+              <input className="input" value={coupon} onChange={(e) => setCoupon(e.target.value.toUpperCase())} placeholder="SAVE10" />
+              <button type="button" className="btn btn-soft" onClick={applyCoupon} disabled={couponBusy || !coupon.trim()}>
+                {couponBusy ? <Spinner /> : <Tag size={14} />}
+                Apply
               </button>
             </div>
           </div>
+
+          <div className={`trust-strip`} style={short ? { background: 'var(--danger-soft)', boxShadow: 'inset 0 0 0 1px rgba(251,113,133,.25)' } : undefined}>
+            {short ? <Info size={14} color="var(--danger)" /> : <ShieldCheck size={14} color="var(--ok)" />}
+            <span>
+              Wallet balance <b>{balance} coins</b>{short ? ' — itne coins nahi hain, pehle add fund karein.' : ' — build turant queue me chala jaayega.'}
+            </span>
+          </div>
+
+          {short && (
+            <button className="btn btn-gold btn-block" onClick={onOpenWallet}>
+              <Wallet size={15} /> Add fund
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="sheet-foot">
+        {step > 1 ? (
+          <button className="btn btn-soft" onClick={() => setStep((s) => s - 1)} disabled={submitting}>
+            <ArrowLeft size={15} /> Back
+          </button>
+        ) : (
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
         )}
 
-        {/* Step 3: Coupon & Cost Breakdown */}
-        {step === 3 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            {/* Coupon field */}
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--dim)', marginBottom: 6 }}>
-                HAVE A COUPON CODE?
-              </label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Enter promo code"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                />
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={handleValidateCoupon}
-                  disabled={couponChecking || !couponCode.trim()}
-                >
-                  <Tag size={15} />
-                  <span>Apply</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Summary Box */}
-            <div style={{
-              background: 'rgba(10, 8, 24, 0.8)',
-              border: '1px solid var(--border)',
-              borderRadius: 14,
-              padding: 18
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--dim)', marginBottom: 8 }}>
-                <span>App Name</span>
-                <span style={{ fontWeight: 600, color: '#fff' }}>{appName}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--dim)', marginBottom: 8 }}>
-                <span>Selected Engine</span>
-                <span style={{ fontWeight: 700, color: '#4df5b4' }}>Flutter 3.x (Obfuscated)</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--dim)', marginBottom: 8 }}>
-                <span>Live Link Sync</span>
-                <span style={{ color: '#6ec3ff' }}>Enabled (Firebase RTDB)</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--dim)', marginBottom: 8 }}>
-                <span>Base Price</span>
-                <span>{basePrice} Coins</span>
-              </div>
-              {couponDiscount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ok)', marginBottom: 8 }}>
-                  <span>Coupon Discount</span>
-                  <span>-{couponDiscount} Coins</span>
-                </div>
-              )}
-              <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', margin: '12px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>Total Build Cost</span>
-                <span style={{ fontWeight: 800, fontSize: 18, color: 'var(--gold)' }}>{finalCost} Coins</span>
-              </div>
-            </div>
-
-            {/* Wallet Balance Status */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: 12,
-              borderRadius: 12,
-              background: hasEnoughCoins ? 'rgba(77, 245, 180, 0.1)' : 'rgba(255, 84, 112, 0.1)',
-              border: `1px solid ${hasEnoughCoins ? 'rgba(77, 245, 180, 0.25)' : 'rgba(255, 84, 112, 0.25)'}`
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {hasEnoughCoins ? (
-                  <ShieldCheck size={18} color="var(--ok)" />
-                ) : (
-                  <AlertTriangle size={18} color="var(--danger)" />
-                )}
-                <span style={{ fontSize: 13, color: hasEnoughCoins ? 'var(--ok)' : 'var(--danger)' }}>
-                  {hasEnoughCoins
-                    ? `Balance Available (${userCoins} Coins)`
-                    : `Insufficient Coins (${userCoins} Coins available)`}
-                </span>
-              </div>
-              {!hasEnoughCoins && (
-                <button
-                  type="button"
-                  className="btn-gold"
-                  style={{ padding: '6px 12px', fontSize: 12 }}
-                  onClick={onOpenWallet}
-                >
-                  Top Up
-                </button>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
-              <button type="button" className="btn-secondary" onClick={() => setStep(2)}>
-                <ArrowLeft size={16} />
-                <span>Back</span>
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleCreateOrder}
-                disabled={submitting || !hasEnoughCoins}
-              >
-                {submitting ? 'Initiating Build...' : 'Confirm & Build APK'}
-              </button>
-            </div>
-          </div>
+        {step < 3 ? (
+          <button
+            className="btn btn-primary grow"
+            disabled={step === 1 ? !validateStep1() : !validateStep2()}
+            onClick={() => setStep((s) => s + 1)}
+          >
+            Continue <ArrowRight size={15} />
+          </button>
+        ) : (
+          <button className="btn btn-primary grow" onClick={submit} disabled={submitting || short}>
+            {submitting ? <Spinner /> : <Check size={15} />}
+            {submitting ? 'Starting build…' : `Pay ${total} coins & build`}
+          </button>
         )}
       </div>
-    </div>
+
+      {step === 3 && total === 0 && (
+        <Notice tone="ok">Coupon ne poori payment cover kar li — build free me chalega.</Notice>
+      )}
+    </Sheet>
   );
 }
