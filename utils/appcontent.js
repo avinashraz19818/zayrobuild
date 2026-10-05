@@ -19,6 +19,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { resolveLoadingHtml } = require('./loading-html');
 const db = require('../database/db');
 const { encryptHtmlToBin, FIXED_PASSWORD } = require('./encrypt');
 const { extractDomain, buildUrls, injectParams, isDhaniUrl } = require('./htmlprocessor');
@@ -180,10 +181,11 @@ async function buildAppContent(pathKey, kind = 'popup', kid = null, opts = {}) {
 
     let html;
     if (kind === 'loading') {
-      const loadingName = db.prepare('SELECT value FROM settings WHERE key=?').get('loading_html_file')?.value || 'loading.html';
-      const lp = path.join(TEMPLATES_DIR, loadingName);
-      if (!fs.existsSync(lp)) return null;
-      html = stripFirebaseLiveScript(stripIntroSnippet(injectParams(fs.readFileSync(lp, 'utf8'), params)));
+      const loadingName = db.prepare('SELECT value FROM settings WHERE key=?').get('loading_html_file')?.value || '';
+      // Missing file par null return karne se installed APK ka loading screen gayab
+      // ho jaata tha — ab fallback file (ya built-in) use hoti hai.
+      const { html: loadingHtml } = resolveLoadingHtml(loadingName);
+      html = stripFirebaseLiveScript(stripIntroSnippet(injectParams(loadingHtml, params)));
     } else {
       const popupName = isFake ? design.fake_popup_html_file : design.popup_html_file;
       const pp = path.join(TEMPLATES_DIR, popupName);

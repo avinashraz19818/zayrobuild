@@ -159,9 +159,10 @@ db.exec(`
     ('site_name','APK Builder'),
     ('telegram_bot_token',''),
     ('telegram_admin_id',''),
-    ('loading_html_file','loading.html'),
+    ('loading_html_file','redload.html'),
     ('addon_fake_price','5'),
-    ('invite_code_change_price','10');
+    ('invite_code_change_price','10'),
+    ('demo_user_price','10');
 `);
 
 // Migrations — safe on existing DB
@@ -193,6 +194,7 @@ db.exec(`
   try { db.exec("ALTER TABLE orders ADD COLUMN build_engine TEXT DEFAULT 'flutter'"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('domain_change_price','10')"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('invite_code_change_price','10')"); } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('demo_user_price','10')"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('backup_keep_count','10')"); } catch(e) {}
   try { db.exec("ALTER TABLE coin_requests ADD COLUMN screenshot_file TEXT DEFAULT ''"); } catch(e) {}
   try { db.exec("ALTER TABLE users ADD COLUMN plain_password TEXT DEFAULT ''"); } catch(e) {}
@@ -214,6 +216,26 @@ db.exec(`
   try { db.exec("ALTER TABLE users ADD COLUMN google_id TEXT"); } catch(e) {}
   try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)"); } catch(e) {}
   try { db.exec("ALTER TABLE orders ADD COLUMN app_name_style TEXT DEFAULT 'normal'"); } catch(e) {}
+
+  // ── Loading screen file self-heal ────────────────────────────────────────
+  // Purane databases me 'loading.html' set tha jo templates/ me exist nahi karta —
+  // uski wajah se har build "Loading HTML not found" par fail ho jaata tha.
+  // Yahan setting ko kisi maujood loading file par point kar dete hain.
+  try {
+    const templatesDir = path.join(__dirname, '..', 'templates');
+    const configured = String(db.prepare("SELECT value FROM settings WHERE key='loading_html_file'").get()?.value || '').trim();
+    const exists = configured && fs.existsSync(path.join(templatesDir, configured));
+    if (!exists) {
+      const files = fs.existsSync(templatesDir)
+        ? fs.readdirSync(templatesDir).filter(f => /^[\w.-]+\.html?$/i.test(f) && /load/i.test(f))
+        : [];
+      const pick = files.includes('redload.html') ? 'redload.html' : files[0];
+      if (pick) {
+        db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run('loading_html_file', pick);
+        console.log(`[db] loading_html_file "${configured || '(khali)'}" missing tha → "${pick}" set kar diya`);
+      }
+    }
+  } catch (e) { console.warn('[db] loading_html_file self-heal skip:', e.message); }
 
   // ── Referral system (Refer & Earn) ───────────────────────────────────────
   // users.referral_code: har user ka apna invite code (shareable link me jaata hai)

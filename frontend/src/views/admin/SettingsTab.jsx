@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Server, Save, Upload, Trash2, QrCode, RefreshCw, Sparkles } from 'lucide-react';
+import { Server, Save, Upload, Trash2, QrCode, RefreshCw, Sparkles, FileCode, CheckCircle2 } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { Loader, Notice } from '../../components/ui';
 import { admin, api } from '../../lib/api';
@@ -12,11 +12,15 @@ const FIELDS = [
   { key: 'addon_fake_price', label: 'Fake addon price (coins)' },
   { key: 'domain_change_price', label: 'Domain change price (coins)' },
   { key: 'invite_code_change_price', label: 'Invite change price (coins)' },
+  { key: 'demo_user_price', label: 'Demo account price (coins)', hint: '0 = free' },
   { key: 'telegram_support_user', label: 'Support username', hint: '@ ke bina likhein' },
   { key: 'telegram_channel_url', label: 'Channel URL' },
   { key: 'telegram_admin_id', label: 'Admin Telegram ID' },
   { key: 'telegram_log_channel_id', label: 'Log channel ID' }
 ];
+
+// Ye settings FormData me alag se jaate hain (input field nahi, selection hai).
+const EXTRA_SAVE_KEYS = ['loading_html_file'];
 
 /** Store settings — branding (logo), payments aur prices. */
 export default function SettingsTab({ act }) {
@@ -26,6 +30,7 @@ export default function SettingsTab({ act }) {
   const [busy, setBusy] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
   const [qrFile, setQrFile] = useState(null);
+  const [loadingFile, setLoadingFile] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -44,12 +49,15 @@ export default function SettingsTab({ act }) {
     try {
       const fd = new FormData();
       FIELDS.forEach((f) => { if (values[f.key] !== undefined) fd.append(f.key, values[f.key]); });
+      EXTRA_SAVE_KEYS.forEach((k) => { if (values[k] !== undefined) fd.append(k, values[k]); });
       if (logoFile) fd.append('logo', logoFile);
       if (qrFile) fd.append('upi_qr_image', qrFile);
+      if (loadingFile) fd.append('loading_html', loadingFile);
       await api.postForm('/api/admin/settings', fd);
       addToast('Settings save ho gayi — panel me turant live', 'success');
       setLogoFile(null);
       setQrFile(null);
+      setLoadingFile(null);
       await load();
     } catch (err) {
       addToast(err.message || 'Save fail hua', 'error');
@@ -106,6 +114,66 @@ export default function SettingsTab({ act }) {
               )}
             </div>
             <span className="hint">Square PNG / SVG (512×512 best). Logo brand naam ke aage aur loading screen par dikhta hai.</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Loading screen — har APK ke start hone par ye HTML dikhta hai ── */}
+      <div className="card card-pad stack gap-12">
+        <div className="flex-row gap-8">
+          <FileCode size={15} color="var(--ok)" />
+          <span className="row-title">Loading screen (APK)</span>
+        </div>
+
+        <div className="brand-upload">
+          <span className="logo-preview brand-upload-preview" style={{ fontSize: 22 }}>
+            <FileCode size={24} />
+          </span>
+
+          <div className="brand-upload-info">
+            <div className="brand-upload-title">Loading HTML file</div>
+            <div className="brand-upload-status">
+              {loadingFile
+                ? `${loadingFile.name.slice(0, 26)} — save karte hi naye builds me lag jaayega`
+                : values.loading_html_file
+                  ? `Set hai: ${values.loading_html_file} — har naye APK me yahi loading screen lagti hai`
+                  : 'Set nahi hai — built-in default loading screen use hogi'}
+            </div>
+
+            <div className="flex-row gap-8 wrap" style={{ marginTop: 6 }}>
+              <label className="btn btn-soft btn-sm">
+                <input
+                  type="file" hidden accept=".html,.htm,text/html"
+                  onChange={(e) => setLoadingFile(e.target.files?.[0] || null)}
+                />
+                <Upload size={13} /> {loadingFile ? 'Change file' : 'Upload loading HTML'}
+              </label>
+            </div>
+
+            {(values.loading_html_files || []).length > 0 && (
+              <div className="stack gap-4" style={{ marginTop: 8 }}>
+                <span className="hint">Server par maujood loading files (koi ek chun lein):</span>
+                <div className="flex-row gap-6 wrap">
+                  {(values.loading_html_files || []).map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      className={`chip ${values.loading_html_file === f ? 'chip-ok' : 'chip-brand'}`}
+                      style={{ cursor: 'pointer', border: 0 }}
+                      onClick={() => setValues((v) => ({ ...v, loading_html_file: f }))}
+                    >
+                      {values.loading_html_file === f && <CheckCircle2 size={11} />} {f}
+                    </button>
+                  ))}
+                </div>
+                <span className="hint">Ye selection Save karte hi live ho jaati hai (upload kiye bina bhi).</span>
+              </div>
+            )}
+
+            <span className="hint">
+              Har APK isi file ko loading screen ki tarah dikhata hai. File delete/missing ho jaaye to
+              build fail nahi hoti — built-in default loading screen lag jaati hai.
+            </span>
           </div>
         </div>
       </div>

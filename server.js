@@ -1015,6 +1015,7 @@ app.get('/api/public-config', (req, res) => {
       addon_fake_price: parseInt(read('addon_fake_price', '5'), 10) || 5,
       domain_change_price: parseInt(read('domain_change_price', '10'), 10) || 10,
       invite_code_change_price: parseInt(read('invite_code_change_price', '10'), 10) || 10,
+      demo_user_price: parseInt(read('demo_user_price', '10'), 10) || 0,
       referral_bonus: referralBonusCoins(),
       support_url: supportUser ? `https://t.me/${supportUser}` : (adminId ? `tg://user?id=${adminId}` : ''),
       channel_url: String(read('telegram_channel_url') || '').trim(),
@@ -2109,6 +2110,28 @@ app.post('/api/orders/:id/demo-users', requireAuth, async (req, res) => {
   if (!order) return res.status(404).json({ error: 'Order not found' });
   const rawKey = String(req.body.user_key || '').trim();
   if (!rawKey) return res.status(400).json({ error: 'Enter phone number or user key' });
+
+  // Demo account ka price admin settings se (0 = free). Coins pehle kate jaate hain,
+  // Firebase fail hone par turant refund.
+  const price = Math.max(0, parseInt(db.prepare('SELECT value FROM settings WHERE key=?').get('demo_user_price')?.value || '10', 10) || 0);
+  const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.session.userId);
+  if (!user) return res.status(401).json({ error: 'User not found' });
+
+  const chargeUser = () => {
+    if (!price) return false;
+    const charged = db.prepare('UPDATE users SET coins=coins-? WHERE id=? AND coins>=?')
+      .run(price, user.id, price);
+    if (!charged.changes) throw new Error(`Not enough coins. Need ${price}, have ${user.coins}`);
+    return true;
+  };
+  const refundUser = () => { if (price) db.prepare('UPDATE users SET coins=coins+? WHERE id=?').run(price, user.id); };
+
+  try {
+    chargeUser();
+  } catch (error) {
+    return res.status(400).json({ error: error.message, coins: user.coins, price });
+  }
+
   try {
     const { addFirebaseUser } = require('./utils/runtime-links');
     const added = await addFirebaseUser(order.firebase_path, rawKey, { addedByUser: true, isDemo: true });
@@ -2120,9 +2143,13 @@ app.post('/api/orders/:id/demo-users', requireAuth, async (req, res) => {
       req.session.userId,
       added.key
     );
-    res.json({ success: true, key: added.key });
+    res.json({ success: true, key: added.key, price, coins: Math.max(0, Number(user.coins || 0) - price) });
   } catch (e) {
-    res.status(400).json({ error: e.message });
+    refundUser();
+    res.status(400).json({
+      error: price > 0 ? `${e.message}. Coins refund kar diye gaye.` : e.message,
+      price
+    });
   }
 });
 
@@ -3648,13 +3675,19 @@ app.get('/api/admin/settings', requireAdmin, (req, res) => {
     'telegram_admin_id','telegram_support_user','telegram_channel_url',
     'telegram_log_channel_id','telegram_log_enabled','addon_fake_price',
     'domain_change_price','invite_code_change_price','backup_keep_count',
-    'loading_html_file','logo_file','deploy_bot_enabled','deploy_bot_plans'
+    'loading_html_file','logo_file','deploy_bot_enabled','deploy_bot_plans','demo_user_price'
   ]);
   const result = {};
   rows.forEach(r => {
     if (exposedKeys.has(r.key)) result[r.key] = r.value;
   });
   result.telegram_bot_token_configured = Boolean(rows.find(r => r.key === 'telegram_bot_token' && r.value));
+  // Loading screen ke liye server par kaun-kaun si HTML files maujood hain
+  // (admin ek click me chun sake, upload kiye bina bhi).
+  try {
+    const { loadingCandidates } = require('./utils/loading-html');
+    result.loading_html_files = loadingCandidates();
+  } catch (_) { result.loading_html_files = []; }
   res.json(result);
 });
 
@@ -3663,7 +3696,7 @@ app.post('/api/admin/settings', requireAdmin, adminUpload.fields([
   { name: 'loading_html', maxCount: 1 },
   { name: 'logo', maxCount: 1 }
 ]), (req, res) => {
-  const allowed = ['upi_id','coin_rate','site_name','site_url','telegram_admin_id','telegram_support_user','telegram_channel_url','telegram_log_channel_id','telegram_log_enabled','addon_fake_price','domain_change_price','invite_code_change_price','backup_keep_count','deploy_bot_enabled','deploy_bot_plans'];
+  const allowed = ['upi_id','coin_rate','site_name','site_url','telegram_admin_id','telegram_support_user','telegram_channel_url','telegram_log_channel_id','telegram_log_enabled','addon_fake_price','domain_change_price','invite_code_change_price','backup_keep_count','deploy_bot_enabled','deploy_bot_plans','loading_html_file','demo_user_price'];
   for (const key of allowed) {
     if (req.body[key] !== undefined) {
       db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run(key, req.body[key]);
@@ -3680,9 +3713,12 @@ app.post('/api/admin/settings', requireAdmin, adminUpload.fields([
   }
   if (req.files?.loading_html?.[0]) {
     const f = req.files.loading_html[0];
-    const dest = path.join(__dirname, 'templates', f.originalname);
+    // Naam saaf karo — path traversal / ajeeb characters allowed nahi.
+    let name = path.basename(String(f.originalname || 'loading.html')).replace(/[^A-Za-z0-9._-]/g, '_');
+    if (!/\.html?$/i.test(name)) name += '.html';
+    const dest = path.join(__dirname, 'templates', name);
     fs.renameSync(f.path, dest);
-    db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run('loading_html_file', f.originalname);
+    db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run('loading_html_file', name);
   }
   // Brand logo — panel header + intro loader me brand naam ke aage dikhta hai.
   if (req.files?.logo?.[0]) {

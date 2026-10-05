@@ -331,9 +331,6 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
         )}
       </div>
 
-      {step === 3 && (
-        <Notice tone="info">Coins kam pad rahe hain to profile me Gift Code claim karein ya wallet me top-up karein.</Notice>
-      )}
     </Sheet>
   );
 }

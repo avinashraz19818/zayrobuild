@@ -35,6 +35,7 @@ function Panel() {
   const [previewDesign, setPreviewDesign] = useState(null);
   const [logsOrder, setLogsOrder] = useState(null);
   const [linksOrder, setLinksOrder] = useState(null);
+  const [linksSection, setLinksSection] = useState('links');
 
   // Server auth redirect errors (?err=...) ko friendly message me badlo
   useEffect(() => {
@@ -101,7 +102,8 @@ function Panel() {
       case 'orders':
         return <OrdersView
           onOpenLogs={(id) => setLogsOrder(id)}
-          onOpenLiveLinks={(order) => setLinksOrder(order)}
+          onOpenLiveLinks={(order) => { setLinksSection('links'); setLinksOrder(order); }}
+          onOpenDemoUsers={(order) => { setLinksSection('demo'); setLinksOrder(order); }}
           setTab={goTab}
         />;
       case 'wallet':
@@ -174,6 +176,7 @@ function Panel() {
       <LiveLinksModal
         order={linksOrder}
         isOpen={Boolean(linksOrder)}
+        section={linksSection}
         onClose={() => setLinksOrder(null)}
         onUpdated={() => setLinksOrder(null)}
       />

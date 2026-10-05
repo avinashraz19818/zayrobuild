@@ -35,13 +35,14 @@ const ORDERS = [
 
 const RESPONSES = {
   '/api/me': USER,
-  '/api/public-config': { site_name: 'ZAYRO BUILD', coin_rate: 1, referral_bonus: 10, addon_fake_price: 5, domain_change_price: 10, support_url: 'https://t.me/zayrosupport', channel_url: 'https://t.me/zayrochannel', bot_username: 'zayrobuild_bot', maintenance: false },
+  '/api/public-config': { site_name: 'ZAYRO BUILD', coin_rate: 1, referral_bonus: 10, addon_fake_price: 5, domain_change_price: 10, invite_code_change_price: 10, demo_user_price: 10, support_url: 'https://t.me/zayrosupport', channel_url: 'https://t.me/zayrochannel', bot_username: 'zayrobuild_bot', maintenance: false },
   '/api/announcement': { id: 1, title: 'UPDATE', message: 'MAAN WIN FAKE WEBSITE is now live. Plans from Rs 699 — tap the FAKE WEBSITE tab to buy.', button_text: 'Open now', button_url: 'https://t.me/zayrobuild_bot', created_at: '2026-10-05 08:09:39' },
   '/api/designs': STORE_DESIGNS,
   '/api/settings/payment': { upi_id: 'zayro@upi', upi_qr_image: 'qr.png', coin_rate: '1' },
   '/api/orders': ORDERS,
   '/api/me/coin-requests': [{ id: 9, coins_requested: 500, amount_paid: 500, utr: '428192837192', status: 'approved', created_at: '2026-10-03 12:00:00' }],
   '/api/me/referral': { code: 'ZAYRO7X', link: 'https://t.me/zayrobuild_bot?start=ref_ZAYRO7X', invited_count: 4, pending_count: 1, earned_coins: 40, recent: [{ name: 'Rahul', created_at: '2026-10-02', bonus: 10 }] },
+  '/api/orders/51/demo-users': [{ key: '9876543210', created_at: '2026-10-05 10:00:00' }],
   '/api/me/fake-sites': [{ order_id: 51, app_name: 'MAAN WIN VIP', register_url: 'https://fake.com/register', apk_file: 'fake.apk', status: 'done', created_at: '2026-10-04' }],
   '/api/font-styles': [{ key: 'bold', label: 'Bold', sample: '𝗠𝗔𝗔𝗡 𝗪𝗜𝗡' }, { key: 'sansbold', label: 'Bold Sans', sample: 'Maan Win' }],
   /* ── admin panel (phase 4) ── */
@@ -95,6 +96,11 @@ window.__REQS = [];
 window.fetch = async (url, init) => {
   const key = String(url).split('?')[0];
   window.__REQS.push({ method: (init && init.method) || 'GET', path: key });
+  if (/^\/api\/orders\/\d+\/demo-users$/.test(key) && init && String(init.method || '').toUpperCase() === 'POST') {
+    const sent = JSON.parse(init.body || '{}');
+    if (!sent.user_key) return json({ error: 'Enter phone number or user key' }, 400);
+    return json({ success: true, key: sent.user_key, price: 10, coins: 410 }, 200);
+  }
   if (key === '/api/gift-codes/claim' && init) {
     const sent = JSON.parse(init.body || '{}');
     if (String(sent.code || '').toUpperCase() === 'ZR-TEST-100') {
@@ -615,6 +621,62 @@ await wait(1200);
   const backLink = [...deepHost.querySelectorAll('a')].some((a) => (a.textContent || '').includes('Store panel'));
   if (!backLink) failed += 1;
   origError(`${backLink ? '✅' : '❌'} admin login par 'Store panel' wapas link`);
+}
+
+/* ── Phase 7: Orders → Dynamic links + Demo accounts (price dikhna chahiye) ── */
+{
+  window.history.replaceState({}, '', '/');
+  RESPONSES['/api/me'] = USER;
+  const olHost = window.document.createElement('div');
+  window.document.body.appendChild(olHost);
+  mount(olHost);
+  await wait(1500);
+
+  const clickBtn = async (re, scoped = olHost) => {
+    const btn = [...scoped.querySelectorAll('button')].find((b) => re.test((b.textContent || '').trim()));
+    if (!btn) return false;
+    btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(700);
+    return true;
+  };
+
+  await clickBtn(/^orders$/i);
+  const cardOk = await clickBtn(/^dynamic links$/i);
+  let dlTxt = olHost.textContent || '';
+  const priceOk = cardOk && /Main domain/.test(dlTxt) && /Full invite code/.test(dlTxt)
+    && /10 coins/.test(dlTxt) && /change karne ka charge/.test(dlTxt)
+    && /Update live link · 10 coins/.test(dlTxt);
+  if (!priceOk) failed += 1;
+  origError(`${priceOk ? '✅' : '❌'} Dynamic links sheet: dono change types ka price + CTA par coins (10 coins)`);
+
+  // sheet band karo, phir Demo accounts kholo
+  await clickBtn(/^cancel$/i);
+  await clickBtn(/^demo accounts$/i);
+  await wait(500);
+  const dTxt = olHost.textContent || '';
+  const demoOk = /Demo accounts/.test(dTxt) && /10 coins \/ account/.test(dTxt)
+    && /9876543210/.test(dTxt) && /Add · 10 coins/.test(dTxt);
+  if (!demoOk) failed += 1;
+  origError(`${demoOk ? '✅' : '❌'} Demo accounts section: price chip (10 coins / account) + list + Add button par price`);
+
+  // naya demo account add karo → POST jaye
+  const inp = olHost.querySelector('input[inputmode="tel"]');
+  if (inp) {
+    const proto = Object.getPrototypeOf(inp);
+    Object.getOwnPropertyDescriptor(proto, 'value')?.set?.call(inp, '9123456780');
+    inp.dispatchEvent(new window.Event('input', { bubbles: true }));
+    await wait(150);
+  }
+  await clickBtn(/^add ·/i);
+  await wait(900);
+  const posted = window.__REQS.some((r) => r.method === 'POST' && /\/api\/orders\/51\/demo-users$/.test(r.path));
+  const addedTxt = olHost.textContent || '';
+  const addOk = posted && /Demo account add ho gaya/.test(addedTxt);
+  if (!addOk) failed += 1;
+  origError(`${addOk ? '✅' : '❌'} Demo account add → POST /api/orders/51/demo-users + success toast`);
+
+  fs.writeFileSync('smoke/out/demo-accounts.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Demo accounts + live links</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${olHost.innerHTML}</body></html>`);
 }
 
 origError(`\nDOM size: ${html.length} chars · text: ${text.length} chars · failures: ${failed} · errors: ${realErrors.length}`);

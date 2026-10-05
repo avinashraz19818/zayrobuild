@@ -1,7 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import {
-  Package, Download, Terminal, Radio, RefreshCw, ShieldCheck, Layers, Box, Globe, Lock
-} from 'lucide-react';
+import { Box, Download, Globe, Layers, Lock, Package, Radio, RefreshCw, ShieldCheck, Terminal, Users } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
 import { EmptyState, Loader, SectionHead, StatusPill } from '../components/ui';
@@ -16,7 +14,7 @@ const FILTERS = [
   { key: 'failed', label: 'Failed' }
 ];
 
-export default function OrdersView({ onOpenLogs, onOpenLiveLinks, setTab }) {
+export default function OrdersView({ onOpenLogs, onOpenLiveLinks, onOpenDemoUsers, setTab }) {
   const { orders, loading, refreshOrders, config } = useStore();
   const { user, openAuth } = useAuth();
   const [filter, setFilter] = useState('all');
@@ -122,6 +120,13 @@ export default function OrdersView({ onOpenLogs, onOpenLiveLinks, setTab }) {
                 </button>
                 <button className="btn btn-outline btn-sm" onClick={() => onOpenLiveLinks(order)}>
                   <Radio size={14} /> Dynamic links
+                </button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => (onOpenDemoUsers || onOpenLiveLinks)?.(order)}
+                  title="App me test/login karne ke liye demo account add karein"
+                >
+                  <Users size={14} /> Demo accounts
                 </button>
               </div>
 

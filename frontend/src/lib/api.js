@@ -96,6 +96,10 @@ export const orders = {
   status: (id) => api.get(`/api/orders/${id}/status`),
   create: (formData) => api.postForm('/api/order', formData),
   changeDomain: (id, body) => api.post(`/api/orders/${id}/change-domain`, body),
+  // Demo accounts — app me test/login ke liye (user ko app me nahi dikhte)
+  demoUsers: (id) => api.get(`/api/orders/${id}/demo-users`),
+  addDemoUser: (id, userKey) => api.post(`/api/orders/${id}/demo-users`, { user_key: userKey }),
+  removeDemoUser: (id, userKey) => api.del(`/api/orders/${id}/demo-users/${encodeURIComponent(userKey)}`),
   fakeSites: () => api.get('/api/me/fake-sites')
 };
 

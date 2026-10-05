@@ -6,6 +6,7 @@ const { encryptHtmlToBin, FIXED_PASSWORD, generateBuildPassword } = require('./e
 const crypto = require('crypto');
 const { extractDomain, buildUrls, injectParams, isDhaniUrl } = require('./htmlprocessor');
 const { applyFontStyle } = require('./fontstyles');
+const { resolveLoadingHtml } = require('./loading-html');
 
 const BUILDS_DIR        = path.join(__dirname, '..', 'builds');
 const TEMPLATE_PROJECT  = path.join(__dirname, '..', 'android-project');
@@ -370,14 +371,18 @@ async function buildApkInWorker(order, design, buildId, logCallback) {
       : design.popup_html_file;
     const popupHtmlPath = path.join(TEMPLATES_DIR, popupHtmlFileName);
     const db = require('../database/db');
-    const loadingHtmlFileName = db.prepare('SELECT value FROM settings WHERE key=?').get('loading_html_file')?.value || 'loading.html';
-    const loadingHtmlPath = path.join(TEMPLATES_DIR, loadingHtmlFileName);
+    const loadingHtmlFileName = db.prepare('SELECT value FROM settings WHERE key=?').get('loading_html_file')?.value || '';
 
-    if (!fs.existsSync(popupHtmlPath))   throw new Error(`Popup HTML not found: ${design.popup_html_file}`);
-    if (!fs.existsSync(loadingHtmlPath)) throw new Error(`Loading HTML not found: ${loadingHtmlFileName}. Upload it from admin Settings.`);
+    if (!fs.existsSync(popupHtmlPath)) throw new Error(`Popup HTML not found: ${design.popup_html_file}`);
 
-    const popupHtml   = fs.readFileSync(popupHtmlPath,   'utf8');
-    const loadingHtml = fs.readFileSync(loadingHtmlPath, 'utf8');
+    // Loading screen file optional hai — kabhi bhi build fail nahi karni chahiye.
+    //   1) setting wali file  2) koi bhi available loading file  3) built-in default
+    const { html: loadingHtml, file: loadingFileUsed, fellBack } = resolveLoadingHtml(loadingHtmlFileName);
+    if (fellBack) {
+      log(`Loading HTML: ${loadingFileUsed}${loadingHtmlFileName ? ` (setting me "${loadingHtmlFileName}" tha jo mila nahi)` : ''}`);
+    }
+
+    const popupHtml = fs.readFileSync(popupHtmlPath, 'utf8');
 
     // ── Prepare icon ──
     let appIconBase64 = null;
