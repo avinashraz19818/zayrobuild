@@ -27,3 +27,9 @@ firebase-service-account.json
 
 # NOTE: database/apkbuilder.db jaan-boojh kar tracked hai — isi me aapke templates,
 # designs, settings aur users hain, aur VPS clone ke saath yahi data aana chahiye.
+
+# Local binaries / build output (VPS par apne Linux binaries lein)
+cloudflared.exe
+cloudflared
+backups/
+builds/
