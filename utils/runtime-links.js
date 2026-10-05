@@ -59,7 +59,13 @@ function loadServiceAccount() {
       }
     }
 
-    console.warn('[fb-sa] service account file NAHI mila');
+    if (Date.now() - _lastTokenErrorLog > 30 * 60_000) {
+      _lastTokenErrorLog = Date.now();
+      console.warn('[fb-sa] firebase-service-account.json nahi mila — Firebase / live-link features off rahenge.');
+      console.warn('        Fix: Google Cloud Console → IAM → Service Accounts → apna account → Keys →');
+      console.warn('             Add key → Create new key (JSON) → file ko repo folder me');
+      console.warn('             firebase-service-account.json naam se rakh dein, phir pm2 restart zayro-panel --update-env');
+    }
     return null;
   } catch (e) {
     console.error('[fb-sa] service account load fail:', e.message);
@@ -78,6 +84,7 @@ function b64url(buf) {
 let _tokenCache = null;
 let _tokenExp = 0;
 let _tokenPromise = null;
+let _lastTokenErrorLog = 0;
 
 function clearFirebaseToken() {
   _tokenCache = null;
@@ -129,9 +136,22 @@ async function _doTokenExchange() {
       const lifetime = Math.max(60_000, Number(j.expires_in || 3600) * 1000);
       _tokenCache = j.access_token;
       _tokenExp = Date.now() + lifetime;
+      _lastTokenErrorLog = 0;
       return _tokenCache;
     }
-    console.error('[fb-token] exchange failed with status', res.status);
+    // Google ne key reject kar di (usually 'invalid_grant: Invalid JWT Signature' —
+    // public repo me leak hui key ko Google khud disable kar deta hai).
+    // 30 min me sirf ek baar warning, warna pm2 logs spam ho jaate hain.
+    if (Date.now() - _lastTokenErrorLog > 30 * 60_000) {
+      _lastTokenErrorLog = Date.now();
+      const reason = j?.error_description || j?.error || `HTTP ${res.status}`;
+      console.error(`[fb-token] ❌ Firebase key reject ho gayi: ${reason}`);
+      console.error('           Fix: Google Cloud Console → IAM → Service Accounts → apna account →');
+      console.error('                Keys → Add key → Create new key (JSON) → us file ko repo me');
+      console.error('                firebase-service-account.json naam se rakh dein, phir:');
+      console.error('                pm2 restart zayro-panel --update-env && pm2 save');
+      console.error('           (Ye warning har 30 min me ek hi baar dikhegi)');
+    }
     return null;
   } catch (e) {
     console.error('[fb-token] exchange ERROR:', e.message);

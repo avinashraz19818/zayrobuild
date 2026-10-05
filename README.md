@@ -81,6 +81,22 @@ bot token / admin hash / Firebase key use kar sakta hai. Isliye:
 - Firebase service account key Google Cloud console se delete karke nayi banayein
 - Ya repo ko **private** kar dein (GitHub → Settings → Danger Zone → Change visibility)
 
+### Firebase key (firebase-service-account.json)
+Ye file **repo me nahi hai** (public repo me key leak hone par Google usko disable kar deta hai —
+isi wajah se `[fb-token] exchange failed` aata hai). Nayi key banane ka tarika:
+
+1. https://console.cloud.google.com/iam-admin/serviceaccounts → project chunein (`zayro-build`)
+2. Service account `firebase-adminsdk-...` → **Keys** → **Add key → Create new key → JSON**
+3. Download hui JSON file ko VPS par rakhein:
+   ```bash
+   nano ~/zayrobuild/firebase-service-account.json      # poora JSON paste karein
+   cd ~/zayrobuild && node scripts/diag-firebase-auth.js # "TOKEN MILA ✅" aana chahiye
+   pm2 restart zayro-panel --update-env && pm2 save
+   ```
+4. Ye bhi check karein: `date -u` (ghadi galat ho to `sudo timedatectl set-ntp true`)
+
+Bina key ke panel poora chalta hai — sirf **live links (Firebase RTDB) wale features** off rehte hain.
+
 ### Config badalna (PORT, token, etc.)
 ```bash
 nano ~/zayrobuild/.env

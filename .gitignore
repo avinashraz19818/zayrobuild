@@ -17,12 +17,13 @@ backups/
 frontend/smoke/dist/
 frontend/dist/
 
-# ⚠️ .env aur firebase-service-account.json jaan-boojh kar repo me rakhe hain
-# (aapki request — clone ke saath hi settings aa jaayein). Ye asli secrets hain,
-# isliye repo ko private rakhna better hai, aur values rotate karte rahein.
+# ⚠️ Secrets — repo public hai, inhe tracked nahi rakhte (VPS par replace karne se
+# pull block hota tha, aur Google public keys ko disable bhi kar deta hai).
+# firebase-service-account.json: nayi key Google Cloud Console se banakar yahan rakhein.
 .env
 .env.local
 .env.*.local
+firebase-service-account.json
 *.pem
 
 # Purane recovery/backup DB artifacts
