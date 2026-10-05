@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Server, Save, Upload, Trash2, Bot, QrCode, RefreshCw, Sparkles } from 'lucide-react';
+import { Server, Save, Upload, Trash2, QrCode, RefreshCw, Sparkles } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { Loader, Notice } from '../../components/ui';
 import { admin, api } from '../../lib/api';
@@ -18,17 +18,10 @@ const FIELDS = [
   { key: 'telegram_log_channel_id', label: 'Log channel ID' }
 ];
 
-const BLANK_PLANS = [
-  { key: 'starter', name: 'Starter Bot', price: 699, days: 30 },
-  { key: 'pro', name: 'Pro Bot', price: 1299, days: 90 },
-  { key: 'vip', name: 'VIP Bot', price: 1999, days: 365 }
-];
-
-/** Store settings — branding (logo), payments, prices aur Deploy Bot plans. */
+/** Store settings — branding (logo), payments aur prices. */
 export default function SettingsTab({ act }) {
   const { addToast } = useToast();
   const [values, setValues] = useState({});
-  const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [logoFile, setLogoFile] = useState(null);
@@ -39,9 +32,6 @@ export default function SettingsTab({ act }) {
     try {
       const flat = (await admin.settings()) || {};
       setValues(flat);
-      let parsed = [];
-      try { parsed = JSON.parse(flat.deploy_bot_plans || '[]'); } catch (_) { parsed = []; }
-      setPlans(Array.isArray(parsed) && parsed.length ? parsed : BLANK_PLANS);
     } catch (err) {
       addToast(err.message || 'Settings load nahi hui', 'error');
     } finally { setLoading(false); }
@@ -54,8 +44,6 @@ export default function SettingsTab({ act }) {
     try {
       const fd = new FormData();
       FIELDS.forEach((f) => { if (values[f.key] !== undefined) fd.append(f.key, values[f.key]); });
-      fd.append('deploy_bot_enabled', String(values.deploy_bot_enabled ?? '1') === '0' ? '0' : '1');
-      fd.append('deploy_bot_plans', JSON.stringify(plans.filter((p) => p.name)));
       if (logoFile) fd.append('logo', logoFile);
       if (qrFile) fd.append('upi_qr_image', qrFile);
       await api.postForm('/api/admin/settings', fd);
@@ -70,7 +58,6 @@ export default function SettingsTab({ act }) {
 
   if (loading) return <Loader label="Settings load ho rahi hain…" />;
 
-  const setPlan = (i, patch) => setPlans((prev) => prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
 
   return (
     <>
@@ -147,54 +134,12 @@ export default function SettingsTab({ act }) {
         </div>
       </div>
 
-      {/* Deploy Bot plans */}
-      <div className="card card-pad stack gap-12">
-        <div className="admin-card-head">
-          <div className="flex-row gap-8"><Bot size={15} color="var(--brand-2)" /><span className="row-title">Deploy Bot plans</span></div>
-          <label className="flex-row gap-8" style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>
-            <input
-              type="checkbox"
-              checked={String(values.deploy_bot_enabled ?? '1') !== '0'}
-              onChange={(e) => setValues((v) => ({ ...v, deploy_bot_enabled: e.target.checked ? '1' : '0' }))}
-            />
-            Service ON
-          </label>
-        </div>
-
-        {plans.map((p, i) => (
-          <div className="flex-row gap-8 wrap" key={p.key || i}>
-            <div className="field grow" style={{ minWidth: 130 }}>
-              <span className="label">Plan name</span>
-              <input className="input" value={p.name || ''} onChange={(e) => setPlan(i, { name: e.target.value })} />
-            </div>
-            <div className="field" style={{ minWidth: 88 }}>
-              <span className="label">Price ₹</span>
-              <input className="input" inputMode="numeric" value={p.price ?? ''} onChange={(e) => setPlan(i, { price: parseInt(e.target.value, 10) || 0 })} />
-            </div>
-            <div className="field" style={{ minWidth: 88 }}>
-              <span className="label">Days</span>
-              <input className="input" inputMode="numeric" value={p.days ?? ''} onChange={(e) => setPlan(i, { days: parseInt(e.target.value, 10) || 0 })} />
-            </div>
-            <div className="field grow" style={{ minWidth: 170 }}>
-              <span className="label">Perks (comma se alag)</span>
-              <input
-                className="input"
-                value={(p.perks || []).join(', ')}
-                onChange={(e) => setPlan(i, { perks: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
-              />
-            </div>
-          </div>
-        ))}
-        <span className="hint">Plans Deploy Bot tab par isi order me dikhte hain. Service OFF karte hi users ko form band dikhta hai.</span>
-      </div>
-
       <button className="btn btn-primary btn-block btn-lg" onClick={save} disabled={busy}>
         <Save size={15} /> {busy ? 'Saving…' : 'Save all settings'}
       </button>
 
       <Notice tone="info">
-        <RefreshCw size={13} style={{ verticalAlign: -2 }} /> Bot token aur log channel purane admin dashboard se
-        manage hote hain. Logo, QR, prices aur deploy plans yahin se.
+        <RefreshCw size={13} style={{ verticalAlign: -2 }} /> Changes save karte hi store panel par live ho jaate hain.
       </Notice>
     </>
   );
