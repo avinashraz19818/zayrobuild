@@ -6,9 +6,9 @@ import { EmptyState, Loader, SectionHead } from '../components/ui';
 import TemplateCard from '../components/TemplateCard';
 import { SORTS, sortDesigns, filterDesigns, categoriesFrom } from '../lib/catalog';
 
-export default function CatalogView({ onOpenDesign, onPreview }) {
+export default function CatalogView({ onOpenDesign, onPreview, onNeedTelegram }) {
   const { designs, loading } = useStore();
-  const { openAuth, user } = useAuth();
+  const { user } = useAuth();
   const [sort, setSort] = useState('latest');
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
@@ -19,8 +19,9 @@ export default function CatalogView({ onOpenDesign, onPreview }) {
     [designs, category, search, sort]
   );
 
+  // Telegram-only panel: bina Telegram account ke sirf "Open in Telegram" screen.
   const openDesign = (design) => {
-    if (!user) { openAuth('login'); return; }
+    if (!user) { onNeedTelegram?.(); return; }
     onOpenDesign?.(design);
   };
 

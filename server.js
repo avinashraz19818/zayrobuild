@@ -238,7 +238,10 @@ function isDesignMediaFile(name) {
   try {
     if (db.prepare('SELECT 1 FROM designs WHERE preview_image=? OR preview_video=? LIMIT 1').get(name, name)) return true;
     if (db.prepare('SELECT 1 FROM design_preview_images WHERE file_name=? LIMIT 1').get(name)) return true;
-    if (db.prepare('SELECT 1 FROM settings WHERE key="upi_qr_image" AND value=? LIMIT 1').get(name)) return true;
+    // NOTE: SQL string literals single-quoted hone chahiye — double quotes me
+    // SQLite use identifier samajhta hai aur query silently fail ho jaati hai.
+    if (db.prepare("SELECT 1 FROM settings WHERE key='upi_qr_image' AND value=? LIMIT 1").get(name)) return true;
+    if (db.prepare("SELECT 1 FROM settings WHERE key='logo_file' AND value=? LIMIT 1").get(name)) return true;
     if (db.prepare('SELECT 1 FROM orders WHERE icon_file=? LIMIT 1').get(name)) return true;
   } catch (_) {}
   return false;
@@ -973,8 +976,13 @@ app.get('/api/public-config', (req, res) => {
     const brandName = (storedName && storedName.toLowerCase() !== 'apk builder')
       ? storedName
       : (String(process.env.SITE_NAME || '').trim() || 'ZAYRO BUILD');
+    // Brand logo — admin settings (logo_file) se aata hai, warna default 'Z' mark.
+    const logoFile = String(read('logo_file', '') || '').trim();
+    // Telegram-only panel: bot link har jagah yahi se banta hai.
+    const botUsername = String(db.prepare("SELECT value FROM settings WHERE key='telegram_bot_username'").get()?.value || '').trim().replace(/^@/, '');
     res.json({
       site_name: brandName,
+      logo_url: logoFile ? `/api/files/${path.basename(logoFile)}` : '',
       coin_rate: parseFloat(read('coin_rate', '1')) || 1,
       addon_fake_price: parseInt(read('addon_fake_price', '5'), 10) || 5,
       domain_change_price: parseInt(read('domain_change_price', '10'), 10) || 10,
@@ -982,7 +990,9 @@ app.get('/api/public-config', (req, res) => {
       referral_bonus: referralBonusCoins(),
       support_url: supportUser ? `https://t.me/${supportUser}` : (adminId ? `tg://user?id=${adminId}` : ''),
       channel_url: String(read('telegram_channel_url') || '').trim(),
-      bot_username: getBotUsername()
+      bot_username: getBotUsername(),
+      bot_link: botUsername ? `https://t.me/${botUsername}` : '',
+      deploy_bot_enabled: String(read('deploy_bot_enabled', '1')) !== '0'
     });
   } catch (error) {
     res.json({});
@@ -1061,6 +1071,90 @@ app.get('/api/me/fake-sites', requireAuth, (req, res) => {
   } catch (error) {
     console.error('[fake-site] list failed:', error.message);
     res.status(500).json({ error: 'Could not load fake builds' });
+  }
+});
+
+// ═══════════════════════════════════════════
+// DEPLOY BOT (welcome-message bot module)
+// ═══════════════════════════════════════════
+
+function readDeployPlans() {
+  try {
+    const raw = db.prepare("SELECT value FROM settings WHERE key='deploy_bot_plans'").get()?.value;
+    const plans = raw ? JSON.parse(raw) : null;
+    if (Array.isArray(plans) && plans.length) return plans;
+  } catch (_) { /* fall through */ }
+  return [
+    { key: 'starter', name: 'Starter Bot', price: 699, days: 30, perks: ['Welcome message bot', '1 bot token', 'Basic support'] },
+    { key: 'pro', name: 'Pro Bot', price: 1299, days: 90, perks: ['Welcome + broadcast', 'Anti-spam filters', 'Priority deploy'] },
+    { key: 'vip', name: 'VIP Bot', price: 1999, days: 365, perks: ['Full auto welcome engine', 'Custom buttons + links', 'Dedicated support'] }
+  ];
+}
+
+app.get('/api/deploy-bot/plans', (req, res) => {
+  const enabled = String(db.prepare("SELECT value FROM settings WHERE key='deploy_bot_enabled'").get()?.value ?? '1') !== '0';
+  res.json({ enabled, plans: readDeployPlans() });
+});
+
+app.get('/api/me/bot-deploys', requireAuth, (req, res) => {
+  if (req.session.isAdmin === true) return res.json([]);
+  try {
+    const rows = db.prepare(`
+      SELECT id, bot_name, bot_username, admin_tg_id, plan_key, plan_name, price, status, note, created_at
+      FROM bot_deploy_requests WHERE user_id=? ORDER BY id DESC LIMIT 25
+    `).all(req.session.userId);
+    res.json(rows);
+  } catch (error) {
+    console.error('[deploy-bot] list failed:', error.message);
+    res.status(500).json({ error: 'Could not load deploy requests' });
+  }
+});
+
+app.post('/api/me/bot-deploys', requireAuth, async (req, res) => {
+  if (req.session.isAdmin === true) return res.json({ error: 'Admin does not need a deploy request' });
+  const { bot_name, bot_token, admin_tg_id, plan_key } = req.body || {};
+
+  const name = String(bot_name || '').trim();
+  const token = String(bot_token || '').trim();
+  const adminId = String(admin_tg_id || '').trim();
+  if (name.length < 2) return res.json({ error: 'Client / bot name likhna zaroori hai (min 2 letters)' });
+  if (!/^\d{6,}:[A-Za-z0-9_-]{20,}$/.test(token)) {
+    return res.json({ error: 'Bot token galat lag raha hai — @BotFather se dobara copy karein' });
+  }
+  if (adminId && !/^\d{5,}$/.test(adminId)) {
+    return res.json({ error: 'Admin Telegram ID numbers me honi chahiye' });
+  }
+
+  try {
+    const enabled = String(db.prepare("SELECT value FROM settings WHERE key='deploy_bot_enabled'").get()?.value ?? '1') !== '0';
+    if (!enabled) return res.json({ error: 'Deploy bot service abhi band hai — thodi der me try karein' });
+
+    const plans = readDeployPlans();
+    const plan = plans.find((p) => p.key === plan_key) || plans[0];
+
+    const result = db.prepare(`
+      INSERT INTO bot_deploy_requests(user_id, bot_name, bot_token, admin_tg_id, plan_key, plan_name, price, status)
+      VALUES(?,?,?,?,?,?,?, 'pending')
+    `).run(req.session.userId, name, token, adminId, plan.key, plan.name, Number(plan.price) || 0);
+
+    const row = db.prepare('SELECT * FROM bot_deploy_requests WHERE id=?').get(result.lastInsertRowid);
+    const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.session.userId);
+
+    try {
+      sendLogEvent('deploy_requested', {
+        id: row.id,
+        user_id: user.id,
+        username: user.username,
+        bot_name: name,
+        plan: plan.name,
+        price: plan.price
+      });
+    } catch (_) { /* log channel optional */ }
+
+    res.json({ success: true, request: { id: row.id, bot_name: row.bot_name, plan_name: row.plan_name, price: row.price, status: row.status, created_at: row.created_at } });
+  } catch (error) {
+    console.error('[deploy-bot] create failed:', error.message);
+    res.status(500).json({ error: 'Deploy request save nahi hui — dobara try karein' });
   }
 });
 
@@ -3377,7 +3471,7 @@ app.get('/api/admin/settings', requireAdmin, (req, res) => {
     'telegram_admin_id','telegram_support_user','telegram_channel_url',
     'telegram_log_channel_id','telegram_log_enabled','addon_fake_price',
     'domain_change_price','invite_code_change_price','backup_keep_count',
-    'loading_html_file'
+    'loading_html_file','logo_file','deploy_bot_enabled','deploy_bot_plans'
   ]);
   const result = {};
   rows.forEach(r => {
@@ -3389,9 +3483,10 @@ app.get('/api/admin/settings', requireAdmin, (req, res) => {
 
 app.post('/api/admin/settings', requireAdmin, adminUpload.fields([
   { name: 'upi_qr_image', maxCount: 1 },
-  { name: 'loading_html', maxCount: 1 }
+  { name: 'loading_html', maxCount: 1 },
+  { name: 'logo', maxCount: 1 }
 ]), (req, res) => {
-  const allowed = ['upi_id','coin_rate','site_name','site_url','telegram_admin_id','telegram_support_user','telegram_channel_url','telegram_log_channel_id','telegram_log_enabled','addon_fake_price','domain_change_price','invite_code_change_price','backup_keep_count'];
+  const allowed = ['upi_id','coin_rate','site_name','site_url','telegram_admin_id','telegram_support_user','telegram_channel_url','telegram_log_channel_id','telegram_log_enabled','addon_fake_price','domain_change_price','invite_code_change_price','backup_keep_count','deploy_bot_enabled','deploy_bot_plans'];
   for (const key of allowed) {
     if (req.body[key] !== undefined) {
       db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run(key, req.body[key]);
@@ -3411,6 +3506,14 @@ app.post('/api/admin/settings', requireAdmin, adminUpload.fields([
     const dest = path.join(__dirname, 'templates', f.originalname);
     fs.renameSync(f.path, dest);
     db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run('loading_html_file', f.originalname);
+  }
+  // Brand logo — panel header + intro loader me brand naam ke aage dikhta hai.
+  if (req.files?.logo?.[0]) {
+    db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)')
+      .run('logo_file', path.basename(req.files.logo[0].path));
+  }
+  if (String(req.body.remove_logo || '') === '1') {
+    db.prepare("DELETE FROM settings WHERE key='logo_file'").run();
   }
   if (newToken) initBot(newToken, db);
   res.json({ success: true });

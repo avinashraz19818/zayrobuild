@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
 import { EmptyState, SectionHead, Stat } from '../components/ui';
 import { displayName, initials, openTelegramLink, fmtDay } from '../lib/api';
+import TelegramGate from '../components/TelegramGate';
 
 function MenuRow({ icon: Icon, tone, title, sub, trail, onClick }) {
   return (
@@ -29,14 +30,7 @@ export default function AccountView({ setTab, onAddFund }) {
   const { orders, referral, config } = useStore();
 
   if (!user) {
-    return (
-      <EmptyState
-        icon={User}
-        title="Account"
-        text="Telegram Mini App se open karne par auto-login hota hai. Warna sign in karein."
-        action={<button className="btn btn-primary" onClick={() => openAuth('login')}>Sign in</button>}
-      />
-    );
+    return <TelegramGate botLink={config?.bot_link} />;
   }
 
   const name = displayName(user);

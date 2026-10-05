@@ -23,7 +23,6 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
 
   const [step, setStep] = useState(1);
   const [appName, setAppName] = useState('');
-  const [brandTitle, setBrandTitle] = useState('');
   const [fontStyle, setFontStyle] = useState('bold');
   const [fonts, setFonts] = useState([]);
   const [iconFile, setIconFile] = useState(null);
@@ -56,7 +55,6 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
     if (!isOpen || !design) return;
     setStep(1);
     setAppName('');
-    setBrandTitle('');
     setIconFile(null);
     setIconPreview(null);
     setMode('real');
@@ -125,7 +123,8 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
       fd.append('design_id', design.id);
       fd.append('app_name', appName.trim());
       fd.append('app_name_style', fontStyle);
-      fd.append('brand_title', (brandTitle.trim() || appName.trim()));
+      // App name aur brand title ek hi hai — server dono field same value se bharta hai.
+      fd.append('brand_title', appName.trim());
       fd.append('min_deposit', String(parseInt(minDeposit, 10) || 300));
       fd.append('build_mode', mode);
       if (mode !== 'fake') fd.append('register_url', registerUrl.trim());
@@ -180,8 +179,21 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
 
           <div className="field">
             <span className="label">App name *</span>
-            <input className="input" value={appName} onChange={(e) => setAppName(e.target.value)} placeholder="e.g. MAAN WIN VIP" maxLength={28} />
-            <span className="hint">Launcher par yahi naam dikhega. {appName ? `Preview: ${activeFont?.sample || appName}` : ''}</span>
+            <div className="name-field">
+              <input
+                className="input"
+                value={appName}
+                onChange={(e) => setAppName(e.target.value)}
+                placeholder="e.g. MAAN WIN VIP"
+                maxLength={28}
+                autoFocus
+              />
+              <span className="name-count">{appName.trim().length}/28</span>
+            </div>
+            <span className="hint">
+              Launcher aur app ke andar dono jagah yahi naam dikhega
+              {appName ? ` · Preview: ${activeFont?.sample || appName}` : ''}
+            </span>
           </div>
 
           {fonts.length > 0 && (
@@ -198,14 +210,20 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
           )}
 
           <div className="field">
-            <span className="label">Brand title (optional)</span>
-            <input className="input" value={brandTitle} onChange={(e) => setBrandTitle(e.target.value)} placeholder="App ke andar dikhne wala title" maxLength={28} />
-          </div>
-
-          <div className="field">
             <span className="label">App icon</span>
-            <input className="input" type="file" accept="image/png,image/jpeg,image/webp" onChange={onIcon} />
-            <span className="hint"><ImageIcon size={11} style={{ display: 'inline', verticalAlign: -1 }} /> PNG/JPG — square 512×512 best rehta hai. Blank chhodo to template ka default icon lagega.</span>
+            <label className={`icon-drop${iconPreview ? ' has-img' : ''}`}>
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onIcon} hidden />
+              {iconPreview
+                ? <img src={iconPreview} alt="" />
+                : (
+                  <>
+                    <ImageIcon size={20} />
+                    <b>Upload icon</b>
+                    <span>PNG / JPG · 512×512</span>
+                  </>
+                )}
+            </label>
+            <span className="hint">Blank chhodein to template ka default icon lagega.</span>
           </div>
         </div>
       )}

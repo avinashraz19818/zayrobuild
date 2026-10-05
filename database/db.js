@@ -229,6 +229,41 @@ db.exec(`
       );
     `);
   } catch(e) {}
+  // ── Deploy Bot (home page ka welcome-message bot module) ─────────────────
+  // User apna bot token + admin telegram id deta hai, admin usse deploy karta
+  // hai. Request yahin store hoti hai taaki panel me status dikha sakein.
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS bot_deploy_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        bot_name TEXT NOT NULL,
+        bot_username TEXT DEFAULT '',
+        bot_token TEXT NOT NULL,
+        admin_tg_id TEXT DEFAULT '',
+        plan_key TEXT DEFAULT 'starter',
+        plan_name TEXT DEFAULT 'Starter Bot',
+        price INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'pending',
+        note TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_bot_deploy_user ON bot_deploy_requests(user_id, id DESC);
+    `);
+  } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('deploy_bot_enabled','1')"); } catch(e) {}
+  // Deploy-bot plans — admin panel settings se badle ja sakte hain (JSON array).
+  const DEFAULT_DEPLOY_PLANS = [
+    { key: 'starter', name: 'Starter Bot', price: 699, days: 30, perks: ['Welcome message bot', '1 bot token', 'Basic support'] },
+    { key: 'pro', name: 'Pro Bot', price: 1299, days: 90, perks: ['Welcome + broadcast', 'Anti-spam filters', 'Priority deploy'] },
+    { key: 'vip', name: 'VIP Bot', price: 1999, days: 365, perks: ['Full auto welcome engine', 'Custom buttons + links', 'Dedicated support'] }
+  ];
+  try {
+    db.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('deploy_bot_plans',?)")
+      .run(JSON.stringify(DEFAULT_DEPLOY_PLANS));
+  } catch(e) {}
+
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('referral_bonus','10')"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('telegram_bot_username','')"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('site_url','')"); } catch(e) {}

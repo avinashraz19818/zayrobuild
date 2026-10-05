@@ -6,20 +6,14 @@ import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
 import { EmptyState, Loader, Notice, SectionHead, StatusPill } from '../components/ui';
 import { fmtDate } from '../lib/api';
+import TelegramGate from '../components/TelegramGate';
 
 export default function FakeSiteView({ setTab, onOpenDesign }) {
   const { user, openAuth } = useAuth();
-  const { fakeSites, designs, loading, refreshFakeSites } = useStore();
+  const { fakeSites, designs, loading, refreshFakeSites, config } = useStore();
 
   if (!user) {
-    return (
-      <EmptyState
-        icon={Lock}
-        title="Fake Website engine"
-        text="Sign in karke apne orders ke fake builds aur unke APK downloads yahan dekhein."
-        action={<button className="btn btn-primary" onClick={() => openAuth('login')}>Sign in</button>}
-      />
-    );
+    return <TelegramGate botLink={config?.bot_link} />;
   }
 
   const fakeReadyTemplates = designs.filter((d) => Number(d.fake_price_coins || 0) >= 0).slice(0, 3);

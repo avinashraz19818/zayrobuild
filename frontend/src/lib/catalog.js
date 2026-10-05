@@ -7,10 +7,12 @@ export const SORTS = [
   { key: 'low', label: 'Price: Low' }
 ];
 
+// Category pills sirf filtering ke liye — template card par ye naam nahi dikhta
+// (store-style tiles rakhne ke liye labels short aur brand-neutral rakhe gaye hain).
 export const CATEGORIES = [
   { key: 'all', label: 'All Templates' },
-  { key: 'zayro', label: 'Zayro Core' },
-  { key: 'dhani', label: 'Dhani Win' },
+  { key: 'zayro', label: 'Standard' },
+  { key: 'dhani', label: 'Dhani' },
   { key: 'premium', label: 'VIP / Premium' }
 ];
 

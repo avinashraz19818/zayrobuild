@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   Sparkles, Layers, Globe, Gift, Wallet, ShieldCheck, Zap, ArrowRight, Headphones,
-  PackageCheck, TrendingUp, BadgeCheck, Radio, Megaphone
+  PackageCheck, TrendingUp, BadgeCheck, Radio, Megaphone, Bot
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useAuth } from '../context/AuthContext';
@@ -56,8 +56,8 @@ function QuickAction({ icon: Icon, title, text, tone, onClick }) {
 }
 
 export default function HomeView({ setTab, onOpenDesign, onPreview, onAddFund }) {
-  const { designs, orders, announcement, payment, loading } = useStore();
-  const { user, isAdmin, openAuth } = useAuth();
+  const { designs, orders, announcement, payment, loading, config } = useStore();
+  const { user, isAdmin } = useAuth();
   const [sort, setSort] = useState('latest');
 
   const topDesigns = useMemo(() => sortDesigns(designs, sort).slice(0, 8), [designs, sort]);
@@ -95,29 +95,34 @@ export default function HomeView({ setTab, onOpenDesign, onPreview, onAddFund })
             <Layers size={15} />
             Browse templates
           </button>
-          <button className="btn btn-soft" onClick={() => (user ? setTab('orders') : openAuth('login'))}>
+          <button className="btn btn-soft" onClick={() => (user ? setTab('orders') : openTelegramLink(config?.bot_link || config?.support_url))}>
             <PackageCheck size={15} />
-            {user ? 'My orders' : 'Sign in'}
+            {user ? 'My orders' : 'Open in Telegram'}
           </button>
         </div>
       </section>
 
-      {/* Balance + Add fund */}
+      {/* Balance card — 'Add fund' button hata diya, sirf balance + wallet shortcut */}
       <section className="balance-card">
-        <div>
+        <div className="grow">
           <span className="label">Available balance</span>
           <div className="balance-value">
             ₹{coins.toLocaleString('en-IN')}
             <small>coins · ≈ ₹{(coins * rate).toLocaleString('en-IN')}</small>
           </div>
           <div className="balance-note">
-            {user ? '1 coin = ₹' + rate + ' · deposit approved in minutes' : 'Sign in to load wallet & build apps'}
+            {user
+              ? `1 coin = ₹${rate} · deposit approved in minutes`
+              : 'Telegram bot se kholo — account apne aap ban jaata hai'}
           </div>
         </div>
-        <button className="btn btn-gold" onClick={user ? onAddFund : () => openAuth('login')}>
-          <Wallet size={15} />
-          Add fund
-        </button>
+        {user && (
+          <button className="balance-link" onClick={() => setTab('wallet')}>
+            <Wallet size={14} />
+            Wallet
+            <ArrowRight size={13} />
+          </button>
+        )}
       </section>
 
       <div className="trust-strip">
@@ -132,7 +137,8 @@ export default function HomeView({ setTab, onOpenDesign, onPreview, onAddFund })
           <QuickAction icon={Sparkles} title="Build APK" text="Template pick karo, app ready" onClick={() => setTab('templates')} />
           <QuickAction icon={Globe} title="Fake website" text="Backup / test build banao" tone="info" onClick={() => setTab('fakesite')} />
           <QuickAction icon={Gift} title="Refer & earn" text="Dost ko bulao, coins pao" tone="gold" onClick={() => setTab('refer')} />
-          <QuickAction icon={Wallet} title="Add fund" text="UPI se wallet top-up" tone="ok" onClick={user ? onAddFund : () => openAuth('login')} />
+          <QuickAction icon={Wallet} title="Wallet" text="Balance + deposit history" tone="ok" onClick={() => setTab('wallet')} />
+          <QuickAction icon={Bot} title="Deploy Bot" text="Welcome-message bot live karo" tone="info" onClick={() => setTab('deploy')} />
         </div>
       </section>
 
@@ -169,6 +175,8 @@ export default function HomeView({ setTab, onOpenDesign, onPreview, onAddFund })
           ))}
         </div>
 
+        {/* skillhub style: home par templates ek scroll row me, poora grid Templates tab par */}
+
         {loading ? (
           <Loader label="Loading templates…" />
         ) : topDesigns.length === 0 ? (
@@ -178,8 +186,8 @@ export default function HomeView({ setTab, onOpenDesign, onPreview, onAddFund })
             text="Admin ne abhi koi template publish nahi kiya. Thodi der me check karein."
           />
         ) : (
-          <div className="tpl-grid">
-            {topDesigns.map((design, i) => (
+          <div className="tpl-grid tpl-scroll">
+            {topDesigns.slice(0, 6).map((design, i) => (
               <TemplateCard key={design.id} design={design} index={i} onOpen={onOpenDesign} onPreview={onPreview} />
             ))}
           </div>

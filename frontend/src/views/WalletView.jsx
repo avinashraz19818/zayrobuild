@@ -8,12 +8,13 @@ import { useToast } from '../components/Toast';
 import { EmptyState, Loader, Notice, SectionHead, StatusPill } from '../components/ui';
 import { wallet as walletApi, copyText, fmtDate, api } from '../lib/api';
 import { getMediaUrl } from '../utils/media';
+import TelegramGate from '../components/TelegramGate';
 
 const PACKS = [100, 250, 500, 1000, 2500];
 
 export default function WalletView({ setTab }) {
   const { user, refreshUser, openAuth } = useAuth();
-  const { payment, refreshPayment } = useStore();
+  const { payment, refreshPayment, config } = useStore();
   const { addToast } = useToast();
 
   const [coins, setCoins] = useState(250);
@@ -39,14 +40,7 @@ export default function WalletView({ setTab }) {
   useEffect(() => { refreshPayment(); loadHistory(); /* eslint-disable-next-line */ }, [user]);
 
   if (!user) {
-    return (
-      <EmptyState
-        icon={Wallet}
-        title="Wallet ke liye sign in karein"
-        text="Coins add karke templates unlock karein aur APK build karwaein."
-        action={<button className="btn btn-primary" onClick={() => openAuth('login')}>Sign in</button>}
-      />
-    );
+    return <TelegramGate botLink={config?.bot_link} />;
   }
 
   const copyUpi = async () => {

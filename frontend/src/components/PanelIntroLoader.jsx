@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Boxes, ShieldCheck, Zap } from 'lucide-react';
-
-const STEPS = [
-  { at: 12, text: 'Store front load ho raha hai…' },
-  { at: 38, text: 'Templates sync ho rahe hain…' },
-  { at: 62, text: 'Wallet & session check…' },
-  { at: 86, text: 'Secure build engine ready…' },
-  { at: 100, text: 'Welcome to ZAYRO BUILD' }
-];
+import { ShieldCheck, Zap } from 'lucide-react';
+import { useStore } from '../context/StoreContext';
 
 export default function PanelIntroLoader({ onComplete }) {
+  const { config } = useStore();
+  const brandName = String(config?.site_name || 'ZAYRO BUILD').trim() || 'ZAYRO BUILD';
+  const brandLogo = config?.logo_url;
+  const STEPS = React.useMemo(() => ([
+    { at: 12, text: 'Store front load ho raha hai…' },
+    { at: 38, text: 'Templates sync ho rahe hain…' },
+    { at: 62, text: 'Wallet & session check…' },
+    { at: 86, text: 'Secure build engine ready…' },
+    { at: 100, text: `Welcome to ${brandName}` }
+  ]), [brandName]);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState(STEPS[0].text);
   const [fade, setFade] = useState(false);
@@ -30,7 +33,7 @@ export default function PanelIntroLoader({ onComplete }) {
       }
     }, 70);
     return () => clearInterval(timer);
-  }, [onComplete]);
+  }, [onComplete, STEPS]);
 
   return (
     <div
@@ -48,25 +51,18 @@ export default function PanelIntroLoader({ onComplete }) {
       }}
     >
       <div style={{ textAlign: 'center', padding: 24, maxWidth: 380 }}>
-        <div
-          className="float-y"
-          style={{
-            width: 78,
-            height: 78,
-            margin: '0 auto 18px',
-            borderRadius: 24,
-            display: 'grid',
-            placeItems: 'center',
-            background: 'linear-gradient(140deg, var(--brand-2), var(--brand-3))',
-            boxShadow: '0 24px 60px -22px var(--brand-glow), inset 0 1px 0 rgba(255,255,255,.4)',
-            color: '#fff'
-          }}
-        >
-          <Boxes size={34} />
+        <div className="load-mark float-y">
+          {brandLogo
+            ? <img src={brandLogo} alt="" />
+            : (
+              <div className="load-mark-glow" aria-hidden="true" />
+            )}
+          {!brandLogo && <b>{brandName.charAt(0).toUpperCase()}</b>}
+          <span className="load-ring" aria-hidden="true" />
         </div>
 
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
-          Zayro Build
+          {brandName}
         </h1>
         <p style={{ fontSize: 10.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 22 }}>
           Premium APK Marketplace

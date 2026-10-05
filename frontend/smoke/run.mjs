@@ -96,7 +96,8 @@ const checks = [
   ['brand name', /Zayro Build/i.test(text) || /ZAYRO BUILD/i.test(text)],
   ['hero title', /Premium APK Marketplace|Welcome back/i.test(text)],
   ['balance card', /Available balance/i.test(text)],
-  ['add fund button', /Add fund/i.test(text)],
+  ['brand tile has Create APK', /Create APK/i.test(text)],
+  ['no signin / add-fund button', !/\bSign in\b/i.test(text) && !/Add fund/i.test(text)],
   ['templates section', /Available Templates/i.test(text)],
   ['template card rendered', /Zayro Apex VIP/i.test(text)],
   ['discount badge', /% OFF/i.test(text)],
@@ -139,6 +140,7 @@ const tabChecks = [
   ['Orders', /My Orders|Abhi koi build nahi/i],
   ['Account', /Account stats|Total orders/i],
   ['Refer', /Referral link|Refer & Earn/i],
+  ['Deploy Bot', /Welcome Message Bot|Choose plan/i],
   ['Templates', /image\/video preview ke saath/i],
   ['Fake Website', /Fake builds|Ek order, do APK/i]
 ];
@@ -153,6 +155,12 @@ for (const [label, re] of tabChecks) {
 }
 
 await clickByText('Templates');
+{ // premium tile: category naam nahi, 'Create APK' button + discount badge
+  const t = rootEl.textContent || '';
+  const ok = /Create APK/i.test(t) && !/Zayro Core/i.test(t);
+  if (!ok) failed += 1;
+  origError(`${ok ? '✅' : '❌'} template tile: Create APK button, no category label`);
+}
 const card = window.document.querySelector('.tpl-card');
 if (card) {
   card.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
@@ -166,15 +174,49 @@ if (card) {
   origError('❌ template card not found for wizard test');
 }
 
-// wizard band karo, home par jao, phir Add fund
+// wizard band karo, home par jao, phir wallet
 await clickByText('Cancel');
 await clickByText('Home');
-await clickByText('Add fund');
+{
+  // Telegram-only: koi Sign in / Add fund button nahi hona chahiye
+  const t = rootEl.textContent || '';
+  const ok = !/\bSign in\b/i.test(t) && !/Add fund/i.test(t);
+  if (!ok) failed += 1;
+  origError(`${ok ? '✅' : '❌'} no sign-in / no add-fund button (Telegram-only)`);
+}
+await clickByText('Wallet');
 {
   const txt = rootEl.textContent || '';
   const ok = /Choose amount|Submit payment proof|Deposit history/i.test(txt);
   if (!ok) failed += 1;
-  origError(`${ok ? '✅' : '❌'} add-fund / wallet flow`);
+  origError(`${ok ? '✅' : '❌'} wallet flow`);
+}
+
+/* ── Phase 3: Telegram-only panel (koi user nahi) ── */
+delete RESPONSES['/api/me'];
+const gateHost = window.document.createElement('div');
+window.document.body.appendChild(gateHost);
+mount(gateHost);
+await wait(1400);
+{
+  const t = gateHost.textContent || '';
+  const noSignin = !/\bSign in\b/i.test(t) && !/\bRegister\b/i.test(t) && !/Add fund/i.test(t);
+  if (!noSignin) failed += 1;
+  origError(`${noSignin ? '✅' : '❌'} Telegram-only header (no Sign in / Register buttons)`);
+
+  const gateOk = /Telegram bot/i.test(t);
+  if (!gateOk) failed += 1;
+  origError(`${gateOk ? '✅' : '❌'} Telegram bot button visible for logged-out users`);
+
+  // guarded tab (Deploy Bot) par gate card
+  const navBtns = [...gateHost.querySelectorAll('button')];
+  const deployBtn = navBtns.find((b) => (b.textContent || '').trim().toLowerCase().includes('deploy bot'));
+  deployBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(500);
+  const gt = gateHost.textContent || '';
+  const ok = /Open in Telegram/i.test(gt);
+  if (!ok) failed += 1;
+  origError(`${ok ? '✅' : '❌'} deploy tab par Telegram gate card`);
 }
 
 const realErrors2 = errors.filter((e) => !/not wrapped in act|ReactDOMTestUtils|Warning: /.test(e));

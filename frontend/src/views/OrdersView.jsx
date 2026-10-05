@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { EmptyState, Loader, SectionHead, StatusPill } from '../components/ui';
 import { fmtDate } from '../lib/api';
 import { getMediaUrl } from '../utils/media';
+import TelegramGate from '../components/TelegramGate';
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -16,7 +17,7 @@ const FILTERS = [
 ];
 
 export default function OrdersView({ onOpenLogs, onOpenLiveLinks, setTab }) {
-  const { orders, loading, refreshOrders } = useStore();
+  const { orders, loading, refreshOrders, config } = useStore();
   const { user, openAuth } = useAuth();
   const [filter, setFilter] = useState('all');
   const [busy, setBusy] = useState(false);
@@ -28,14 +29,7 @@ export default function OrdersView({ onOpenLogs, onOpenLiveLinks, setTab }) {
   }, [orders, filter]);
 
   if (!user) {
-    return (
-      <EmptyState
-        icon={Lock}
-        title="Sign in to see your builds"
-        text="Telegram se open kiya hai to panel auto-login ho jaata hai. Warna username/password se sign in karein."
-        action={<button className="btn btn-primary" onClick={() => openAuth('login')}>Sign in</button>}
-      />
-    );
+    return <TelegramGate botLink={config?.bot_link} />;
   }
 
   const reload = async () => {

@@ -1,12 +1,13 @@
 import React from 'react';
 import {
-  House, Layers, Globe, Package, User, Gift, Shield, Wallet, LogIn, Boxes, Radio
+  House, Layers, Globe, Package, User, Gift, Shield, Wallet, Send, Bot, Radio
 } from 'lucide-react';
-import { displayName, initials } from '../lib/api';
+import { displayName, initials, openTelegramLink } from '../lib/api';
 import { useStore } from '../context/StoreContext';
 
 export const NAV = [
   { key: 'home', label: 'Home', icon: House },
+  { key: 'deploy', label: 'Deploy Bot', icon: Bot },
   { key: 'templates', label: 'Templates', icon: Layers },
   { key: 'fakesite', label: 'Fake Website', icon: Globe },
   { key: 'refer', label: 'Refer', icon: Gift },
@@ -14,10 +15,12 @@ export const NAV = [
   { key: 'account', label: 'Account', icon: User }
 ];
 
-export const MOBILE_KEYS = ['home', 'templates', 'fakesite', 'orders', 'account'];
+export const MOBILE_KEYS = ['home', 'deploy', 'templates', 'orders', 'account'];
 
-/** Mobile bottom nav ke liye 5 primary tabs. */
-const MOBILE_NAV = NAV.filter((n) => MOBILE_KEYS.includes(n.key));
+/** Mobile bottom nav — skillhub jaisa 5-tab bar (Home · Deploy Bot · Templates · Orders · Account). */
+const MOBILE_NAV = MOBILE_KEYS
+  .map((key) => NAV.find((n) => n.key === key))
+  .filter(Boolean);
 
 export function CoinIco({ size = 14 }) {
   return (
@@ -27,13 +30,20 @@ export function CoinIco({ size = 14 }) {
   );
 }
 
+/**
+ * Brand mark — admin panel settings se aaya logo (config.logo_url) brand naam
+ * ke aage dikhta hai; logo set na ho to brand naam ka first letter.
+ */
 export function Brand({ onClick }) {
   const { config } = useStore();
-  const name = String(config?.site_name || 'Zayro Build').trim() || 'Zayro Build';
+  const name = String(config?.site_name || 'ZAYRO BUILD').trim() || 'ZAYRO BUILD';
+  const logo = config?.logo_url;
   return (
     <div className="brand" onClick={onClick}>
-      <div className="brand-logo">
-        <Boxes size={20} />
+      <div className={`brand-logo${logo ? ' has-img' : ''}`}>
+        {logo
+          ? <img src={logo} alt="" />
+          : <b>{name.charAt(0).toUpperCase()}</b>}
       </div>
       <div style={{ minWidth: 0 }}>
         <div className="brand-name">{name}</div>
@@ -43,7 +53,7 @@ export function Brand({ onClick }) {
   );
 }
 
-export function TopBar({ tab, setTab, user, isAdmin, orderCount, onAddFund, onAuth }) {
+export function TopBar({ tab, setTab, user, isAdmin, orderCount, onAddFund, botLink }) {
   return (
     <header className="topbar">
       <div className="topbar-inner">
@@ -81,9 +91,14 @@ export function TopBar({ tab, setTab, user, isAdmin, orderCount, onAddFund, onAu
             </button>
           </div>
         ) : (
-          <button className="btn btn-primary btn-sm" onClick={onAuth}>
-            <LogIn size={14} />
-            Sign in
+          // Koi signup/login nahi — Telegram bot me le jaate hain.
+          <button
+            className="btn btn-gold btn-sm"
+            onClick={() => { if (botLink) openTelegramLink(botLink); }}
+            disabled={!botLink}
+          >
+            <Send size={14} />
+            Telegram bot
           </button>
         )}
       </div>
@@ -111,17 +126,20 @@ export function BottomNav({ tab, setTab, orderCount }) {
 }
 
 export function Footer({ isAdmin, setTab }) {
+  const { config } = useStore();
+  const name = String(config?.site_name || 'ZAYRO BUILD').trim() || 'ZAYRO BUILD';
   return (
-    <footer style={{ padding: '18px 14px 6px', textAlign: 'center' }}>
+    <footer className="app-footer">
       <div className="flex-row gap-10" style={{ justifyContent: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+        <button className="btn btn-ghost btn-xs" onClick={() => setTab('deploy')}><Bot size={13} />Deploy Bot</button>
         <button className="btn btn-ghost btn-xs" onClick={() => setTab('templates')}><Layers size={13} />Templates</button>
         <button className="btn btn-ghost btn-xs" onClick={() => setTab('wallet')}><Wallet size={13} />Wallet</button>
         <button className="btn btn-ghost btn-xs" onClick={() => setTab('refer')}><Gift size={13} />Refer &amp; Earn</button>
         <button className="btn btn-ghost btn-xs" onClick={() => setTab('fakesite')}><Radio size={13} />Fake Website</button>
         {isAdmin && <button className="btn btn-ghost btn-xs" onClick={() => setTab('admin')}><Shield size={13} />Admin</button>}
       </div>
-      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-        © {new Date().getFullYear()} ZAYRO BUILD · Premium APK Marketplace · 100% Secure &amp; Fast
+      <div className="app-footer-note">
+        © {new Date().getFullYear()} {name} · Premium APK Marketplace · 100% Secure &amp; Fast
       </div>
     </footer>
   );

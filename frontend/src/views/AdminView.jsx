@@ -25,7 +25,8 @@ const SETTING_FIELDS = [
   { key: 'domain_change_price', label: 'Domain change price (coins)', type: 'text' },
   { key: 'invite_code_change_price', label: 'Invite change price (coins)', type: 'text' },
   { key: 'telegram_support_user', label: 'Support username', type: 'text' },
-  { key: 'telegram_channel_url', label: 'Channel URL', type: 'text' }
+  { key: 'telegram_channel_url', label: 'Channel URL', type: 'text' },
+  { key: 'deploy_bot_enabled', label: 'Deploy Bot service (1 = on, 0 = off)', type: 'text' }
 ];
 
 function AdminLogin({ onDone }) {
@@ -298,6 +299,48 @@ export default function AdminView() {
               />
             </div>
           ))}
+
+          {/* Brand logo — panel header + intro loader me naam ke aage dikhta hai */}
+          <div className="field">
+            <span className="label">Brand logo (panel + loading screen)</span>
+            <div className="flex-row gap-10" style={{ alignItems: 'center' }}>
+              <span className="logo-preview">
+                {settings.logo_file
+                  ? <img src={`/api/files/${settings.logo_file}`} alt="" />
+                  : <b>{(settingsDraft.site_name || settings.site_name || 'Z').trim().charAt(0).toUpperCase()}</b>}
+              </span>
+              <input
+                className="input"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const fd = new FormData();
+                  fd.append('logo', file);
+                  try {
+                    await api.postForm('/api/admin/settings', fd);
+                    addToast('Logo uploaded — panel me turant dikhega', 'success');
+                    loadTab('settings');
+                  } catch (err) {
+                    addToast(err.message || 'Logo upload fail hua', 'error');
+                  }
+                }}
+              />
+            </div>
+            <span className="hint">Square PNG/SVG best rehta hai (512×512). Khali chhodne par brand naam ka first letter dikhta hai.</span>
+            {settings.logo_file && (
+              <button
+                className="btn btn-ghost btn-xs"
+                onClick={() => act(async () => {
+                  await api.post('/api/admin/settings', { remove_logo: '1' });
+                  await loadTab('settings');
+                }, 'Logo removed')}
+              >
+                <RotateCcw size={12} /> Remove logo
+              </button>
+            )}
+          </div>
           <div className="flex-row gap-8">
             <Bell size={13} color="var(--muted)" />
             <span className="hint">Bot token, QR image aur announcements admin ke purane dashboard se manage hote hain.</span>

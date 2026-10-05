@@ -11,17 +11,21 @@ import AccountView from './views/AccountView';
 import ReferView from './views/ReferView';
 import FakeSiteView from './views/FakeSiteView';
 import AdminView from './views/AdminView';
-import AuthModal from './components/AuthModal';
+import DeployBotView from './views/DeployBotView';
+import TelegramGate from './components/TelegramGate';
 import BuildWizardModal from './components/BuildWizardModal';
 import TemplatePreview from './components/TemplatePreview';
 import LogsModal from './components/LogsModal';
 import LiveLinksModal from './components/LiveLinksModal';
 import PanelIntroLoader from './components/PanelIntroLoader';
 
-const TAB_KEYS = ['home', 'templates', 'fakesite', 'refer', 'orders', 'account', 'wallet', 'admin'];
+const TAB_KEYS = ['home', 'templates', 'fakesite', 'refer', 'orders', 'account', 'wallet', 'deploy', 'admin'];
+
+// Ye tabs Telegram account ke bina kholne ka koi matlab nahi — in par gate dikhta hai.
+const AUTH_TABS = ['orders', 'wallet', 'account', 'refer', 'fakesite', 'deploy'];
 
 function Panel() {
-  const { user, isAdmin, loading, openAuth } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const { orders, config } = useStore();
   const { addToast } = useToast();
 
@@ -80,11 +84,20 @@ function Panel() {
 
   const goTab = (next) => setTab(next);
 
+  // Build wizard Telegram account ke bina nahi khulta.
+  const openBuild = (design) => {
+    if (!user) { setTab('account'); return; }
+    setBuildDesign(design);
+  };
+
   const body = (() => {
     if (loading && !splashDone) return null;
+    if (!loading && !user && AUTH_TABS.includes(tab)) {
+      return <TelegramGate botLink={config?.bot_link} />;
+    }
     switch (tab) {
       case 'templates':
-        return <CatalogView onOpenDesign={setBuildDesign} onPreview={setPreviewDesign} />;
+        return <CatalogView onOpenDesign={openBuild} onPreview={setPreviewDesign} onNeedTelegram={() => setTab('account')} />;
       case 'orders':
         return <OrdersView
           onOpenLogs={(id) => setLogsOrder(id)}
@@ -99,13 +112,15 @@ function Panel() {
         return <ReferView setTab={goTab} />;
       case 'fakesite':
         return <FakeSiteView setTab={goTab} onOpenDesign={setBuildDesign} />;
+      case 'deploy':
+        return <DeployBotView setTab={goTab} />;
       case 'admin':
         return <AdminView />;
       case 'home':
       default:
         return <HomeView
           setTab={goTab}
-          onOpenDesign={setBuildDesign}
+          onOpenDesign={openBuild}
           onPreview={setPreviewDesign}
           onAddFund={() => setTab('wallet')}
         />;
@@ -123,7 +138,7 @@ function Panel() {
         isAdmin={isAdmin}
         orderCount={queueCount}
         onAddFund={() => setTab('wallet')}
-        onAuth={() => openAuth('login')}
+        botLink={config?.bot_link || config?.support_url}
       />
 
       <main className="app-main">
@@ -141,8 +156,6 @@ function Panel() {
       </main>
 
       <BottomNav tab={tab} setTab={goTab} orderCount={queueCount} />
-
-      <AuthModal />
 
       <BuildWizardModal
         design={buildDesign}

@@ -5,6 +5,7 @@ import { useStore } from '../context/StoreContext';
 import { useToast } from '../components/Toast';
 import { EmptyState, Loader, SectionHead, Stat, Notice } from '../components/ui';
 import { copyText, shareLink, fmtDay } from '../lib/api';
+import TelegramGate from '../components/TelegramGate';
 
 const STEPS = [
   { t: 'Apna link share karein', d: 'WhatsApp, Telegram ya kisi bhi group me bhejein.' },
@@ -19,14 +20,7 @@ export default function ReferView({ setTab }) {
   const [copied, setCopied] = useState(false);
 
   if (!user) {
-    return (
-      <EmptyState
-        icon={Gift}
-        title="Refer & Earn"
-        text="Sign in karke apna referral link banayein — har naye user par coins kamaayein."
-        action={<button className="btn btn-primary" onClick={() => openAuth('login')}>Sign in</button>}
-      />
-    );
+    return <TelegramGate botLink={config?.bot_link} />;
   }
 
   const bonus = config?.referral_bonus ?? 10;
