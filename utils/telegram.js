@@ -50,8 +50,6 @@ const PE = {
   broadcast: '<tg-emoji emoji-id="5256134032852278918">📡</tg-emoji>'
 };
 
-// Mini App ka URL. Pehle Admin → Settings wali value (taaki panel se hi badal sakein),
-// uske baad .env ka SITE_URL, warna last-resort default.
 // Ye hosts "temporary tunnel" hote hain — band hone par dead ho jaate hain (ERR_NAME_NOT_RESOLVED).
 // Purane trycloudflare/ngrok links DB me pade reh jaate hain, isliye unhe last option rakhte hain.
 const TEMP_TUNNEL_HOSTS = [

@@ -29,7 +29,15 @@ function Panel() {
   const { orders, config } = useStore();
   const { addToast } = useToast();
 
-  const [tab, setTab] = useState('home');
+  // /admin ya #admin se seedha admin tab khule (bookmark/share ke liye aasan).
+  const [tab, setTab] = useState(() => {
+    try {
+      const hash = String(window.location.hash || '').replace(/^#\/?/, '').toLowerCase();
+      const path = String(window.location.pathname || '').replace(/\/+$/, '').toLowerCase();
+      if (hash === 'admin' || path === '/admin') return 'admin';
+    } catch (_) { /* ignore */ }
+    return 'home';
+  });
   const [splashDone, setSplashDone] = useState(false);
   const [buildDesign, setBuildDesign] = useState(null);
   const [previewDesign, setPreviewDesign] = useState(null);
@@ -56,6 +64,15 @@ function Panel() {
     const name = String(config?.site_name || '').trim() || 'ZAYRO BUILD';
     document.title = `${name} · Premium APK Marketplace`;
   }, [config?.site_name]);
+
+  // Admin tab khula ho to URL me /admin rakho (refresh/share ke liye), warna hata do.
+  useEffect(() => {
+    try {
+      const path = window.location.pathname.replace(/\/+$/, '');
+      if (tab === 'admin' && path !== '/admin') window.history.replaceState({}, '', '/admin');
+      else if (tab !== 'admin' && path === '/admin') window.history.replaceState({}, '', '/');
+    } catch (_) { /* ignore */ }
+  }, [tab]);
 
   // Telegram back button -> pehla tab
   useEffect(() => {
