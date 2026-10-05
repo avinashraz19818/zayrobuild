@@ -82,7 +82,7 @@ export function TopBar({ tab, setTab, user, isAdmin, orderCount, onAddFund, botL
 
         {user ? (
           <div className="flex-row gap-8">
-            <button className="balance-chip" onClick={onAddFund} title="Add fund">
+            <button className="balance-chip" onClick={onAddFund} title="Wallet balance">
               <CoinIco />
               <span>₹{Number(user.coins || 0).toLocaleString('en-IN')}</span>
             </button>

@@ -126,6 +126,12 @@ fs.writeFileSync('smoke/out/rendered.html', `<!doctype html><html><head><meta ch
 
 const realErrors = errors.filter((e) => !/not wrapped in act|ReactDOMTestUtils|Warning: /.test(e));
 
+/* Live CSS filename — snapshot usi ko reference karta hai jo panel use karta hai. */
+function liveCssName() {
+  const shell = fs.readFileSync('../public/index.html', 'utf8');
+  return (shell.match(/assets\/(index-[A-Za-z0-9_-]+\.css)/) || [])[1];
+}
+
 /* ── Phase 2: saare tabs + build wizard click-through ── */
 async function clickByText(label) {
   const nodes = [...window.document.querySelectorAll('button, .tpl-card')];
@@ -152,6 +158,11 @@ for (const [label, re] of tabChecks) {
   const ok = clicked && re.test(txt);
   if (!ok) failed += 1;
   origError(`${ok ? '✅' : '❌'} ${label} tab`);
+  // Deploy Bot tab ka alag snapshot — review ke liye
+  if (label === 'Deploy Bot' && clicked) {
+    fs.writeFileSync('smoke/out/deploy.html',
+      `<!doctype html><html><head><meta charset="utf-8"><title>Deploy Bot tab</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${rootEl.innerHTML}</body></html>`);
+  }
 }
 
 await clickByText('Templates');
