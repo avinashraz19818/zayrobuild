@@ -25,6 +25,10 @@ firebase-service-account.json
 *service-account*.json
 *.pem
 
+# SQLite runtime files (WAL/SHM har second badalte hain — DB file hi track hoti hai)
+database/apkbuilder.db-wal
+database/apkbuilder.db-shm
+
 # NOTE: database/apkbuilder.db jaan-boojh kar tracked hai — isi me aapke templates,
 # designs, settings aur users hain, aur VPS clone ke saath yahi data aana chahiye.
 
