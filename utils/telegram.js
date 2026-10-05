@@ -250,7 +250,7 @@ function initBot(token, db) {
 
 ${PE.wave} <b>Welcome, ${firstName}!</b> ${rawUsername ? `(<code>@${rawUsername}</code>)` : ''}
 
-${PE.bot} <b>System Status:</b> <code>ONLINE 🟢</code>
+${PE.bot} <b>System Status:</b> <code>ONLINE</code> ${PE.check}
 ${PE.money} <b>Your Balance:</b> <code>${userCoins} Coins</code>
 ${PE.trophy} <b>Total Orders:</b> <code>${userOrders} APKs Built</code>
 
@@ -649,8 +649,8 @@ ${PE.down} <i>Uploading your APK files now… Please wait.</i>
       const filename = path.basename(apkPath);
       const isReal = index === 0;
       const caption = isReal
-        ? `${PE.check} <b>REAL PRODUCTION APK</b>\n📁 <code>${escapeHtml(filename)}</code>\n\n${PE.bell} <i><b>Tip:</b> If "App scan recommended" appears, tap "Scan app" — installs in 5s!</i>`
-        : `${PE.sparkles} <b>FAKE PREVIEW APK</b>\n📁 <code>${escapeHtml(filename)}</code>\n\n${PE.star} <i>Multi-game clone variant.</i>`;
+        ? `${PE.check} <b>REAL PRODUCTION APK</b>\n${PE.card} <code>${escapeHtml(filename)}</code>\n\n${PE.bell} <i><b>Tip:</b> If "App scan recommended" appears, tap "Scan app" — installs in 5s!</i>`
+        : `${PE.sparkles} <b>FAKE PREVIEW APK</b>\n${PE.card} <code>${escapeHtml(filename)}</code>\n\n${PE.star} <i>Multi-game clone variant.</i>`;
 
       try {
         await sendDocumentWithRetry(sender, telegramId, apkPath, caption);
@@ -805,7 +805,7 @@ ${PE.broadcast} <b>IP Address:</b> <code>${escapeHtml(data.ip || 'Unknown')}</co
 ${PE.card} <b>Timestamp:</b> <code>${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</code>`;
       await bot.sendMessage(targetChat, text, { parse_mode: 'HTML', disable_web_page_preview: true });
     } else if (eventType === 'order_created') {
-      const modeLabel = data.build_mode === 'fake' ? '🎭 Fake / Clone APK Only' : data.build_mode === 'both' ? '⚡ Real + Fake Both APKs' : '👑 Real Production APK';
+      const modeLabel = data.build_mode === 'fake' ? `${PE.sparkles} Fake / Clone APK Only` : data.build_mode === 'both' ? `${PE.fire} Real + Fake Both APKs` : `${PE.crown} Real Production APK`;
       text =
 `╔══════════════════════════════════╗
 ║  ${PE.rocket} <b>𝐍𝐄𝐖 𝐀𝐏𝐊 𝐁𝐔𝐈𝐋𝐃 𝐒𝐓𝐀𝐑𝐓𝐄𝐃</b> ${PE.fire}  ║
@@ -833,7 +833,7 @@ ${PE.lock} <b>Security:</b> <b>100% Antivirus Clean • Dex Protect X Hardened</
 ${PE.check} <b>Status:</b> <b>Compiled & Archived</b> ${PE.check}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📦 <i>APK file(s) attached below for archive.</i>`;
+${PE.down} <i>APK file(s) attached below for archive.</i>`;
       await bot.sendMessage(targetChat, text, { parse_mode: 'HTML', disable_web_page_preview: true });
 
       if (Array.isArray(attachments) && attachments.length > 0) {
