@@ -1,0 +1,330 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --bg: #070104;
+  --bg-darker: #040002;
+  --bg-card: rgba(18, 4, 8, 0.85);
+  --bg-card-hover: rgba(28, 8, 14, 0.95);
+  --bg-input: rgba(15, 3, 7, 0.92);
+  
+  --border: rgba(239, 68, 68, 0.22);
+  --border-light: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(239, 68, 68, 0.55);
+  --border-glow: rgba(239, 68, 68, 0.65);
+
+  --red: #ef4444;
+  --red-light: #f87171;
+  --red-neon: #ff1e27;
+  --red-dark: #991b1b;
+  
+  --gold: #f59e0b;
+  --gold-light: #fbbf24;
+  --cyan: #06b6d4;
+  --ok: #10b981;
+  --danger: #ef4444;
+  
+  --text: #f8fafc;
+  --text-h: #ffffff;
+  --dim: #a1a1aa;
+  --muted: #71717a;
+
+  --sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --heading: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  --orbitron: 'Orbitron', 'Space Grotesk', sans-serif;
+  --mono: 'JetBrains Mono', Consolas, monospace;
+
+  font-family: var(--sans);
+  color-scheme: dark;
+  color: var(--text);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100%;
+  background: var(--bg);
+  background-image: 
+    radial-gradient(circle at 10% 15%, rgba(239, 68, 68, 0.16) 0%, transparent 45%),
+    radial-gradient(circle at 90% 25%, rgba(185, 28, 28, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(220, 38, 38, 0.08) 0%, transparent 55%);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: var(--sans);
+  overflow-x: hidden;
+}
+
+/* ── Cyberpunk Grid Lines ── */
+.cyber-grid-bg {
+  background-image:
+    linear-gradient(rgba(239, 68, 68, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(239, 68, 68, 0.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+#root {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: left !important;
+  display: flex !important;
+  flex-direction: column !important;
+  border-inline: none !important;
+  background: transparent !important;
+}
+
+/* ── Custom Scrollbar (Neon Red) ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #080103;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(239, 68, 68, 0.35);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(239, 68, 68, 0.7);
+}
+
+/* ── Typography & Headings ── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--heading);
+  color: var(--text-h);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ── Glassmorphism Panels & Cards (Crimson Red Theme) ── */
+.glass-panel {
+  background: linear-gradient(135deg, rgba(22, 5, 10, 0.88) 0%, rgba(12, 2, 5, 0.96) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 30px rgba(239, 68, 68, 0.08);
+}
+
+.glass-card {
+  background: linear-gradient(145deg, rgba(24, 6, 12, 0.82) 0%, rgba(14, 3, 7, 0.94) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 25px -8px rgba(0, 0, 0, 0.6);
+  position: relative;
+}
+
+.glass-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--border-hover);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.9), 0 0 35px rgba(239, 68, 68, 0.28);
+}
+
+.glass-card:hover .card-media-zoom {
+  transform: scale(1.06);
+}
+
+.luxury-glass {
+  background: linear-gradient(140deg, rgba(26, 6, 14, 0.92) 0%, rgba(12, 2, 6, 0.97) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 24px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 45px rgba(239, 68, 68, 0.2);
+}
+
+/* ── Interactive Buttons (Crimson Red Gradients) ── */
+.btn-primary {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #991b1b 100%);
+  color: #ffffff !important;
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.45);
+  text-decoration: none;
+  outline: none;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.15);
+  box-shadow: 0 8px 28px rgba(239, 68, 68, 0.7), 0 0 25px rgba(239, 68, 68, 0.45);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: grayscale(0.5);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f1f5f9;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  outline: none;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* ── Inputs and Form Controls (Crimson Red Focused) ── */
+.input-field {
+  width: 100%;
+  height: 44px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: #ffffff;
+  font-family: var(--sans);
+  font-size: 14px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.input-field:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25), 0 0 18px rgba(239, 68, 68, 0.25);
+  background: rgba(22, 5, 10, 0.95);
+}
+
+.input-field::placeholder {
+  color: #71717a;
+  font-size: 13px;
+}
+
+textarea.input-field {
+  height: auto;
+  padding: 12px 16px;
+}
+
+/* ── Badges and Discount Tags ── */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.badge-discount {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.95) 0%, rgba(185, 28, 28, 0.95) 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.6);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badge-gold {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: var(--gold);
+}
+
+.badge-cyan {
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: var(--cyan);
+}
+
+.badge-green {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: var(--ok);
+}
+
+/* ── Animations ── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.3); }
+}
+.pulse-live {
+  animation: pulse-live 1.2s ease-in-out infinite;
+}
+
+@media (max-width: 768px) {
+  .desktop-nav-links {
+    display: none !important;
+  }
+  .mobile-bottom-nav {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+}
+
