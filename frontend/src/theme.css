@@ -1982,3 +1982,59 @@ a { color: var(--brand-2); text-decoration: none; }
   .admin-topbar { padding: 12px 14px; }
   .admin-topbar-title { font-size: 17px; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   v3.6 — Mobile layout fixes (Telegram WebView ~360-430px)
+   • Profile ka wallet card: 'Add fund' button card se bahar nikal raha tha
+   • Brand / store banner ke naam-teg narrow screen par clip ho rahe the
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Wallet balance card ── */
+.balance-card { flex-wrap: wrap; row-gap: 12px; }
+.balance-card > div:first-child { min-width: 0; flex: 1 1 150px; }
+.balance-card > .btn { flex: 0 0 auto; white-space: nowrap; margin-left: auto; }
+.balance-value { flex-wrap: wrap; column-gap: 8px; row-gap: 0; font-size: clamp(24px, 7.2vw, 30px); }
+.balance-value small { flex: 0 0 auto; white-space: nowrap; }
+
+/* ── Brand (topbar + hero + loading) ── */
+.brand { min-width: 0; }
+.brand-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.brand > div:last-child { min-width: 0; flex: 1 1 auto; }
+
+/* ── Store banner ── */
+.store-banner-main > div { min-width: 0; flex: 1 1 auto; }
+.store-name { font-size: clamp(15.5px, 5vw, 19px); overflow-wrap: anywhere; }
+.store-tag { font-size: clamp(9.5px, 2.8vw, 11px); letter-spacing: 0.11em; }
+
+/* ── Chhoti screen par thoda compact ── */
+@media (max-width: 400px) {
+  .balance-card { padding: 14px; gap: 10px; }
+  .balance-card > .btn { padding: 9px 13px; font-size: 12.5px; }
+  .store-banner { padding: 15px; }
+  .store-logo { width: 50px; height: 50px; border-radius: 16px; font-size: 21px; }
+  .brand-logo { width: 34px; height: 34px; border-radius: 11px; }
+  .brand-name { font-size: 14px; letter-spacing: 0.04em; }
+  .brand-sub { font-size: 9px; letter-spacing: 0.12em; }
+}
+
+/* Chhoti screen par sub-text poori width le (button neeche aa jaye) */
+@media (max-width: 360px) {
+  .balance-card > .btn { flex: 1 1 100%; margin-left: 0; justify-content: center; }
+}
+
+/* ── Admin: brand logo upload block ── */
+.brand-upload {
+  display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap;
+  padding: 14px; border-radius: var(--r);
+  border: 1px dashed rgba(128, 119, 239, 0.42);
+  background: linear-gradient(160deg, rgba(103, 92, 236, 0.10), rgba(255, 255, 255, 0.02));
+}
+.brand-upload-preview { width: 62px !important; height: 62px !important; border-radius: 18px !important; font-size: 24px !important; }
+.brand-upload-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 200px; }
+.brand-upload-title { font-family: var(--font-display); font-weight: 800; font-size: 14.5px; }
+.brand-upload-status { font-size: 11.5px; color: var(--muted); }

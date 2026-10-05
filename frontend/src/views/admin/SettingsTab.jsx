@@ -66,35 +66,47 @@ export default function SettingsTab({ act }) {
           <Sparkles size={15} color="var(--brand-2)" />
           <span className="row-title">Branding</span>
         </div>
-        <div className="flex-row gap-12 wrap" style={{ alignItems: 'center' }}>
-          <span className="logo-preview">
+
+        <div className="brand-upload">
+          <span className="logo-preview brand-upload-preview">
             {logoFile
               ? <img src={URL.createObjectURL(logoFile)} alt="" />
               : values.logo_file
                 ? <img src={`/api/files/${values.logo_file}`} alt="" />
                 : <b>{(values.site_name || 'Z').trim().charAt(0).toUpperCase()}</b>}
           </span>
-          <div className="stack gap-6 grow" style={{ minWidth: 180 }}>
-            <label className="btn btn-soft btn-sm" style={{ alignSelf: 'flex-start' }}>
-              <input
-                type="file" hidden accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-              />
-              <Upload size={13} /> {logoFile ? logoFile.name.slice(0, 20) : 'Upload logo'}
-            </label>
-            <span className="hint">Square PNG/SVG (512×512). Logo brand naam ke aage aur loading screen par dikhta hai.</span>
+
+          <div className="brand-upload-info">
+            <div className="brand-upload-title">Brand logo</div>
+            <div className="brand-upload-status">
+              {logoFile
+                ? `${logoFile.name.slice(0, 24)} — save karte hi live ho jaayega`
+                : values.logo_file
+                  ? 'Logo set hai — header aur loading screen par dikh raha hai'
+                  : 'Abhi koi logo nahi hai — neeche se upload karein'}
+            </div>
+            <div className="flex-row gap-8 wrap" style={{ marginTop: 6 }}>
+              <label className="btn btn-soft btn-sm">
+                <input
+                  type="file" hidden accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                />
+                <Upload size={13} /> {logoFile ? 'Change file' : 'Upload logo'}
+              </label>
+              {values.logo_file && !logoFile && (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => act(async () => {
+                    await api.post('/api/admin/settings', { remove_logo: '1' });
+                    await load();
+                  }, 'Logo hata diya')}
+                >
+                  <Trash2 size={12} /> Remove
+                </button>
+              )}
+            </div>
+            <span className="hint">Square PNG / SVG (512×512 best). Logo brand naam ke aage aur loading screen par dikhta hai.</span>
           </div>
-          {values.logo_file && !logoFile && (
-            <button
-              className="btn btn-ghost btn-xs"
-              onClick={() => act(async () => {
-                await api.post('/api/admin/settings', { remove_logo: '1' });
-                await load();
-              }, 'Logo hata diya')}
-            >
-              <Trash2 size={12} /> Remove logo
-            </button>
-          )}
         </div>
       </div>
 

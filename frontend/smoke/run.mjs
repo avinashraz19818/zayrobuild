@@ -336,6 +336,8 @@ await wait(1400);
     const shown = bodyTxt.length > 40;
     if (!shown) failed += 1;
     origError(`${shown ? '✅' : '❌'} admin tab: ${label}`);
+    fs.writeFileSync(`smoke/out/admin-${label.toLowerCase().replace(/[^a-z]+/g, '-')}.html`,
+      `<!doctype html><html><head><meta charset="utf-8"><title>admin ${label}</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
   }
   // screenshot ke liye wapas overview
   const ov = [...adminHost.querySelectorAll('button')].find((b) => (b.textContent || '').trim().toLowerCase().startsWith('overview'));
@@ -357,6 +359,9 @@ await wait(1400);
 // Profile tab kholo (header ke profile chip se)
 giftHost.querySelector('.profile-chip')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 await wait(700);
+// Profile page ka snapshot (wallet card layout check ke liye)
+fs.writeFileSync('smoke/out/profile.html',
+  `<!doctype html><html><head><meta charset="utf-8"><title>Profile page</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${giftHost.innerHTML}</body></html>`);
 {
   const cta = giftHost.querySelector('.gift-cta');
   const ctaOk = Boolean(cta) && /Gift Code/i.test(cta.textContent || '');
