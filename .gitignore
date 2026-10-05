@@ -17,12 +17,11 @@ backups/
 frontend/smoke/dist/
 frontend/dist/
 
-# ⚠️ Secrets — repo public ho sakta hai, inse kabhi commit na karein
-.env
+# ⚠️ .env aur firebase-service-account.json jaan-boojh kar repo me rakhe hain
+# (aapki request — clone ke saath hi settings aa jaayein). Ye asli secrets hain,
+# isliye repo ko private rakhna better hai, aur values rotate karte rahein.
 .env.local
 .env.*.local
-firebase-service-account.json
-*service-account*.json
 *.pem
 
 # Purane recovery/backup DB artifacts

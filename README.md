@@ -33,18 +33,14 @@ cd zayrobuild
 npm install
 npm --prefix frontend install      # (sirf UI rebuild ke liye; chalta panel already public/ me hai)
 
-# 5) settings file banayein (repo me .env nahi hai — secrets public repo me nahi jaate)
-cp .env.example .env
-nano .env        # PORT, SESSION_SECRET, TELEGRAM_BOT_TOKEN, ADMIN_PASSWORD_HASH, KEYSTORE_PASSWORD bharein
-node scripts/set-admin-password.js "AapkaNewAdminPassword"     # ADMIN_PASSWORD_HASH isse milega
-
-# 6) firebase-service-account.json apni Google service account key se upload karein
-#    (ye file bhi repo me nahi hai)
-
-# 7) start
+# 5) bas start (`.env` aur `firebase-service-account.json` clone ke saath hi aa jaate hain)
 npm start
 # → "APK Builder running on port 3000"
 ```
+
+Kuch values badalni ho to `.env` edit karke server restart kar dein:
+admin password ke liye `node scripts/set-admin-password.js "NayaPassword"`
+(uska hash `.env` ke `ADMIN_PASSWORD_HASH` me daalein).
 
 Panel: `http://<VPS-IP>:3000` · Admin: `http://<VPS-IP>:3000/admin` (Admin tab se unlock)
 
@@ -68,17 +64,18 @@ pm2 save && pm2 startup
 
 ## Settings / keys
 
-`cp .env.example .env` karke apni values daalein (PORT, SITE_NAME, SESSION_SECRET,
+`.env` aur `firebase-service-account.json` repo me hain (aapki request par), taaki
+clone ke saath hi saari settings aa jaayein. Keys: PORT, SITE_NAME, SESSION_SECRET,
 TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID, FIREBASE_*, ADMIN_USERNAME,
-ADMIN_PASSWORD_HASH, KEYSTORE_*). `.env` aur `firebase-service-account.json`
-jaan-boojh kar repo se bahar rakhe hain — inme secrets hote hain.
+ADMIN_PASSWORD_HASH, KEYSTORE_*. Reference ke liye `.env.example` bhi rakha hai.
 
-⚠️ **Purana `.env` (aur `firebase-service-account.json`) is repo ke git history me
-pehle se public tha.** Isliye VPS par jaane se pehle ye kaam zaroor karein:
+⚠️ **Ye asli secrets hain aur repo public hai.** Jo bhi ise dekh sakta hai, wo aapka
+bot token / admin hash / Firebase key use kar sakta hai. Isliye:
 - Telegram bot token BotFather → `/revoke` se naya lein
 - `SESSION_SECRET` naya random string rakhein
 - Admin password change karein (`node scripts/set-admin-password.js`)
 - Firebase service account key Google Cloud console se delete karke nayi banayein
+- Ya repo ko **private** kar dein (GitHub → Settings → Danger Zone → Change visibility)
 
 Isi tarah `.gitignore` me `database/apkbuilder.db` ki lines jaan-boojh kar hata di gayi hain —
 DB me aapke templates, designs, settings aur users hain, aur wahi data clone ke saath aana chahiye.
