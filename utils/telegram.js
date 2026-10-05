@@ -718,6 +718,24 @@ function sendApkReady(user, order, apkPaths = [], downloadUrls = []) {
   return delivery;
 }
 
+/**
+ * Ek user ko simple HTML notice bhejo (deploy-bot status, admin actions etc.).
+ * Bot offline ho to silently skip — caller ka flow nahi rukta.
+ */
+async function sendUserNotice(chatId, html, replyMarkup = null) {
+  if (!bot || !chatId) return null;
+  try {
+    return await bot.sendMessage(chatId, html, {
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {})
+    });
+  } catch (error) {
+    console.error('[Telegram] user notice failed:', error.message);
+    return null;
+  }
+}
+
 // ── Broadcast Announcement to All Telegram Bot Users with Premium Emojis ──
 async function broadcastAnnouncement(announcement) {
   if (!bot || !_db) throw new Error('Telegram bot is not configured or running');
@@ -873,4 +891,4 @@ ${PE.dot} <b>Request ID:</b> <code>#${data.id}</code>`;
   }
 }
 
-module.exports = { initBot, sendCoinRequest, sendApkReady, broadcastAnnouncement, sendLogEvent };
+module.exports = { initBot, sendCoinRequest, sendApkReady, broadcastAnnouncement, sendLogEvent, sendUserNotice };

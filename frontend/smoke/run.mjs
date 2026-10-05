@@ -40,7 +40,48 @@ const RESPONSES = {
   '/api/me/coin-requests': [{ id: 9, coins_requested: 500, amount_paid: 500, utr: '428192837192', status: 'approved', created_at: '2026-10-03 12:00:00' }],
   '/api/me/referral': { code: 'ZAYRO7X', link: 'https://t.me/zayrobuild_bot?start=ref_ZAYRO7X', invited_count: 4, pending_count: 1, earned_coins: 40, recent: [{ name: 'Rahul', created_at: '2026-10-02', bonus: 10 }] },
   '/api/me/fake-sites': [{ order_id: 51, app_name: 'MAAN WIN VIP', register_url: 'https://fake.com/register', apk_file: 'fake.apk', status: 'done', created_at: '2026-10-04' }],
-  '/api/font-styles': [{ key: 'bold', label: 'Bold', sample: '𝗠𝗔𝗔𝗡 𝗪𝗜𝗡' }, { key: 'sansbold', label: 'Bold Sans', sample: 'Maan Win' }]
+  '/api/font-styles': [{ key: 'bold', label: 'Bold', sample: '𝗠𝗔𝗔𝗡 𝗪𝗜𝗡' }, { key: 'sansbold', label: 'Bold Sans', sample: 'Maan Win' }],
+  /* ── admin panel (phase 4) ── */
+  '/api/admin/dashboard': {
+    stats: {
+      total_users: 128, users_today: 6, total_orders: 342, orders_today: 9,
+      completed_orders: 300, building_orders: 4, pending_orders: 2, failed_orders: 36,
+      total_apks_built: 512, real_apks_built: 340, fake_apks_built: 172, apks_built_today: 11,
+      total_user_coins: 8420, coins_spent_total: 51960, pending_coin_requests: 3, pending_coin_amount: 1500
+    },
+    recent_orders: [
+      { id: 91, app_name: 'MAAN WIN VIP', user_name: 'Rahul', design_name: 'Zayro Apex VIP', created_at: '2026-10-05 10:12:00', apk_count: 2, status: 'building' },
+      { id: 90, app_name: 'TIGER PLAY', user_name: 'Sahil', design_name: 'Dhani Win Core', created_at: '2026-10-05 09:02:00', apk_count: 1, status: 'done' }
+    ]
+  },
+  '/api/admin/designs': DESIGNS,
+  '/api/admin/coin-requests': [
+    { id: 9, user_id: 7, coins_requested: 500, amount_paid: 500, utr: '428192837192', status: 'pending', screenshot_file: 'shot.png', created_at: '2026-10-05 08:00:00' }
+  ],
+  '/api/admin/orders': ORDERS,
+  '/api/admin/users': [
+    { id: 7, username: 'builder', first_name: 'Avinash', tg_username: 'avinash', telegram_id: '8015937475', coins: 420, created_at: '2026-09-20 10:00:00' }
+  ],
+  '/api/admin/bot-deploys': [
+    { id: 3, user_id: 7, bot_name: 'Rahul Store', bot_username: '', bot_token: '8123456789…6789', admin_tg_id: '8015937475', plan_key: 'pro', plan_name: 'Pro Bot', price: 1299, status: 'pending', note: '', created_at: '2026-10-05 09:30:00', username: 'builder', tg_username: 'avinash', first_name: 'Avinash', telegram_id: '8015937475', coins: 420 }
+  ],
+  '/api/admin/announcements': [
+    { id: 1, title: 'UPDATE', message: 'MAAN WIN FAKE WEBSITE is now live. Plans from Rs 699.', button_text: 'Open now', button_url: 'https://t.me/zayrobuild_bot', active: 1, created_at: '2026-10-05 08:09:39' }
+  ],
+  '/api/admin/coupons': [
+    { id: 1, code: 'SAVE10', type: 'fixed', value: 10, max_uses: 100, used_count: 12, active: 1, expires_at: '', created_at: '2026-10-01 10:00:00' }
+  ],
+  '/api/admin/settings': {
+    site_name: 'ZAYRO BUILD', site_url: 'https://panel.example.com', upi_id: 'zayro@upi',
+    coin_rate: '1', addon_fake_price: '5', domain_change_price: '10', invite_code_change_price: '10',
+    telegram_support_user: 'zayrosupport', telegram_channel_url: '', telegram_admin_id: '8015937475',
+    deploy_bot_enabled: '1',
+    deploy_bot_plans: JSON.stringify([
+      { key: 'starter', name: 'Starter Bot', price: 699, days: 30, perks: ['Welcome message bot'] },
+      { key: 'pro', name: 'Pro Bot', price: 1299, days: 90, perks: ['Welcome + broadcast'] },
+      { key: 'vip', name: 'VIP Bot', price: 1999, days: 365, perks: ['Full auto welcome engine'] }
+    ])
+  }
 };
 
 window.fetch = async (url) => {
@@ -230,7 +271,7 @@ mount(gateHost);
 await wait(1400);
 {
   const t = gateHost.textContent || '';
-  const noSignin = !/\bSign in\b/i.test(t) && !/\bRegister\b/i.test(t) && !/Add fund/i.test(t);
+  const noSignin = !/Sign in/i.test(t) && !/Create account/i.test(t) && !/Add fund/i.test(t);
   if (!noSignin) failed += 1;
   origError(`${noSignin ? '✅' : '❌'} Telegram-only header (no Sign in / Register buttons)`);
 
@@ -247,6 +288,63 @@ await wait(1400);
   const ok = /Open in Telegram/i.test(gt);
   if (!ok) failed += 1;
   origError(`${ok ? '✅' : '❌'} deploy tab par Telegram gate card`);
+}
+
+/* ── Phase 4: admin panel (admin session mock) ── */
+RESPONSES['/api/me'] = { ...USER, isAdmin: true };
+const adminHost = window.document.createElement('div');
+window.document.body.appendChild(adminHost);
+mount(adminHost);
+await wait(1200);
+// Admin tab kholo (desktop nav me admin ke liye button aata hai)
+{
+  const adminBtn = [...adminHost.querySelectorAll('button')]
+    .find((b) => (b.textContent || '').trim().toLowerCase() === 'admin');
+  adminBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+}
+await wait(1400);
+{
+  const t = adminHost.textContent || '';
+  const ok = /Admin panel/i.test(t) && /Users/.test(t) && /Deploy Bot/i.test(t) && /Coupons/i.test(t);
+  if (!ok) failed += 1;
+  origError(`${ok ? '✅' : '❌'} admin panel unlock + tabs visible`);
+
+  const kpi = /Pending deposits/i.test(t) && /Coins in wallets/i.test(t);
+  if (!kpi) failed += 1;
+  origError(`${kpi ? '✅' : '❌'} admin overview KPIs`);
+
+  fs.writeFileSync('smoke/out/admin.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Admin panel — overview</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
+
+  // baaki admin tabs ek-ek karke check
+  const adminTabs = [
+    ['Templates', /New template/i],
+    ['Deposits', /Deposit requests/i],
+    ['Orders', /Orders \(/],
+    ['Users', /Users \(/],
+    ['Deploy Bot', /Deploy Bot requests/i],
+    ['Announce', /Naya announcement/i],
+    ['Coupons', /Naya coupon/i],
+    ['Settings', /Save all settings/i]
+  ];
+  for (const [label, re] of adminTabs) {
+    const btn = [...adminHost.querySelectorAll('.admin-tabs button')]
+      .find((b) => (b.textContent || '').trim().toLowerCase().startsWith(label.toLowerCase()));
+    if (!btn) { failed += 1; origError(`❌ admin tab missing: ${label}`); continue; }
+    btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(420);
+    const okTab = re.test(adminHost.textContent || '');
+    if (!okTab) failed += 1;
+    origError(`${okTab ? '✅' : '❌'} admin tab: ${label}`);
+    if (label === 'Deploy Bot') {
+      fs.writeFileSync('smoke/out/admin-deploy.html',
+        `<!doctype html><html><head><meta charset="utf-8"><title>Admin — Deploy Bot</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
+    }
+    if (label === 'Settings') {
+      fs.writeFileSync('smoke/out/admin-settings.html',
+        `<!doctype html><html><head><meta charset="utf-8"><title>Admin — Settings</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
+    }
+  }
 }
 
 const realErrors2 = errors.filter((e) => !/not wrapped in act|ReactDOMTestUtils|Warning: /.test(e));

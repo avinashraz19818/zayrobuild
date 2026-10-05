@@ -113,7 +113,22 @@ export const admin = {
   rebuild: (id) => api.post(`/api/admin/orders/${id}/rebuild`, {}),
   settings: () => api.get('/api/admin/settings'),
   saveSetting: (key, value) => api.post('/api/admin/settings', { [key]: value }),
-  designs: () => api.get('/api/admin/designs')
+  designs: () => api.get('/api/admin/designs'),
+  createDesign: (fd) => api.postForm('/api/admin/designs', fd),
+  updateDesign: (id, patch) => api.patch(`/api/admin/designs/${id}`, patch),
+  deleteDesign: (id) => api.del(`/api/admin/designs/${id}`),
+  announcements: () => api.get('/api/admin/announcements'),
+  createAnnouncement: (body) => api.post('/api/admin/announcements', body),
+  updateAnnouncement: (id, body) => api.patch(`/api/admin/announcements/${id}`, body),
+  deleteAnnouncement: (id) => api.del(`/api/admin/announcements/${id}`),
+  broadcastAnnouncement: (id) => api.post(`/api/admin/announcements/${id}/broadcast`, {}),
+  coupons: () => api.get('/api/admin/coupons'),
+  createCoupon: (body) => api.post('/api/admin/coupons', body),
+  setCoupon: (id, active) => api.patch(`/api/admin/coupons/${id}`, { active }),
+  deleteCoupon: (id) => api.del(`/api/admin/coupons/${id}`),
+  botDeploys: () => api.get('/api/admin/bot-deploys'),
+  setBotDeployStatus: (id, status, note) => api.post(`/api/admin/bot-deploys/${id}`, { status, note }),
+  deleteBotDeploy: (id) => api.del(`/api/admin/bot-deploys/${id}`)
 };
 
 /* ─────────────────────────  helpers  ───────────────────────── */

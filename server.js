@@ -11,7 +11,7 @@ const https = require('https');
 
 const db = require('./database/db');
 const { buildApk, makePackageName } = require('./utils/apkbuilder');
-const { initBot, sendCoinRequest, sendApkReady, broadcastAnnouncement, sendLogEvent } = require('./utils/telegram');
+const { initBot, sendCoinRequest, sendApkReady, broadcastAnnouncement, sendLogEvent, sendUserNotice } = require('./utils/telegram');
 const { injectParams: injectHtmlParams } = require('./utils/htmlprocessor');
 const { buildAppContent, buildRuntimeConfig, readUsersNode, writeUsersNode } = require('./utils/appcontent');
 const { applyFontStyle, isValidStyle, FONT_STYLES } = require('./utils/fontstyles');
@@ -1078,6 +1078,14 @@ app.get('/api/me/fake-sites', requireAuth, (req, res) => {
 // DEPLOY BOT (welcome-message bot module)
 // ═══════════════════════════════════════════
 
+// Telegram HTML escaping (deploy-bot notices jaise chhote messages ke liye).
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function readDeployPlans() {
   try {
     const raw = db.prepare("SELECT value FROM settings WHERE key='deploy_bot_plans'").get()?.value;
@@ -1155,6 +1163,64 @@ app.post('/api/me/bot-deploys', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('[deploy-bot] create failed:', error.message);
     res.status(500).json({ error: 'Deploy request save nahi hui — dobara try karein' });
+  }
+});
+
+// ── Admin: deploy-bot requests ──────────────────────────────────────────────
+app.get('/api/admin/bot-deploys', requireAdmin, (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT r.*, u.username, u.tg_username, u.first_name, u.telegram_id, u.coins
+      FROM bot_deploy_requests r
+      LEFT JOIN users u ON u.id=r.user_id
+      ORDER BY r.id DESC LIMIT 100
+    `).all();
+    // Token browser me poora nahi bhejte — sirf masked preview.
+    const safe = rows.map((r) => ({
+      ...r,
+      bot_token: r.bot_token ? `${String(r.bot_token).slice(0, 10)}…${String(r.bot_token).slice(-4)}` : '',
+      token_masked: true
+    }));
+    res.json(safe);
+  } catch (error) {
+    console.error('[deploy-bot] admin list failed:', error.message);
+    res.status(500).json({ error: 'Could not load deploy requests' });
+  }
+});
+
+app.post('/api/admin/bot-deploys/:id', requireAdmin, async (req, res) => {
+  const status = String(req.body?.status || '').trim().toLowerCase();
+  const allowed = ['pending', 'active', 'rejected', 'failed'];
+  if (!allowed.includes(status)) return res.status(400).json({ error: `status must be one of ${allowed.join(', ')}` });
+  const note = String(req.body?.note || '').trim().slice(0, 300);
+  try {
+    const row = db.prepare('SELECT * FROM bot_deploy_requests WHERE id=?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Deploy request not found' });
+    db.prepare('UPDATE bot_deploy_requests SET status=?, note=? WHERE id=?').run(status, note, row.id);
+
+    // User ko Telegram par status bata do (agar bot chal raha ho)
+    const user = db.prepare('SELECT telegram_id FROM users WHERE id=?').get(row.user_id);
+    const label = { active: 'LIVE ✅', pending: 'Pending', rejected: 'Rejected', failed: 'Failed' }[status] || status;
+    if (user?.telegram_id) {
+      try {
+        await sendUserNotice(user.telegram_id,
+          `🤖 <b>Deploy Bot update</b>\n\nBot: <code>${escapeHtml(row.bot_name)}</code>\nPlan: <b>${escapeHtml(row.plan_name)}</b>\nStatus: <b>${label}</b>${note ? `\nNote: <i>${escapeHtml(note)}</i>` : ''}`);
+      } catch (_) { /* telegram offline */ }
+    }
+    res.json({ success: true, status });
+  } catch (error) {
+    console.error('[deploy-bot] admin update failed:', error.message);
+    res.status(500).json({ error: 'Could not update deploy request' });
+  }
+});
+
+app.delete('/api/admin/bot-deploys/:id', requireAdmin, (req, res) => {
+  try {
+    const info = db.prepare('DELETE FROM bot_deploy_requests WHERE id=?').run(req.params.id);
+    if (!info.changes) return res.status(404).json({ error: 'Deploy request not found' });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Could not delete deploy request' });
   }
 });
 
