@@ -103,7 +103,8 @@ const checks = [
   ['discount badge', /% OFF/i.test(text)],
   ['announcement card', /FAKE WEBSITE is now live/i.test(text)],
   ['sort pills', /Latest/.test(text) && /Popular/.test(text)],
-  ['bottom nav', /Templates/.test(text) && /Orders/.test(text) && /Account/.test(text)],
+  ['bottom nav', /Templates/.test(text) && /Orders/.test(text) && /Fake Website/.test(text) && /Deploy Bot/.test(text)],
+  ['header profile button', /My profile/i.test(text)],
   ['quick actions', /Refer & earn|Refer & Earn/i.test(text)]
 ];
 
@@ -134,6 +135,15 @@ function liveCssName() {
 
 /* ── Phase 2: saare tabs + build wizard click-through ── */
 async function clickByText(label) {
+  // Account tab ab bottom nav me nahi hai — header ke profile chip se khulta hai.
+  if (label === 'Account') {
+    const chip = window.document.querySelector('.profile-chip');
+    if (chip) {
+      chip.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      await wait(450);
+      return true;
+    }
+  }
   const nodes = [...window.document.querySelectorAll('button, .tpl-card')];
   const target = nodes.find((n) => (n.textContent || '').trim().toLowerCase().includes(label.toLowerCase()));
   if (!target) { origError(`⚠️  click target not found: ${label}`); return false; }
@@ -144,12 +154,21 @@ async function clickByText(label) {
 
 const tabChecks = [
   ['Orders', /My Orders|Abhi koi build nahi/i],
-  ['Account', /Account stats|Total orders/i],
+  ['Account', /Account stats|Total orders/i, 'profile'],
   ['Refer', /Referral link|Refer & Earn/i],
   ['Deploy Bot', /Welcome Message Bot|Choose plan/i],
   ['Templates', /image\/video preview ke saath/i],
   ['Fake Website', /Fake builds|Ek order, do APK/i]
 ];
+
+{
+  const nav = window.document.querySelector('.bottomnav');
+  const labels = nav ? (nav.textContent || '') : '';
+  const ok = /Home/.test(labels) && /Deploy Bot/.test(labels) && /Templates/.test(labels)
+    && /Fake Website/.test(labels) && /Orders/.test(labels) && !/Account/.test(labels);
+  if (!ok) failed += 1;
+  origError(`${ok ? '✅' : '❌'} bottom nav: Home · Deploy Bot · Templates · Fake Website · Orders (no Account)`);
+}
 
 origError('\n— tab walk —');
 for (const [label, re] of tabChecks) {

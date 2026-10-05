@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  House, Layers, Globe, Package, User, Gift, Shield, Wallet, Send, Bot, Radio
+  House, Layers, Globe, Package, User, Gift, Shield, Wallet, Send, Bot, Radio, ChevronRight
 } from 'lucide-react';
 import { displayName, initials, openTelegramLink } from '../lib/api';
 import { useStore } from '../context/StoreContext';
@@ -15,7 +15,9 @@ export const NAV = [
   { key: 'account', label: 'Account', icon: User }
 ];
 
-export const MOBILE_KEYS = ['home', 'deploy', 'templates', 'orders', 'account'];
+// Mobile bottom nav — Home · Deploy Bot · Templates · Fake Website · Orders.
+// Account bottom nav me nahi hai: uska profile button header me (naam ke saath) hai.
+export const MOBILE_KEYS = ['home', 'deploy', 'templates', 'fakesite', 'orders'];
 
 /** Mobile bottom nav — skillhub jaisa 5-tab bar (Home · Deploy Bot · Templates · Orders · Account). */
 const MOBILE_NAV = MOBILE_KEYS
@@ -81,13 +83,22 @@ export function TopBar({ tab, setTab, user, isAdmin, orderCount, onAddFund, botL
         <div className="topbar-spacer" />
 
         {user ? (
-          <div className="flex-row gap-8">
+          <div className="topbar-user">
             <button className="balance-chip" onClick={onAddFund} title="Wallet balance">
               <CoinIco />
               <span>₹{Number(user.coins || 0).toLocaleString('en-IN')}</span>
             </button>
-            <button className="avatar-btn" onClick={() => setTab('account')} title={displayName(user)}>
-              {user.photo_url ? <img src={user.photo_url} alt="" /> : initials(displayName(user))}
+
+            {/* Profile button — Telegram naam ke saath, click par account/profile view */}
+            <button className={`profile-chip${tab === 'account' ? ' active' : ''}`} onClick={() => setTab('account')} title="My profile">
+              <span className="avatar-btn">
+                {user.photo_url ? <img src={user.photo_url} alt="" /> : initials(displayName(user))}
+              </span>
+              <span className="profile-meta">
+                <span className="profile-name">{displayName(user)}</span>
+                <span className="profile-sub">My profile</span>
+              </span>
+              <ChevronRight size={14} className="profile-chev" />
             </button>
           </div>
         ) : (
