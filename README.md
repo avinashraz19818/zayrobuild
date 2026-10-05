@@ -97,6 +97,23 @@ isi wajah se `[fb-token] exchange failed` aata hai). Nayi key banane ka tarika:
 
 Bina key ke panel poora chalta hai — sirf **live links (Firebase RTDB) wale features** off rehte hain.
 
+### Firebase project ek hi rakhein (bahut zaroori)
+Panel ka service account + `.env` ka `FIREBASE_DATABASE_URL` aur built APK ke template ka
+`databaseURL` — **teeno ka ek hi Firebase project hona chahiye**, warna "live link" feature
+kaam nahi karega (server ek database me likhega, app doosri padhegi).
+
+Kitne templates purane project par hain, dekhne ke liye:
+```bash
+node scripts/switch-firebase-project.js                      # dry-run (kuch nahi badalta)
+node scripts/switch-firebase-project.js --apply              # .env wale project par le aao
+```
+Ye saare `templates/*.html` ka `databaseURL` badal deta hai (git me tracked hain, isliye
+`git checkout -- templates` se undo ho jata hai). Uske baad:
+```bash
+bash scripts/deploy-rules.sh                                 # us project me rules deploy
+pm2 restart zayro-panel --update-env && pm2 save
+```
+
 ### Config badalna (PORT, token, etc.)
 ```bash
 nano ~/zayrobuild/.env

@@ -65,38 +65,83 @@ async function getToken() {
   }
 }
 
+// Node ke fetch ka "fetch failed" asli wajah chhupa deta hai — usko saaf karke dikhao.
+function describeFetchError(error) {
+  const cause = error?.cause || {};
+  const code = cause.code || cause.errno || '';
+  const msg = cause.message || error?.message || 'unknown';
+  let hint = '';
+  if (code === 'ENOTFOUND' || /ENOTFOUND|getaddrinfo/i.test(msg)) {
+    hint = '→ Ye hostname exist nahi karta. Firebase Console → Realtime Database me jo URL likha hai wahi use karein.';
+  } else if (code === 'ECONNREFUSED' || code === 'ECONNRESET') {
+    hint = '→ Connection refuse hua — database instance band/bana hua nahi hai.';
+  } else if (code === 'ETIMEDOUT' || /timeout/i.test(msg)) {
+    hint = '→ Network timeout — VPS se is host tak rasta band hai (firewall/DNS).';
+  } else if (/certificate|CERT|TLS|SSL/i.test(msg)) {
+    hint = '→ TLS/certificate problem — VPS ki ghadi ya CA store check karein (sudo timedatectl set-ntp true).';
+  }
+  return `${code ? code + ': ' : ''}${msg}${hint ? '\n     ' + hint : ''}`;
+}
+
+async function tryFetch(label, url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    console.log(`${label} → ❌ ${describeFetchError(error)}`);
+    return null;
+  }
+}
+
 async function main() {
   console.log('═══ FIREBASE AUTH DIAGNOSTIC ═══\n');
   const token = await getToken();
   if (!token) { console.log('\n➡️ Token nahi ban raha — upar ka error dekh kar fix karo.'); return; }
 
-  // A) Bina token — config write (rules lagi ho to 401 hona chahiye)
-  let unauth = await fetch(DB_URL + '/arena_diag.json', { method: 'PUT', body: JSON.stringify({ config: { x: 1 } }) });
-  console.log('\n[A] Bina token, root write     → HTTP', unauth.status, '(rules lagi ho to 401/403)');
-  try { await fetch(DB_URL + '/arena_diag.json', { method: 'DELETE' }); } catch (e) {}
+  console.log('\n[NET] Database URL test: ' + DB_URL);
+  const host = new URL(DB_URL).host;
+  try {
+    const dns = require('dns').promises;
+    const addrs = await dns.lookup(host, { all: true });
+    console.log('      DNS ok →', addrs.map(a => a.address).join(', '));
+  } catch (error) {
+    console.log('      ❌ DNS fail →', error.code || error.message, '\n     → Firebase Console → Realtime Database ka exact URL .env ke FIREBASE_DATABASE_URL me daalein.');
+    return;
+  }
+
+  // A) Bina token — write (rules lagi ho to 401/403 hona chahiye)
+  const unauth = await tryFetch('\n[A] Bina token, root write     ', DB_URL + '/arena_diag.json', { method: 'PUT', body: JSON.stringify({ config: { x: 1 } }) });
+  if (unauth) {
+    console.log('     HTTP', unauth.status, '(rules lagi ho to 401/403)');
+    try { await fetch(DB_URL + '/arena_diag.json', { method: 'DELETE' }); } catch (e) {}
+  }
 
   // B) Token ke saath — config write on own panel (harmless probe field)
-  let authed = await fetch(DB_URL + '/zayrobdgwinabiz/config.json?access_token=' + encodeURIComponent(token), {
+  const authed = await tryFetch('[B] TOKEN ke saath config write ', DB_URL + '/zayrobdgwinabiz/config.json?access_token=' + encodeURIComponent(token), {
     method: 'PATCH', body: JSON.stringify({ probeAuth: Date.now() })
   });
-  let authedText = await authed.text();
-  console.log('[B] TOKEN ke saath config write → HTTP', authed.status, authedText.slice(0, 120));
+  if (!authed) { console.log('\n➡️ Database tak pahunch hi nahi pa rahe — upar ka NET/DNS error dekhein.'); return; }
+  const authedText = await authed.text();
+  console.log('     HTTP', authed.status, authedText.slice(0, 160));
 
   // C) Token ke saath — read
-  let read = await fetch(DB_URL + '/zayrobdgwinabiz/config.json?access_token=' + encodeURIComponent(token));
-  console.log('[C] TOKEN ke saath read        → HTTP', read.status);
+  const read = await tryFetch('[C] TOKEN ke saath read        ', DB_URL + '/zayrobdgwinabiz/config.json?access_token=' + encodeURIComponent(token));
+  if (read) console.log('     HTTP', read.status);
 
-  console.log('\n═══ RESULT INTERPRETATION ═══');
+  console.log('\n═══ RESULT ═══');
   if (authed.status === 200) {
-    console.log('✅✅ TOKEN + RULES SAB SAHI HAI!');
-    console.log('   → Matlb server/hunt script ki 401 ka karan token nahi — code path me');
-    console.log('     kuch aur hai. Mujhe batana, main turant debug karunga.');
-  } else if (authed.status === 401) {
-    console.log('❌ TOKEN SAHI PAR FIREBASE 401 DE RAHA HAI — rules service-account ko');
-    console.log('   accept nahi kar rahi. Iska fix: rules me auth.uid (client_email) se');
-    console.log('   allow karna — main turant nayi rules file bana dunga. Muje ye output');
-    console.log('   paste kar dena.');
+    console.log('✅✅ TOKEN + DATABASE + RULES SAB SAHI HAI — live links feature chalega.');
+  } else if (authed.status === 401 || authed.status === 403) {
+    console.log('❌ Token sahi, par database RULES is service account ko allow nahi kar rahi.');
+    console.log('   Fix: database rules me auth != null par write allow karein, ya');
+    console.log('   bash scripts/deploy-rules.sh chalayein (project id .env se).');
+  } else if (authed.status === 404) {
+    console.log('❌ Ye database is project me hai hi nahi (HTTP 404).');
+    console.log('   Fix: Firebase Console → Realtime Database → URL copy karke');
+    console.log('   .env ke FIREBASE_DATABASE_URL me daalein (aur location — asia-southeast1 —');
+    console.log('   hone par URL aisa hota hai: https://<project>-default-rtdb.asia-southeast1.firebasedatabase.app)');
+  } else {
+    console.log('⚠️ Unexpected status — upar ka output paste kar dein.');
   }
 }
 
-main().catch(e => console.log('ERROR:', e.message));
+main().catch(e => console.log('ERROR:', describeFetchError(e)));
