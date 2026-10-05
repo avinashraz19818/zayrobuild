@@ -80,9 +80,19 @@ bot token / admin hash / Firebase key use kar sakta hai. Isliye:
 - Firebase service account key Google Cloud console se delete karke nayi banayein
 - Ya repo ko **private** kar dein (GitHub → Settings → Danger Zone → Change visibility)
 
-Isi tarah `.gitignore` me `database/apkbuilder.db` ki lines jaan-boojh kar hata di gayi hain —
-DB me aapke templates, designs, settings aur users hain, aur wahi data clone ke saath aana chahiye.
-(Agar aapko fresh DB chahiye to file delete karke server restart karein.)
+### Database (pull-safe)
+- Live DB `database/apkbuilder.db` **git me tracked nahi** hai — server use har second likhta hai,
+  isliye tracked rakhne par har `git pull` par conflict aata tha.
+- Repo me `database/apkbuilder.seed.db` hai (aapke 37 designs + settings, users khali).
+  Pehli baar server chalne par ye khud `apkbuilder.db` ban jaati hai.
+- **Update lena:**
+  ```bash
+  cd ~/zayrobuild
+  git pull
+  pm2 restart zayro-panel --update-env && pm2 save
+  ```
+  Aapka apna data (users, orders, coins) safe rehta hai — pull us file ko chhoota hi nahi.
+- Fresh start chahiye to: `pm2 stop zayro-panel && mv database/apkbuilder.db database/apkbuilder.db.purana && pm2 start zayro-panel`
 
 Panel me sabse zaroori settings (Admin → Settings se):
 - **Store name + Brand logo** (logo header aur loading screen par dikhta hai)

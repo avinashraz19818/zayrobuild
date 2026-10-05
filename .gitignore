@@ -42,3 +42,5 @@ cloudflared.exe
 cloudflared
 backups/
 builds/
+database/zayrobuild.db-wal
+database/zayrobuild.db-shm
