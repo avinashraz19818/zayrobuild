@@ -21,7 +21,7 @@ const TABS = [
   { key: 'users',     label: 'Users',      sub: 'Accounts & coins',     icon: Users },
   { key: 'gift',      label: 'Gift Codes', sub: 'Codes & claims',       icon: Gift },
   { key: 'announce',  label: 'Announce',   sub: 'Popup news',           icon: Megaphone },
-  { key: 'settings',  label: 'Settings',   sub: 'Store & keys',         icon: Settings }
+  { key: 'settings',  label: 'Settings',   sub: 'Logo & store',         icon: Settings }
 ];
 
 const TITLE = Object.fromEntries(TABS.map(t => [t.key, t]));
