@@ -32,7 +32,13 @@ export default function TemplateCard({ design, onOpen, onPreview, index = 0 }) {
     >
       <div className="tpl-media">
         {design.preview_image ? (
-          <img src={getMediaUrl(design.preview_image)} alt={design.name} loading="lazy" />
+          // Media missing/broken ho to gradient placeholder hi dikhe — broken icon nahi.
+          <img
+            src={getMediaUrl(design.preview_image)}
+            alt={design.name}
+            loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
         ) : (
           <div className="placeholder"><Layers size={38} /></div>
         )}

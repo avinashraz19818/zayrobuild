@@ -113,7 +113,15 @@ for (const [name, ok] of checks) {
 }
 
 fs.mkdirSync('smoke/out', { recursive: true });
-fs.writeFileSync('smoke/out/rendered.html', `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../public/assets/${fs.readdirSync('../public/assets').find((f) => f.endsWith('.css'))}"></head><body>${html}</body></html>`);
+/* Snapshot: wahi CSS use karo jo live public/index.html reference karta hai, aur
+   mock media ko inline placeholder se replace karo — taaki file browser me saaf dikhe. */
+const shell = fs.readFileSync('../public/index.html', 'utf8');
+const liveCss = (shell.match(/assets\/(index-[A-Za-z0-9_-]+\.css)/) || [])[1];
+const PH = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="260"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d2347"/><stop offset="1" stop-color="#2b2452"/></linearGradient></defs><rect width="300" height="260" fill="url(#g)"/><circle cx="150" cy="112" r="34" fill="#675cec" opacity=".35"/><rect x="96" y="176" width="108" height="12" rx="6" fill="#8b7cff" opacity=".45"/></svg>'
+);
+const snapshot = html.replace(/src="\/api\/files\/[^"]*"/g, `src="${PH}"`);
+fs.writeFileSync('smoke/out/rendered.html', `<!doctype html><html><head><meta charset="utf-8"><title>ZAYRO BUILD — panel snapshot</title><link rel="stylesheet" href="../../../public/assets/${liveCss}"></head><body>${snapshot}</body></html>`);
 
 const realErrors = errors.filter((e) => !/not wrapped in act|ReactDOMTestUtils|Warning: /.test(e));
 
