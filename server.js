@@ -3724,6 +3724,21 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
+const httpServer = app.listen(PORT, () => {
   console.log(`APK Builder running on port ${PORT}`);
+  console.log(`   → Panel: http://localhost:${PORT}   ·   Admin tab panel ke andar hai`);
+});
+
+// Port busy ho to ghuma-phira kar crash hone ke bajaye saaf message do.
+httpServer.on('error', (error) => {
+  if (error && error.code === 'EADDRINUSE') {
+    console.error(`\n❌ Port ${PORT} already in use — is port par koi aur process chal raha hai.`);
+    console.error(`   Kya chal raha hai dekhein:  ss -ltnp | grep ':${PORT}'`);
+    console.error(`   Fix (do me se koi ek):`);
+    console.error(`     1) Doosre port par chalayein:  PORT=3001 npm start`);
+    console.error(`        (ya .env me PORT=3001 karke dobara start karein)`);
+    console.error(`     2) Purana process band karein:  pm2 list  →  pm2 stop <naam>  (ya kill <PID>)\n`);
+    process.exit(1);
+  }
+  throw error;
 });

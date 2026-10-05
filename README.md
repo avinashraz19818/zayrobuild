@@ -51,6 +51,9 @@ Panel: `http://<VPS-IP>:3000` · Admin: `http://<VPS-IP>:3000/admin` (Admin tab 
 | `better-sqlite3 invalid ELF header` ya `NODE_MODULE_VERSION` | `npm rebuild better-sqlite3` |
 | `Cannot find module 'sharp'` / sharp load error | `npm install --include=optional sharp` |
 | node-gyp headers download fail | `npm rebuild better-sqlite3 --nodedir=/usr/local` (ya Node headers install karein) |
+| `Error: listen EADDRINUSE :::3000` | Port pehle se busy hai. `ss -ltnp \| grep ':3000'` se dekhein, phir `PORT=3001 npm start` karein (ya `.env` me `PORT=3001`) |
+| pm2 me port change nahi hua | `.env` edit karne ke baad `pm2 restart zayro-panel && pm2 save` |
+| `[fb-token] exchange failed with status 400` | Firebase service-account key invalid/disable ho gayi hai. `node scripts/diag-firebase-auth.js` chalayein aur Google Cloud Console se **nayi key** banakar `firebase-service-account.json` replace karein |
 
 ### Chalu rakhne ke liye (optional)
 
