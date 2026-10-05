@@ -30,12 +30,12 @@ database/*.old_bak
 database/*.before_recovery_*
 database/apkbuilder_backup*
 
-# SQLite runtime files (WAL/SHM har second badalte hain — DB file hi track hoti hai)
+# Live SQLite DB (server ise har second likhta hai — tracked rakhne par har pull par
+# conflict aata hai). Pehli baar chalte waqt server khud ise apkbuilder.seed.db se
+# bana leta hai, jisme designs + settings pehle se hote hain.
+database/apkbuilder.db
 database/apkbuilder.db-wal
 database/apkbuilder.db-shm
-
-# NOTE: database/apkbuilder.db jaan-boojh kar tracked hai — isi me aapke templates,
-# designs, settings aur users hain, aur VPS clone ke saath yahi data aana chahiye.
 
 # Local binaries / build output (VPS par apne Linux binaries lein)
 cloudflared.exe

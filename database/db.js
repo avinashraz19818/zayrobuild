@@ -2,8 +2,23 @@ const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
 
 const DB_PATH = path.join(__dirname, 'apkbuilder.db');
+const SEED_PATH = path.join(__dirname, 'apkbuilder.seed.db');
+
+// Live DB git me tracked nahi hai (warna har pull par conflict aata hai, kyunki
+// server use har second likhta rehta hai). Pehli baar chalne par seed se ban jaati hai,
+// jisme aapke designs + settings pehle se hote hain (users/sessions khali).
+if (!fs.existsSync(DB_PATH) && fs.existsSync(SEED_PATH)) {
+  try {
+    fs.copyFileSync(SEED_PATH, DB_PATH);
+    console.log('[db] fresh database banayi gayi — seed se (designs + settings ready)');
+  } catch (error) {
+    console.error('[db] seed copy fail:', error.message);
+  }
+}
+
 const db = new Database(DB_PATH);
 
 db.pragma('journal_mode = WAL');
