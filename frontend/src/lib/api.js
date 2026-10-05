@@ -66,6 +66,7 @@ export const api = {
   post: (p, body, o) => request(p, { ...o, method: 'POST', body }),
   postForm: (p, formData, o) => request(p, { ...o, method: 'POST', formData }),
   put: (p, body, o) => request(p, { ...o, method: 'PUT', body }),
+  patchForm: (p, formData, o) => request(p, { ...o, method: 'PATCH', formData }),
   del: (p, o) => request(p, { ...o, method: 'DELETE' })
 };
 
@@ -123,6 +124,8 @@ export const admin = {
   designs: () => api.get('/api/admin/designs'),
   createDesign: (fd) => api.postForm('/api/admin/designs', fd),
   updateDesign: (id, patch) => api.patch(`/api/admin/designs/${id}`, patch),
+  // Edit sheet files ke saath save karta hai (multipart PATCH).
+  saveDesign: (id, fd) => api.patchForm(`/api/admin/designs/${id}`, fd),
   deleteDesign: (id) => api.del(`/api/admin/designs/${id}`),
   announcements: () => api.get('/api/admin/announcements'),
   createAnnouncement: (body) => api.post('/api/admin/announcements', body),

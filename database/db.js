@@ -182,6 +182,8 @@ db.exec(`
     `);
   } catch(e) {}
   try { db.exec("ALTER TABLE designs ADD COLUMN fake_popup_html_file TEXT DEFAULT ''"); } catch(e) {}
+  // 1 = maintenance me (store par dikhta hai par build/order block rehta hai)
+  try { db.exec("ALTER TABLE designs ADD COLUMN maintenance INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
   try { db.exec("ALTER TABLE designs ADD COLUMN original_price_coins INTEGER DEFAULT 0"); } catch(e) {}
   try { db.exec("ALTER TABLE designs ADD COLUMN fake_price_coins INTEGER DEFAULT 5"); } catch(e) {}
   try { db.exec("ALTER TABLE orders ADD COLUMN domain_change_count INTEGER DEFAULT 0"); } catch(e) {}

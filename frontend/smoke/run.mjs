@@ -15,10 +15,13 @@ const { window } = dom;
 
 /* ── fake data ── */
 const DESIGNS = [
-  { id: 3, name: 'Zayro Apex VIP', description: 'Animated radar + live win ticker + TTS voice alerts', price_coins: 120, original_price_coins: 200, fake_price_coins: 60, category: 'zayro', preview_image: 'shot1.png', preview_video: 'demo.mp4', preview_images: ['shot2.png'], orders_count: 42 },
-  { id: 2, name: 'Dhani Win Core', description: 'Wingo trend + auto deposit gate', price_coins: 90, original_price_coins: 0, fake_price_coins: 45, category: 'dhani', preview_image: 'shot3.png', preview_images: [], orders_count: 18 },
-  { id: 1, name: 'Red Wings Lite', description: 'Color prediction with timer', price_coins: 60, original_price_coins: 80, fake_price_coins: 30, category: 'zayro', preview_image: '', preview_images: [], orders_count: 7 }
+  { id: 3, name: 'Zayro Apex VIP', description: 'Animated radar + live win ticker + TTS voice alerts', price_coins: 120, original_price_coins: 200, fake_price_coins: 60, category: 'zayro', preview_image: 'shot1.png', preview_video: 'demo.mp4', preview_images: ['shot2.png'], orders_count: 42, active: 1, maintenance: 0, popup_html_file: 'a.html', fake_popup_html_file: 'fake_a.html', created_at: '2026-10-01 10:00:00' },
+  { id: 2, name: 'Dhani Win Core', description: 'Wingo trend + auto deposit gate', price_coins: 90, original_price_coins: 0, fake_price_coins: 45, category: 'dhani', preview_image: 'shot3.png', preview_images: [], orders_count: 18, active: 1, maintenance: 1, popup_html_file: 'b.html', created_at: '2026-09-28 10:00:00' },
+  { id: 1, name: 'Red Wings Lite', description: 'Color prediction with timer', price_coins: 60, original_price_coins: 80, fake_price_coins: 30, category: 'zayro', preview_image: '', preview_images: [], orders_count: 7, active: 0, maintenance: 0, popup_html_file: 'c.html', created_at: '2026-09-20 10:00:00' }
 ];
+
+// Store sirf visible (active) templates dikhata hai — hidden wale admin me rehte hain.
+const STORE_DESIGNS = DESIGNS.filter((d) => d.active !== 0);
 
 const USER = {
   id: 7, username: 'builder', email: 'builder@test.dev', coins: 420,
@@ -34,7 +37,7 @@ const RESPONSES = {
   '/api/me': USER,
   '/api/public-config': { site_name: 'ZAYRO BUILD', coin_rate: 1, referral_bonus: 10, addon_fake_price: 5, domain_change_price: 10, support_url: 'https://t.me/zayrosupport', channel_url: 'https://t.me/zayrochannel', bot_username: 'zayrobuild_bot', maintenance: false },
   '/api/announcement': { id: 1, title: 'UPDATE', message: 'MAAN WIN FAKE WEBSITE is now live. Plans from Rs 699 — tap the FAKE WEBSITE tab to buy.', button_text: 'Open now', button_url: 'https://t.me/zayrobuild_bot', created_at: '2026-10-05 08:09:39' },
-  '/api/designs': DESIGNS,
+  '/api/designs': STORE_DESIGNS,
   '/api/settings/payment': { upi_id: 'zayro@upi', upi_qr_image: 'qr.png', coin_rate: '1' },
   '/api/orders': ORDERS,
   '/api/me/coin-requests': [{ id: 9, coins_requested: 500, amount_paid: 500, utr: '428192837192', status: 'approved', created_at: '2026-10-03 12:00:00' }],
@@ -242,6 +245,19 @@ await clickByText('Templates');
   const ok = /Create APK/i.test(t) && !/Zayro Core/i.test(t);
   if (!ok) failed += 1;
   origError(`${ok ? '✅' : '❌'} template tile: Create APK button, no category label`);
+
+  // Maintenance template card par badge + disabled button (build block)
+  const maintCard = [...rootEl.querySelectorAll('.tpl-card')]
+    .find((c) => /Dhani Win Core/.test(c.textContent || ''));
+  const maintBadge = maintCard ? /Maintenance/i.test(maintCard.textContent || '') : false;
+  const maintDisabled = maintCard ? Boolean(maintCard.querySelector('.tpl-build[disabled]')) : false;
+  if (!maintBadge || !maintDisabled) failed += 1;
+  origError(`${maintBadge && maintDisabled ? '✅' : '❌'} maintenance template: badge + Create APK disabled`);
+
+  // Hidden template store par nahi dikhna chahiye
+  const noHidden = !/Red Wings Lite/.test(t);
+  if (!noHidden) failed += 1;
+  origError(`${noHidden ? '✅' : '❌'} hidden template store list me nahi aata`);
 }
 const card = window.document.querySelector('.tpl-card');
 if (card) {
@@ -339,6 +355,104 @@ await wait(1400);
     fs.writeFileSync(`smoke/out/admin-${label.toLowerCase().replace(/[^a-z]+/g, '-')}.html`,
       `<!doctype html><html><head><meta charset="utf-8"><title>admin ${label}</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
   }
+  /* ── Templates tab: naye features (list + Edit + filters + maintenance) ── */
+  {
+    const findTab = (label) => [...adminHost.querySelectorAll('button')]
+      .find((b) => (b.textContent || '').trim().toLowerCase().startsWith(label.toLowerCase()));
+    findTab('Templates')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(500);
+
+    const body = adminHost.querySelector('.admin-body') || adminHost;
+    const txt = body.textContent || '';
+    const pills = [...body.querySelectorAll('.admin-pill-grid .pill')].map((b) => (b.textContent || '').trim());
+    const pillOk = ['All', 'Active', 'Maintenance', 'Hidden'].every((l) => pills.some((p) => p.includes(l)));
+    if (!pillOk) failed += 1;
+    origError(`${pillOk ? '✅' : '❌'} templates filters: All · Active · Maintenance · Hidden (${pills.join(' | ')})`);
+
+    const cards = [...body.querySelectorAll('.admin-table article.card')];
+    const editBtns = body.querySelectorAll('.admin-actions .btn');
+    const hasEdit = [...editBtns].some((b) => /Edit/i.test(b.textContent || ''));
+    if (!hasEdit) failed += 1;
+    origError(`${hasEdit ? '✅' : '❌'} har template card par Edit button (${cards.length} cards)`);
+
+    const hasMaintBtn = [...editBtns].some((b) => /Maintenance/i.test(b.textContent || ''));
+    if (!hasMaintBtn) failed += 1;
+    origError(`${hasMaintBtn ? '✅' : '❌'} template card par Maintenance button`);
+
+    const needsMaintenance = [...editBtns].some((b) => /Remove maintenance/i.test(b.textContent || ''));
+    if (!needsMaintenance) failed += 1;
+    origError(`${needsMaintenance ? '✅' : '❌'} maintenance-wale card par 'Remove maintenance'`);
+
+    const hasStatus = /Maintenance/.test(txt) && /Hidden/.test(txt) && /Active/.test(txt);
+    if (!hasStatus) failed += 1;
+    origError(`${hasStatus ? '✅' : '❌'} status chips (Active / Maintenance / Hidden) list me dikhte hain`);
+
+    const hasSearch = Boolean(body.querySelector('input[placeholder*="search" i], input[placeholder*="Search" i]'));
+    if (!hasSearch) failed += 1;
+    origError(`${hasSearch ? '✅' : '❌'} template search box maujood hai`);
+
+    const hasMediaChips = Boolean(body.querySelector('.tpl-file-chip'));
+    if (!hasMediaChips) failed += 1;
+    origError(`${hasMediaChips ? '✅' : '❌'} media summary chips (Video / photos / HTML)`);
+
+    // Maintenance filter click → sirf maintenance wale card
+    const mPill = [...body.querySelectorAll('.admin-pill-grid .pill')].find((b) => /Maintenance/.test(b.textContent || ''));
+    mPill?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(320);
+    const afterFilter = [...(adminHost.querySelector('.admin-body') || adminHost).querySelectorAll('.admin-table article.card')];
+    const onlyMaint = afterFilter.length === 1 && /Dhani Win Core/.test(afterFilter[0].textContent || '');
+    if (!onlyMaint) failed += 1;
+    origError(`${onlyMaint ? '✅' : '❌'} Maintenance filter sirf maintenance templates dikhata hai (${afterFilter.length})`);
+
+    // Hidden filter
+    const hPill = [...(adminHost.querySelector('.admin-body') || adminHost).querySelectorAll('.admin-pill-grid .pill')].find((b) => /Hidden/.test(b.textContent || ''));
+    hPill?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(320);
+    const afterHidden = [...(adminHost.querySelector('.admin-body') || adminHost).querySelectorAll('.admin-table article.card')];
+    const onlyHidden = afterHidden.length === 1 && /Red Wings Lite/.test(afterHidden[0].textContent || '');
+    if (!onlyHidden) failed += 1;
+    origError(`${onlyHidden ? '✅' : '❌'} Hidden filter sirf hidden templates dikhata hai (${afterHidden.length})`);
+
+    // Edit sheet khulta hai
+    const firstEdit = [...(adminHost.querySelector('.admin-body') || adminHost).querySelectorAll('.admin-actions .btn')].find((b) => /Edit/i.test(b.textContent || ''));
+    firstEdit?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(420);
+    const sheet = adminHost.querySelector('.sheet');
+    const sheetTxt = sheet?.textContent || '';
+    const sheetOk = Boolean(sheet) && /Edit ·/.test(sheetTxt) && /Maintenance/i.test(sheetTxt) && /Store par visible|Hidden/.test(sheetTxt);
+    if (!sheetOk) failed += 1;
+    origError(`${sheetOk ? '✅' : '❌'} Edit sheet khulta hai (name/price/visibility/maintenance/files)`);
+    fs.writeFileSync('smoke/out/admin-templates-edit.html',
+      `<!doctype html><html><head><meta charset="utf-8"><title>Template edit</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
+    adminHost.querySelector('.sheet .icon-btn')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(300);
+
+    // All filter wapas
+    const allPill = [...(adminHost.querySelector('.admin-body') || adminHost).querySelectorAll('.admin-pill-grid .pill')].find((b) => /All/.test(b.textContent || ''));
+    allPill?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(280);
+
+    // ── New template sheet: popup HTML + fake HTML + preview image/video/photos ──
+    const newBtn = [...(adminHost.querySelector('.admin-body') || adminHost).querySelectorAll('button')]
+      .find((b) => /New template/i.test(b.textContent || ''));
+    newBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(500);
+    const cSheet = adminHost.querySelector('.sheet');
+    const cTxt = cSheet?.textContent || '';
+    const cNeeds = ['Popup HTML', 'Fake popup HTML', 'Cover image', 'Preview video', 'Photos', 'Maintenance', 'Store par visible'];
+    const missingCreate = cNeeds.filter((n) => !cTxt.includes(n));
+    const createOk = Boolean(cSheet) && missingCreate.length === 0;
+    if (!createOk) failed += 1;
+    origError(`${createOk ? '✅' : '❌'} New template sheet: saare fields (${missingCreate.length ? 'missing: ' + missingCreate.join(', ') : 'popup + fake + image + video + photos + toggles'})`);
+    const toggleCount = cSheet ? cSheet.querySelectorAll('.admin-switch').length : 0;
+    if (toggleCount < 2) failed += 1;
+    origError(`${toggleCount >= 2 ? '✅' : '❌'} New template me visibility + maintenance toggle (${toggleCount})`);
+    fs.writeFileSync('smoke/out/admin-templates-new.html',
+      `<!doctype html><html><head><meta charset="utf-8"><title>New template</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
+    cSheet?.querySelector('.icon-btn')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(300);
+  }
+
   // screenshot ke liye wapas overview
   const ov = [...adminHost.querySelectorAll('button')].find((b) => (b.textContent || '').trim().toLowerCase().startsWith('overview'));
   ov?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));

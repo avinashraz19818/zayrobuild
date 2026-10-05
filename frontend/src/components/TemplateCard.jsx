@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, Play, Sparkles, Flame } from 'lucide-react';
+import { Layers, Play, Sparkles, Flame, Wrench } from 'lucide-react';
 import { getMediaUrl } from '../utils/media';
 import { CoinIco } from './AppShell';
 
@@ -24,13 +24,15 @@ export default function TemplateCard({ design, onOpen, onPreview, index = 0 }) {
   const price = priceOf(design);
   const original = Number(design.original_price_coins || 0);
   const builds = Number(design.orders_count || 0);
+  // Maintenance me template store par dikhta hai, par naya build block rehta hai.
+  const maint = Number(design.maintenance || 0) === 1;
 
   return (
     <article
       className="tpl-card rise-in"
       style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
-      onClick={() => onOpen?.(design)}
-      onKeyDown={(e) => { if (e.key === 'Enter') onOpen?.(design); }}
+      onClick={() => { if (!maint) onOpen?.(design); }}
+      onKeyDown={(e) => { if (e.key === 'Enter' && !maint) onOpen?.(design); }}
       role="button"
       tabIndex={0}
     >
@@ -47,6 +49,11 @@ export default function TemplateCard({ design, onOpen, onPreview, index = 0 }) {
         )}
 
         <div className="tpl-badges">
+          {maint && (
+            <span className="chip chip-warn" style={{ fontSize: 9.5, padding: '3px 8px', fontWeight: 800 }}>
+              <Wrench size={10} /> Maintenance
+            </span>
+          )}
           {discount > 0 && (
             <span className="chip chip-danger" style={{ fontSize: 9.5, padding: '3px 8px', fontWeight: 800 }}>
               <Flame size={10} /> {discount}% OFF
@@ -89,10 +96,10 @@ export default function TemplateCard({ design, onOpen, onPreview, index = 0 }) {
         <button
           type="button"
           className="btn btn-primary btn-block tpl-build"
-          onClick={(e) => { e.stopPropagation(); onOpen?.(design); }}
+          disabled={maint}
+          onClick={(e) => { e.stopPropagation(); if (!maint) onOpen?.(design); }}
         >
-          <Sparkles size={15} />
-          Create APK
+          {maint ? <><Wrench size={15} /> Maintenance</> : <><Sparkles size={15} /> Create APK</>}
         </button>
       </div>
     </article>

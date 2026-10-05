@@ -1527,7 +1527,7 @@ for (const m of ['put', 'patch', 'delete']) {
 app.get('/api/designs', (req, res) => {
   const designs = db.prepare(`
     SELECT d.id,d.name,d.description,d.price_coins,d.original_price_coins,d.fake_price_coins,
-           d.category,d.preview_image,d.preview_video,
+           d.category,d.preview_image,d.preview_video,d.maintenance,
            (SELECT COUNT(*) FROM orders o WHERE o.design_id=d.id) AS orders_count
     FROM designs d WHERE d.active=1 ORDER BY d.id DESC
   `).all().map(d => tokenizeDesignMedia(withPreviewImages(d)));
@@ -1586,6 +1586,10 @@ app.post('/api/order', requireAuth, iconUpload.single('icon'), async (req, res) 
 
   const design = db.prepare('SELECT * FROM designs WHERE id=? AND active=1').get(design_id);
   if (!design) return res.json({ error: 'Design not found' });
+  // Maintenance me design store par dikhta hai par naya build block rehta hai.
+  if (Number(design.maintenance || 0) === 1) {
+    return res.json({ error: 'Ye template abhi maintenance me hai — thodi der baad try karein.' });
+  }
 
   const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.session.userId);
   if (!user) return res.status(401).json({ error: 'User not found. Please login again.' });
@@ -2403,7 +2407,7 @@ app.patch('/api/admin/designs/:id', requireAdmin, adminUpload.fields([
 ]), (req, res) => {
   const templatesDir = path.join(__dirname, 'templates');
   const uploadsDir = path.join(__dirname, 'uploads');
-  const { name, description, price_coins, original_price_coins, fake_price_coins, active, category } = req.body;
+  const { name, description, price_coins, original_price_coins, fake_price_coins, active, category, maintenance } = req.body;
 
   // Get current design to know old file names
   const currentDesign = db.prepare('SELECT * FROM designs WHERE id=?').get(req.params.id);
@@ -2420,6 +2424,9 @@ app.patch('/api/admin/designs/:id', requireAdmin, adminUpload.fields([
   if (original_price_coins !== undefined) { fields.push('original_price_coins=?'); vals.push(parseInt(original_price_coins) || 0); }
   if (fake_price_coins !== undefined) { fields.push('fake_price_coins=?');       vals.push(parseInt(fake_price_coins) || 5); }
   if (active           !== undefined) { fields.push('active=?');                 vals.push(active === '1' || active === 1 || active === true ? 1 : 0); }
+  // UI se do naamo se aata hai: 'hidden' (naya) aur 'active' (purana). Dono ek hi column hai.
+  if (req.body.hidden    !== undefined) { fields.push('active=?');                 vals.push(req.body.hidden === '1' || req.body.hidden === 1 || req.body.hidden === true ? 0 : 1); }
+  if (maintenance      !== undefined) { fields.push('maintenance=?');            vals.push(maintenance === '1' || maintenance === 1 || maintenance === true ? 1 : 0); }
   if (category         !== undefined) {
     const normalizedCategory = normalizeDesignCategory(category, currentDesign);
     fields.push('category=?', 'type=?', 'java_type=?', 'variant=?');

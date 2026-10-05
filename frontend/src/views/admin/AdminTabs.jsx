@@ -197,12 +197,12 @@ export function UsersTab({ act }) {
       ) : (
         <div className="admin-table">
           {rows.map((u) => (
-            <div key={u.id} className="row-item">
+            <div key={u.id} className="admin-user-item">
               <span className="row-ico gold">{Number(u.coins || 0)}</span>
               <span className="row-main">
-                <span className="row-title truncate">{displayName(u)} <span className="muted">@{u.username}</span></span>
+                <span className="row-title truncate">{displayName(u)}</span>
                 <span className="row-sub truncate">
-                  {u.telegram_id ? `TG ${u.telegram_id}` : u.email} · {fmtDate(u.created_at)}
+                  @{u.username || '—'} · {u.telegram_id ? `TG ${u.telegram_id}` : u.email} · {fmtDate(u.created_at)}
                 </span>
               </span>
               <button className="btn btn-soft btn-xs" onClick={() => { setCoinUser(u); setDelta(100); }}>
