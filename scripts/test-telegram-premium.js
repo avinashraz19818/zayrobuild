@@ -61,8 +61,7 @@ console.log('\n── /start buttons check ──');
 const rows = buildStartButtons({
   siteUrl: 'https://jaiclub5vip.site',
   supportUrl: 'https://t.me/zayro_o',
-  channelUrl: 'https://t.me/zayrochannel',
-  isAdmin: false
+  channelUrl: 'https://t.me/zayrochannel'
 });
 const flat = rows.flat();
 const labels = flat.map((b) => b.text);
@@ -73,9 +72,9 @@ check('My Orders button hataya gaya', !/my orders/i.test(plainLabels.join(' ')))
 check('Add Coins button hataya gaya', !/add coin/i.test(plainLabels.join(' ')));
 check('Open Builder Panel button', plainLabels.some((l) => /Builder Panel/.test(l)));
 check('Admin Support + Official Channel', plainLabels.some((l) => /Support/.test(l)) && plainLabels.some((l) => /Channel/.test(l)));
-check('non-admin ke liye Admin Panel button nahi', !plainLabels.some((l) => /Admin Panel/.test(l)));
-check('admin ke liye Admin Panel button', buildStartButtons({ siteUrl: 'https://x.y', supportUrl: 'https://t.me/a', channelUrl: 'https://t.me/b', isAdmin: true })
-  .flat().some((b) => /Admin Panel/.test(unBI(b.text))));
+check('Admin Panel button /start me bilkul nahi (admin ke liye bhi)', !plainLabels.some((l) => /Admin Panel/.test(l)));
+check('buildStartButtons admin param nahi leta', buildStartButtons.length <= 1 && !/isAdmin/.test(buildStartButtons.toString()));
+check('sirf 3 buttons (1 full + 2 half)', rows.length === 2 && rows[0].length === 1 && rows[1].length === 2);
 check('saare labels unicode bold-italic me', flat.every((b) => /[\u{1D63C}-\u{1D66F}]/u.test(b.text)) && plainLabels.every((l) => /^[\x20-\x7E]+$/.test(l)));
 check('har button me target (web_app ya url) hai', flat.every((b) => b.web_app || b.url));
 check('har button me premium icon id (string) hai', flat.every((b) => typeof b.icon === 'string' && /^\d+$/.test(b.icon)));

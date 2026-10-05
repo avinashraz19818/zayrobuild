@@ -285,18 +285,16 @@ ${PE.money}  𝐂𝐨𝐢𝐧𝐬 : ${coinText}
  * "My Orders" / "Add Coins" buttons jaan-boojh kar nahi hain (user request) —
  * sirf Builder Panel (+ admin ke liye Admin Panel) aur Support/Channel.
  */
-function buildStartButtons({ siteUrl, supportUrl, channelUrl, isAdmin = false } = {}) {
-  const rows = [
-    [{ text: toSansBoldItalic('Open Builder Panel'), emoji: '🚀', icon: PE_ID.rocket, web_app: { url: siteUrl }, style: 'success' }]
+function buildStartButtons({ siteUrl, supportUrl, channelUrl } = {}) {
+  // Admin panel ka button yahan jaan-boojh kar NAHI hai — admin ke liye bot me
+  // alag se /admin command hai (panel sirf usi raste se khulta hai).
+  return [
+    [{ text: toSansBoldItalic('Open Builder Panel'), emoji: '🚀', icon: PE_ID.rocket, web_app: { url: siteUrl }, style: 'success' }],
+    [
+      { text: toSansBoldItalic('Admin Support'), emoji: '👨‍💻', icon: PE_ID.phone, url: supportUrl, style: 'primary' },
+      { text: toSansBoldItalic('Official Channel'), emoji: '📢', icon: PE_ID.broadcast, url: channelUrl, style: 'primary' }
+    ]
   ];
-  if (isAdmin) {
-    rows.push([{ text: toSansBoldItalic('Admin Panel'), emoji: '🛡️', icon: PE_ID.gear, web_app: { url: `${siteUrl}/admin` }, style: 'danger' }]);
-  }
-  rows.push([
-    { text: toSansBoldItalic('Admin Support'), emoji: '👨‍💻', icon: PE_ID.phone, url: supportUrl, style: 'primary' },
-    { text: toSansBoldItalic('Official Channel'), emoji: '📢', icon: PE_ID.broadcast, url: channelUrl, style: 'primary' }
-  ]);
-  return rows;
 }
 
 function initBot(token, db) {
@@ -455,7 +453,7 @@ function initBot(token, db) {
         firstName, chatId, userCoins, userOrders, referralApplied
       });
       const startButtons = buildStartButtons({
-        siteUrl, supportUrl, channelUrl, isAdmin: isAdminChat(chatId)
+        siteUrl, supportUrl, channelUrl
       });
 
       try {
@@ -496,10 +494,7 @@ function initBot(token, db) {
         if (!u) {
           return sendPremium(chatId,
             `${PE.alert} <b>Account not found</b>\nTap /start to register automatically.`,
-            [
-              [{ text: toSansBoldItalic('Open Builder Panel'), emoji: '🚀', icon: PE_ID.rocket, web_app: { url: siteUrl }, style: 'success' }],
-              ...(isAdminChat(chatId) ? [[{ text: toSansBoldItalic('Admin Panel'), emoji: '🛡️', icon: PE_ID.gear, web_app: { url: `${siteUrl}/admin` }, style: 'danger' }]] : [])
-            ]);
+            [[{ text: toSansBoldItalic('Open Builder Panel'), emoji: '🚀', icon: PE_ID.rocket, web_app: { url: siteUrl }, style: 'success' }]]);
         }
 
         const orders = _db.prepare('SELECT id, app_name, status, created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 5').all(u.id);
@@ -517,8 +512,7 @@ function initBot(token, db) {
         txt += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
         await sendPremium(chatId, txt, [
-          [{ text: toSansBoldItalic('Manage In Web App'), emoji: '📱', icon: PE_ID.mobile, web_app: { url: `${siteUrl}#orders` }, style: 'primary' }],
-          ...(isAdminChat(chatId) ? [[{ text: toSansBoldItalic('Admin Panel'), emoji: '🛡️', icon: PE_ID.gear, web_app: { url: `${siteUrl}/admin` }, style: 'danger' }]] : [])
+          [{ text: toSansBoldItalic('Manage In Web App'), emoji: '📱', icon: PE_ID.mobile, web_app: { url: `${siteUrl}#orders` }, style: 'primary' }]
         ]);
       } catch (e) {
         console.error('Bot /orders error:', e.message);
@@ -576,8 +570,7 @@ Our APKs are built with 100% clean architecture, without malicious permissions.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
       await sendPremium(chatId, helpMsg, [
-        [{ text: toSansBoldItalic('Contact Support'), emoji: '👨‍💻', icon: PE_ID.phone, url: getSupportUrl(), style: 'primary' }],
-        ...(isAdminChat(chatId) ? [[{ text: toSansBoldItalic('Admin Panel'), emoji: '🛡️', icon: PE_ID.gear, web_app: { url: `${getSiteUrl()}/admin` }, style: 'danger' }]] : [])
+        [{ text: toSansBoldItalic('Contact Support'), emoji: '👨‍💻', icon: PE_ID.phone, url: getSupportUrl(), style: 'primary' }]
       ]);
     });
 
