@@ -105,8 +105,15 @@ curl -4 -sS -m 15 -o /dev/null -w "IPv4: %{http_code}\n" https://zayro-build-def
 curl -6 -sS -m 15 -o /dev/null -w "IPv6: %{http_code}\n" https://zayro-build-default-rtdb.firebaseio.com/.json
 ```
 - `401` aana normal hai (rules auth maangti hain) — matlab network **sahi** hai, aage badhein.
-- Sirf IPv4 chalta hai → node ko IPv4 prefer karayein:
-  `pm2 delete zayro-panel && pm2 start server.js --name zayro-panel --node-args="--dns-result-order=ipv4first" && pm2 save`
+- **Sirf IPv4 chalta hai** (aapke VPS par yahi hua): panel ke code me `dns.setDefaultResultOrder('ipv4first')`
+  pehle se lagaya hua hai, isliye `bash scripts/update.sh` ke baad ye apne aap theek ho jaata hai.
+  `node scripts/diag-firebase-auth.js` me `[NET] IPv4-first DNS: ON ✅` dikhna chahiye.
+- Fir bhi na chale to VPS level par IPv6 band kar dein (sabse pakka fix):
+  ```bash
+  sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.default.disable_ipv6=1
+  printf 'net.ipv6.conf.all.disable_ipv6=1\nnet.ipv6.conf.default.disable_ipv6=1\n' | sudo tee -a /etc/sysctl.conf
+  pm2 restart zayro-panel --update-env && pm2 save
+  ```
 - Dono fail (timeout) → aapka hosting provider `*.firebaseio.com` block kar raha hai. Support se
   baat karein; tab tak Firebase live-link feature off rahega (baaki panel poora chalta hai).
 

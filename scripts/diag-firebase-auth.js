@@ -15,6 +15,7 @@
  *   node scripts/diag-firebase-auth.js
  */
 
+try { require('dns').setDefaultResultOrder('ipv4first'); } catch (_) {}
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -97,7 +98,9 @@ async function main() {
   const token = await getToken();
   if (!token) { console.log('\n➡️ Token nahi ban raha — upar ka error dekh kar fix karo.'); return; }
 
-  console.log('\n[NET] Database URL test: ' + DB_URL);
+  const { getDefaultResultOrder } = require('dns');
+  console.log(`\n[NET] IPv4-first DNS: ${typeof getDefaultResultOrder === 'function' && getDefaultResultOrder() === 'ipv4first' ? 'ON ✅' : 'OFF (VPS par IPv6 toota ho sakta hai)'}`);
+  console.log('[NET] Database URL test: ' + DB_URL);
   const host = new URL(DB_URL).host;
   try {
     const dns = require('dns').promises;

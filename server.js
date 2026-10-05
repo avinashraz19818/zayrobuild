@@ -14,6 +14,11 @@
     console.error('[env] bootstrap warning:', error.message);
   }
 })();
+// Kuch VPS par IPv6 route toota hua hota hai (SSL_ERROR_SYSCALL / ECONNRESET), jabki
+// IPv4 bilkul sahi chalta hai. Node default me IPv6 pehle try karta hai — isliye
+// Firebase/Google jaise endpoints fail hone lagte hain. Ye line IPv4 ko pehle rakhti hai.
+try { require('dns').setDefaultResultOrder('ipv4first'); } catch (_) { /* purane node par ignore */ }
+
 require('dotenv').config();
 const { rateLimit } = require('express-rate-limit');
 const express = require('express');

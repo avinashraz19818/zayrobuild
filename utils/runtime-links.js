@@ -6,6 +6,9 @@ const crypto = require('crypto');
 
 const DEFAULT_FIREBASE_DATABASE_URL = 'https://zayrodev-195f3-default-rtdb.firebaseio.com';
 
+// IPv6 toota ho to bhi Firebase tak pahunchein (VPS par aam problem hai)
+try { require('dns').setDefaultResultOrder('ipv4first'); } catch (_) {}
+
 // ───────────────────────────────────────────────────────────────────────────
 // FIREBASE SERVICE ACCOUNT AUTH (hack lock)
 //
