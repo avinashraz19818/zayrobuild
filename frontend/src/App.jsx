@@ -22,7 +22,7 @@ const TAB_KEYS = ['home', 'templates', 'fakesite', 'refer', 'orders', 'account',
 
 function Panel() {
   const { user, isAdmin, loading, openAuth } = useAuth();
-  const { orders } = useStore();
+  const { orders, config } = useStore();
   const { addToast } = useToast();
 
   const [tab, setTab] = useState('home');
@@ -46,6 +46,12 @@ function Panel() {
     addToast(map[err] || 'Login me problem aayi — dobara try karein.', 'error');
     window.history.replaceState({}, '', window.location.pathname);
   }, [addToast]);
+
+  // Document title bhi store ke naam se — skillhub format: "<STORE> · Premium APK Marketplace"
+  useEffect(() => {
+    const name = String(config?.site_name || '').trim() || 'ZAYRO BUILD';
+    document.title = `${name} · Premium APK Marketplace`;
+  }, [config?.site_name]);
 
   // Telegram back button -> pehla tab
   useEffect(() => {
