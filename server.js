@@ -1530,30 +1530,6 @@ app.get('/api/font-styles', (req, res) => {
 // Counter for package name uniqueness
 let _pkgCounter = db.prepare('SELECT MAX(id) as m FROM orders').get()?.m || 0;
 
-function calculateCouponDiscount(code, subtotal) {
-  const clean = String(code || '').trim().toUpperCase();
-  if (!clean) return { code: '', discount: 0 };
-  const c = db.prepare('SELECT * FROM coupons WHERE UPPER(code)=? AND active=1').get(clean);
-  if (!c) throw new Error('Invalid coupon code');
-  if (c.expires_at && new Date(c.expires_at).getTime() < Date.now()) throw new Error('Coupon expired');
-  if (c.max_uses > 0 && c.used_count >= c.max_uses) throw new Error('Coupon usage limit reached');
-  let discount = c.type === 'percent'
-    ? Math.floor((subtotal * Math.max(0, c.value)) / 100)
-    : Math.max(0, parseInt(c.value, 10) || 0);
-  discount = Math.min(subtotal, discount);
-  return { code: c.code, discount, coupon: c };
-}
-
-app.post('/api/coupons/validate', requireAuth, (req, res) => {
-  try {
-    const subtotal = Math.max(0, parseInt(req.body.subtotal, 10) || 0);
-    const result = calculateCouponDiscount(req.body.code, subtotal);
-    res.json({ success: true, code: result.code, discount: result.discount, total: Math.max(0, subtotal - result.discount) });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
 app.post('/api/order', requireAuth, iconUpload.single('icon'), async (req, res) => {
   const { design_id, app_name, register_url, min_deposit, brand_title, fake_addon, fake_register_url, build_mode } = req.body;
   if (!design_id || !app_name) return res.json({ error: 'Missing design or app name' });
@@ -1588,9 +1564,8 @@ app.post('/api/order', requireAuth, iconUpload.single('icon'), async (req, res) 
 
   const fakePrice = design.fake_price_coins > 0 ? design.fake_price_coins : parseInt(db.prepare('SELECT value FROM settings WHERE key=?').get('addon_fake_price')?.value || '5');
   const subtotalCoins = isOnlyFake ? fakePrice : (design.price_coins + (isBoth ? fakePrice : 0));
-  let couponResult = { code: '', discount: 0 };
+  const couponResult = { code: '', discount: 0 }; // legacy order columns
   try {
-    couponResult = calculateCouponDiscount(req.body.coupon_code, subtotalCoins);
   } catch (error) {
     return res.json({ error: error.message });
   }
@@ -1643,9 +1618,6 @@ app.post('/api/order', requireAuth, iconUpload.single('icon'), async (req, res) 
   }
 
   db.prepare('UPDATE users SET coins = coins - ? WHERE id=?').run(totalCoins, user.id);
-  if (couponResult.code && couponResult.discount > 0) {
-    db.prepare('UPDATE coupons SET used_count=used_count+1 WHERE id=?').run(couponResult.coupon.id);
-  }
 
   const buildId = `build_${orderId}_${Date.now()}`;
 
@@ -1711,12 +1683,10 @@ app.post('/api/order', requireAuth, iconUpload.single('icon'), async (req, res) 
     } else {
       db.prepare('UPDATE orders SET status=? WHERE id=?').run('failed', orderId);
       db.prepare('UPDATE users SET coins = coins + ? WHERE id=?').run(totalCoins, user.id);
-      if (couponResult.code && couponResult.discount > 0) db.prepare('UPDATE coupons SET used_count=MAX(0,used_count-1) WHERE id=?').run(couponResult.coupon.id);
     }
   }).catch(err => {
     db.prepare('UPDATE orders SET status=?,build_log=? WHERE id=?').run('failed', err.message, orderId);
     db.prepare('UPDATE users SET coins = coins + ? WHERE id=?').run(totalCoins, user.id);
-    if (couponResult.code && couponResult.discount > 0) db.prepare('UPDATE coupons SET used_count=MAX(0,used_count-1) WHERE id=?').run(couponResult.coupon.id);
   });
 });
 
@@ -3370,7 +3340,6 @@ app.post('/api/admin/orders/create', requireAdmin, iconUpload.single('icon'), as
   });
 });
 
-
 // Complete Firebase manager for each APK from Admin > Users > APKs.
 // variant: 'real' | 'fake' (Fake 1) | 'fs<id>' (Fake 2, 3, ...)
 app.get('/api/admin/orders/:id/firebase', requireAdmin, async (req, res) => {
@@ -3520,40 +3489,6 @@ app.get('/api/admin/users/stats', requireAdmin, (req, res) => {
     ORDER BY u.id DESC
   `).all();
   res.json(users);
-});
-
-// Coupons
-app.get('/api/admin/coupons', requireAdmin, (req, res) => {
-  res.json(db.prepare('SELECT * FROM coupons ORDER BY id DESC').all());
-});
-
-app.post('/api/admin/coupons', requireAdmin, (req, res) => {
-  const code = String(req.body.code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
-  const type = req.body.type === 'percent' ? 'percent' : 'fixed';
-  const value = Math.max(0, parseInt(req.body.value, 10) || 0);
-  const maxUses = Math.max(0, parseInt(req.body.max_uses, 10) || 0);
-  const expiresAt = String(req.body.expires_at || '').trim() || null;
-  if (!code) return res.status(400).json({ error: 'Coupon code required' });
-  if (!value) return res.status(400).json({ error: 'Coupon value required' });
-  try {
-    const result = db.prepare('INSERT INTO coupons(code,type,value,max_uses,expires_at,active) VALUES(?,?,?,?,?,1)')
-      .run(code, type, value, maxUses, expiresAt);
-    res.json({ success: true, id: result.lastInsertRowid });
-  } catch (error) {
-    res.status(400).json({ error: 'Coupon code already exists' });
-  }
-});
-
-app.patch('/api/admin/coupons/:id', requireAdmin, (req, res) => {
-  const active = req.body.active === true || req.body.active === '1' || req.body.active === 1 ? 1 : 0;
-  const info = db.prepare('UPDATE coupons SET active=? WHERE id=?').run(active, req.params.id);
-  if (!info.changes) return res.status(404).json({ error: 'Coupon not found' });
-  res.json({ success: true });
-});
-
-app.delete('/api/admin/coupons/:id', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM coupons WHERE id=?').run(req.params.id);
-  res.json({ success: true });
 });
 
 // Backups

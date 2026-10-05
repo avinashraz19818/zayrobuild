@@ -80,7 +80,7 @@ export default function ReferView({ setTab }) {
                 className="btn btn-soft"
                 disabled={!link}
                 onClick={() => {
-                  shareLink(link, `ZAYRO BUILD join karo — premium APK templates, fast builds.`);
+                  shareLink(link, `${config?.site_name || 'ZAYRO BUILD'} join karein — premium APK templates, fast builds. Mera invite code: ${referral.code}`);
                   addToast('Share sheet khul rahi hai…', 'info');
                 }}
               >
@@ -91,8 +91,14 @@ export default function ReferView({ setTab }) {
 
             {!link && (
               <Notice tone="warn">
-                Bot username set nahi hai — admin settings me Telegram bot configure karein, tab link generate hoga.
+                Referral link ban rahi hai — panel jab Telegram bot se connect hota hai to bot username save ho jaata hai.
+                Tab tak apna <b>invite code</b> ({referral.code}) dost ko bhejein: wo bot me code bhej kar bhi jud sakte hain.
               </Notice>
+            )}
+            {!link && (
+              <button className="btn btn-soft btn-sm" onClick={() => { refreshReferral(); addToast('Referral details refresh ki gayi', 'info'); }}>
+                <Sparkles size={14} /> Link ban gayi? Refresh karein
+              </button>
             )}
           </div>
         )}
