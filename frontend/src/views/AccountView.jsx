@@ -27,7 +27,7 @@ function MenuRow({ icon: Icon, tone, title, sub, trail, onClick }) {
 }
 
 export default function AccountView({ setTab, onAddFund }) {
-  const { user, isAdmin, logout, refreshUser, telegramUser } = useAuth();
+  const { user, logout, refreshUser, telegramUser } = useAuth();
   const { orders, referral, config } = useStore();
   const [giftOpen, setGiftOpen] = useState(false);
 
@@ -135,9 +135,6 @@ export default function AccountView({ setTab, onAddFund }) {
               sub="Naye templates & offers ki updates"
               onClick={() => openTelegramLink(config.channel_url)}
             />
-          )}
-          {isAdmin && (
-            <MenuRow icon={ShieldCheck} tone="danger" title="Admin panel" sub="Users, orders, coin requests, settings" onClick={() => setTab('admin')} />
           )}
           <MenuRow
             icon={LogOut}

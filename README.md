@@ -14,6 +14,20 @@ uploads/, templates/   → design media + popup HTML files (DB me reference hote
 
 ---
 
+## Admin panel kahan hai?
+Panel ke andar koi admin button nahi hai (jaan-boojh kar). Admin panel **sirf URL se** khulta hai:
+
+```
+https://jaiclub5vip.site/admin          (ya  #admin)
+```
+
+Tel me username/password daalein (`ADMIN_USERNAME` + `ADMIN_PASSWORD_HASH` `.env` se).
+Password bhool gaye? `node scripts/set-admin-password.js "NayaPassword"` → `pm2 restart zayro-panel --update-env`.
+
+Telegram ke andar URL type nahi hota, isliye bot me admin ke liye command rakhi hai —
+admin chat se **`/admin`** bhejein, ek button mil jayega jo seedha `/admin` kholta hai
+(admin id: Admin → Settings → Telegram Admin ID, ya `.env` ka `TELEGRAM_ADMIN_CHAT_ID`).
+
 ## Pehle ye chalayein — health check
 ```bash
 cd ~/zayrobuild && bash scripts/doctor.sh

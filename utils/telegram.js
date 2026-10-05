@@ -126,6 +126,25 @@ function getSupportUrl() {
   return 'https://t.me/';
 }
 
+/**
+ * Ye chat admin ki hai? (settings.telegram_admin_id ya TELEGRAM_ADMIN_CHAT_ID se)
+ * Admin ko bot me `/admin` command par direct Admin Panel button milta hai.
+ */
+function isAdminChat(chatId) {
+  try {
+    const fromDb = _db?.prepare("SELECT value FROM settings WHERE key='telegram_admin_id'").get()?.value;
+    const ids = String(fromDb || process.env.TELEGRAM_ADMIN_CHAT_ID || '')
+      .split(',').map(s => s.trim()).filter(Boolean);
+    if (!ids.length) return false;
+    // Admin kisi group me bhi ho sakta hai — isliye supergroup ke -100 prefix wale ids bhi match karo
+    const me = String(chatId || '').trim();
+    const bare = me.replace('-100', '');
+    return ids.some(id => id === me || id.replace('-100', '') === bare);
+  } catch (_) {
+    return false;
+  }
+}
+
 function getChannelUrl() {
   if (!_db) return 'https://t.me/';
   const ch = _db.prepare("SELECT value FROM settings WHERE key='telegram_channel_url'").get()?.value;
@@ -343,6 +362,32 @@ ${referralApplied ? `\n${PE.gift} <b>Referral applied:</b> <i>invite bonus aapke
     });
 
     // ── /orders command ──
+    // ── /admin — sirf admin chat ko dikhta hai (panel /admin URL par khulta hai) ──
+    bot.onText(/\/admin(?:@\w+)?/, async (msg) => {
+      const chatId = String(msg.chat.id);
+      if (!isAdminChat(chatId)) return;   // normal users ko kuch nahi milta
+      const siteUrl = getSiteUrl();
+      try {
+        await bot.sendMessage(chatId,
+          `${PE.gear} <b>Admin Panel</b>\n\n` +
+          `Sirf aapke liye — neeche button dabakar panel kholein aur admin credentials daalein.\n` +
+          `<i>URL: ${siteUrl}/admin</i>`,
+          {
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [[
+                { text: '🛡️ Open Admin Panel', web_app: { url: `${siteUrl}/admin` } }
+              ], [
+                { text: '🚀 Open Builder Panel', web_app: { url: siteUrl } }
+              ]]
+            }
+          }
+        );
+      } catch (error) {
+        console.error('[Telegram Bot] /admin reply fail:', error.message);
+      }
+    });
+
     bot.onText(/\/orders|\/myorders/, async (msg) => {
       const chatId = String(msg.chat.id);
       const siteUrl = getSiteUrl();
@@ -353,7 +398,12 @@ ${referralApplied ? `\n${PE.gift} <b>Referral applied:</b> <i>invite bonus aapke
         if (!u) {
           return bot.sendMessage(chatId, `${PE.alert} <b>Account not found</b>\nTap /start to register automatically.`, {
             parse_mode: 'HTML',
-            reply_markup: { inline_keyboard: [[{ text: '🟢 🚀 Open Builder Panel', web_app: { url: siteUrl } }]] }
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🟢 🚀 Open Builder Panel', web_app: { url: siteUrl } }],
+                ...(isAdminChat(chatId) ? [[{ text: '🛡️ Open Admin Panel', web_app: { url: `${siteUrl}/admin` } }]] : [])
+              ]
+            }
           });
         }
 
@@ -376,7 +426,8 @@ ${referralApplied ? `\n${PE.gift} <b>Referral applied:</b> <i>invite bonus aapke
           parse_mode: 'HTML',
           reply_markup: {
             inline_keyboard: [
-              [{ text: '📱 ᴍᴀɴᴀɢᴇ ɪɴ ᴡᴇʙ ᴀᴘᴘ', web_app: { url: `${siteUrl}#orders` } }]
+              [{ text: '📱 ᴍᴀɴᴀɢᴇ ɪɴ ᴡᴇʙ ᴀᴘᴘ', web_app: { url: `${siteUrl}#orders` } }],
+              ...(isAdminChat(chatId) ? [[{ text: '🛡️ ᴀᴅᴍɪɴ ᴘᴀɴᴇʟ', web_app: { url: `${siteUrl}/admin` } }]] : [])
             ]
           }
         });
@@ -443,9 +494,10 @@ Our APKs are built with 100% clean architecture, without malicious permissions.
       await bot.sendMessage(chatId, helpMsg, {
         parse_mode: 'HTML',
         reply_markup: {
-          inline_keyboard: [[
-            { text: '👨‍💻 Contact Support', url: getSupportUrl() }
-          ]]
+          inline_keyboard: [
+            [{ text: '👨‍💻 Contact Support', url: getSupportUrl() }],
+            ...(isAdminChat(chatId) ? [[{ text: '🛡️ Open Admin Panel', web_app: { url: `${getSiteUrl()}/admin` } }]] : [])
+          ]
         }
       });
     });

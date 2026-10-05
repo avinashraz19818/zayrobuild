@@ -301,18 +301,13 @@ await wait(1400);
   origError(`${ok ? '✅' : '❌'} deploy tab par Telegram gate card`);
 }
 
-/* ── Phase 4: admin panel (admin session mock) ── */
+/* ── Phase 4: admin panel (admin session mock, /admin URL se) ── */
 RESPONSES['/api/me'] = { ...USER, isAdmin: true };
+window.history.replaceState({}, '', '/admin');   // admin panel sirf URL se khulta hai
 const adminHost = window.document.createElement('div');
 window.document.body.appendChild(adminHost);
 mount(adminHost);
 await wait(1200);
-// Admin tab kholo (desktop nav me admin ke liye button aata hai)
-{
-  const adminBtn = [...adminHost.querySelectorAll('button')]
-    .find((b) => (b.textContent || '').trim().toLowerCase() === 'admin');
-  adminBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-}
 await wait(1400);
 {
   const t = adminHost.textContent || '';
@@ -425,6 +420,32 @@ const realErrors2 = errors.filter((e) => !/not wrapped in act|ReactDOMTestUtils|
 if (realErrors.length) {
   origError(`\n❌ ${realErrors.length} runtime error(s):`);
   realErrors.slice(0, 6).forEach((e) => origError('   ' + e.slice(0, 300)));
+}
+
+/* ── Phase 5b: panel me admin ke entry points NAHI hone chahiye (URL-only) ── */
+{
+  window.history.replaceState({}, '', '/');
+  const cleanHost = window.document.createElement('div');
+  cleanHost.textContent = '';
+  RESPONSES['/api/me'] = { ...USER, isAdmin: true };   // admin logged in hone par bhi
+  window.document.body.appendChild(cleanHost);
+  mount(cleanHost);
+  await wait(1200);
+  const t = cleanHost.textContent || '';
+  const noHomeBtn = !/Open admin panel/i.test(t);
+  if (!noHomeBtn) failed += 1;
+  origError(`${noHomeBtn ? '✅' : '❌'} Home par admin entry nahi (URL-only)`);
+  const noNavTab = ![...cleanHost.querySelectorAll('button')].some((b) => (b.textContent || '').trim().toLowerCase() === 'admin');
+  if (!noNavTab) failed += 1;
+  origError(`${noNavTab ? '✅' : '❌'} nav me admin tab nahi (URL-only)`);
+  // profile (account) tab par bhi admin row nahi
+  const accBtn = [...cleanHost.querySelectorAll('button')].find((b) => /account/i.test(b.textContent || ''));
+  accBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(600);
+  const at = cleanHost.textContent || '';
+  const noAccRow = !/Admin panel/i.test(at);
+  if (!noAccRow) failed += 1;
+  origError(`${noAccRow ? '✅' : '❌'} Account tab par admin row nahi (URL-only)`);
 }
 
 /* ── Phase 6: /admin deep-link (URL se seedha admin unlock screen) ── */

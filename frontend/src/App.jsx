@@ -152,7 +152,6 @@ function Panel() {
         tab={tab}
         setTab={goTab}
         user={user}
-        isAdmin={isAdmin}
         orderCount={queueCount}
         onAddFund={() => setTab('wallet')}
         botLink={config?.bot_link || config?.support_url}
@@ -168,7 +167,7 @@ function Panel() {
             </div>
           ) : body}
 
-          {body && <Footer isAdmin={isAdmin} setTab={goTab} />}
+          {body && <Footer setTab={goTab} />}
         </div>
       </main>
 

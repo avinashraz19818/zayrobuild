@@ -55,7 +55,7 @@ export function Brand({ onClick }) {
   );
 }
 
-export function TopBar({ tab, setTab, user, isAdmin, orderCount, onAddFund, botLink }) {
+export function TopBar({ tab, setTab, user, orderCount, onAddFund, botLink }) {
   return (
     <header className="topbar">
       <div className="topbar-inner">
@@ -72,12 +72,6 @@ export function TopBar({ tab, setTab, user, isAdmin, orderCount, onAddFund, botL
               </button>
             );
           })}
-          {isAdmin && (
-            <button className={tab === 'admin' ? 'active' : ''} onClick={() => setTab('admin')}>
-              <Shield size={15} />
-              Admin
-            </button>
-          )}
         </nav>
 
         <div className="topbar-spacer" />
@@ -136,7 +130,7 @@ export function BottomNav({ tab, setTab, orderCount }) {
   );
 }
 
-export function Footer({ isAdmin, setTab }) {
+export function Footer({ setTab }) {
   const { config } = useStore();
   const name = String(config?.site_name || 'ZAYRO BUILD').trim() || 'ZAYRO BUILD';
   return (
@@ -147,7 +141,6 @@ export function Footer({ isAdmin, setTab }) {
         <button className="btn btn-ghost btn-xs" onClick={() => setTab('wallet')}><Wallet size={13} />Wallet</button>
         <button className="btn btn-ghost btn-xs" onClick={() => setTab('refer')}><Gift size={13} />Refer &amp; Earn</button>
         <button className="btn btn-ghost btn-xs" onClick={() => setTab('fakesite')}><Radio size={13} />Fake Website</button>
-        {isAdmin && <button className="btn btn-ghost btn-xs" onClick={() => setTab('admin')}><Shield size={13} />Admin</button>}
       </div>
       <div className="app-footer-note">
         © {new Date().getFullYear()} {name} · Premium APK Marketplace · 100% Secure &amp; Fast

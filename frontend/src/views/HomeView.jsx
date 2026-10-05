@@ -103,7 +103,7 @@ function QuickAction({ icon: Icon, title, text, tone, onClick }) {
 /* ─────────────────────────  Home  ───────────────────────── */
 export default function HomeView({ setTab, onOpenDesign, onPreview, onAddFund }) {
   const { designs, orders, announcement, payment, loading, config, referral } = useStore();
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const [sort, setSort] = useState('latest');
 
   const topDesigns = useMemo(() => sortDesigns(designs, sort).slice(0, 8), [designs, sort]);
@@ -419,12 +419,6 @@ export default function HomeView({ setTab, onOpenDesign, onPreview, onAddFund })
           {totalBuilds > 0 && ` Ab tak ${totalBuilds} APKs is store se bane hain.`}
         </span>
       </div>
-
-      {isAdmin && (
-        <button className="btn btn-outline btn-block" onClick={() => setTab('admin')}>
-          <ShieldCheck size={15} /> Open admin panel
-        </button>
-      )}
     </>
   );
 }
