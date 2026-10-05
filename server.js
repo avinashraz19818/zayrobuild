@@ -1,3 +1,19 @@
+// .env git me tracked nahi hai (server par edit hoti hai, isliye har pull par conflict
+// deti thi). Pehli baar chalne par .env.example se khud ban jaati hai.
+(() => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const envPath = path.join(__dirname, '.env');
+    const examplePath = path.join(__dirname, '.env.example');
+    if (!fs.existsSync(envPath) && fs.existsSync(examplePath)) {
+      fs.copyFileSync(examplePath, envPath);
+      console.log('[env] .env nahi tha — .env.example se bana di (values check kar lein)');
+    }
+  } catch (error) {
+    console.error('[env] bootstrap warning:', error.message);
+  }
+})();
 require('dotenv').config();
 const { rateLimit } = require('express-rate-limit');
 const express = require('express');

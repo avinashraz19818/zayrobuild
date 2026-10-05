@@ -67,8 +67,9 @@ pm2 save && pm2 startup
 
 ## Settings / keys
 
-`.env` aur `firebase-service-account.json` repo me hain (aapki request par), taaki
-clone ke saath hi saari settings aa jaayein. Keys: PORT, SITE_NAME, SESSION_SECRET,
+`.env` git me tracked nahi hai (server par ise edit karte hain, isliye har `git pull` par
+conflict deti thi). Repo me **`.env.example`** hai jisme poori working settings hain —
+pehli baar server chalne par `.env` khud isse ban jaati hai. Keys: PORT, SITE_NAME, SESSION_SECRET,
 TELEGRAM_BOT_TOKEN, TELEGRAM_ADMIN_CHAT_ID, FIREBASE_*, ADMIN_USERNAME,
 ADMIN_PASSWORD_HASH, KEYSTORE_*. Reference ke liye `.env.example` bhi rakha hai.
 
@@ -79,6 +80,14 @@ bot token / admin hash / Firebase key use kar sakta hai. Isliye:
 - Admin password change karein (`node scripts/set-admin-password.js`)
 - Firebase service account key Google Cloud console se delete karke nayi banayein
 - Ya repo ko **private** kar dein (GitHub → Settings → Danger Zone → Change visibility)
+
+### Config badalna (PORT, token, etc.)
+```bash
+nano ~/zayrobuild/.env
+pm2 restart zayro-panel --update-env && pm2 save
+```
+`.env` ignored hai, isliye aapki changes `git pull` ko kabhi nahi rokengi.
+(Naya clone: `.env` first boot par `.env.example` se ban jaati hai.)
 
 ### Database (pull-safe)
 - Live DB `database/apkbuilder.db` **git me tracked nahi** hai — server use har second likhta hai,
