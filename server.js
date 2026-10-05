@@ -3758,7 +3758,7 @@ app.get('*', (req, res) => {
 
 const httpServer = app.listen(PORT, () => {
   console.log(`APK Builder running on port ${PORT}`);
-  console.log(`   → Panel: http://localhost:${PORT}   ·   Admin tab panel ke andar hai`);
+  console.log(`   → Store: http://localhost:${PORT}   ·   Admin panel: http://localhost:${PORT}/admin`);
 });
 
 // Port busy ho to ghuma-phira kar crash hone ke bajaye saaf message do.
