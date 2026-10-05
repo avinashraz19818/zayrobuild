@@ -97,6 +97,19 @@ isi wajah se `[fb-token] exchange failed` aata hai). Nayi key banane ka tarika:
 
 Bina key ke panel poora chalta hai — sirf **live links (Firebase RTDB) wale features** off rehte hain.
 
+Agar key sahi hai par `fetch failed` aata hai (ya diag me `ENOTFOUND/ETIMEDOUT/ECONNREFUSED`),
+to problem VPS se `*.firebaseio.com` tak network ka hai. Check karein:
+```bash
+getent ahosts zayro-build-default-rtdb.firebaseio.com | head -3
+curl -4 -sS -m 15 -o /dev/null -w "IPv4: %{http_code}\n" https://zayro-build-default-rtdb.firebaseio.com/.json
+curl -6 -sS -m 15 -o /dev/null -w "IPv6: %{http_code}\n" https://zayro-build-default-rtdb.firebaseio.com/.json
+```
+- `401` aana normal hai (rules auth maangti hain) — matlab network **sahi** hai, aage badhein.
+- Sirf IPv4 chalta hai → node ko IPv4 prefer karayein:
+  `pm2 delete zayro-panel && pm2 start server.js --name zayro-panel --node-args="--dns-result-order=ipv4first" && pm2 save`
+- Dono fail (timeout) → aapka hosting provider `*.firebaseio.com` block kar raha hai. Support se
+  baat karein; tab tak Firebase live-link feature off rahega (baaki panel poora chalta hai).
+
 ### Firebase project ek hi rakhein (bahut zaroori)
 Panel ka service account + `.env` ka `FIREBASE_DATABASE_URL` aur built APK ke template ka
 `databaseURL` — **teeno ka ek hi Firebase project hona chahiye**, warna "live link" feature
