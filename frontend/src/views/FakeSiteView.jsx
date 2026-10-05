@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
-import { EmptyState, Loader, Notice, SectionHead, StatusPill } from '../components/ui';
+import { EmptyState, Loader, SectionHead, StatusPill } from '../components/ui';
 import { fmtDate } from '../lib/api';
 import TelegramGate from '../components/TelegramGate';
 
@@ -97,9 +97,7 @@ export default function FakeSiteView({ setTab, onOpenDesign }) {
 
       <section className="section">
         <SectionHead icon={Layers} title="Fake-ready templates" sub="In templates ke saath fake build option available hai" />
-        {fakeReadyTemplates.length === 0 ? (
-          <Notice tone="info">Admin jab fake-enabled template publish karega, yahan list dikhegi.</Notice>
-        ) : (
+        {fakeReadyTemplates.length > 0 && (
           <div className="stack gap-8">
             {fakeReadyTemplates.map((d) => (
               <button key={d.id} className="row-item" onClick={() => onOpenDesign?.(d)}>

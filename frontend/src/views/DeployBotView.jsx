@@ -100,7 +100,7 @@ export default function DeployBotView({ setTab }) {
       </section>
 
       {!enabled && (
-        <Notice tone="warn">Deploy bot service abhi admin ne band ki hui hai — thodi der me wapas check karein.</Notice>
+        <Notice tone="warn">Deploy bot service filhal band hai.</Notice>
       )}
 
       {/* Plans */}

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Gift, Sparkles, CheckCircle2, AlertCircle, PartyPopper, History } from 'lucide-react';
-import { Sheet, Notice, Spinner } from './ui';
+import { Sheet, Spinner } from './ui';
 import { useToast } from './Toast';
 import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
@@ -120,9 +120,6 @@ export default function GiftCodeSheet({ open, onClose }) {
             {busy ? 'Claiming…' : 'Claim gift code'}
           </button>
 
-          <Notice tone="info">
-            Ek code ek account me sirf ek baar chalta hai. Code ka amount admin set karta hai.
-          </Notice>
         </form>
       )}
 

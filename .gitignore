@@ -15,6 +15,7 @@ backups/
 
 # Frontend build scratch
 frontend/smoke/dist/
+frontend/smoke/out/
 frontend/dist/
 
 # ⚠️ Secrets — repo public hai, inhe tracked nahi rakhte (VPS par replace karne se

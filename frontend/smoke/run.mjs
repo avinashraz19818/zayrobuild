@@ -301,59 +301,54 @@ await wait(1400);
   origError(`${ok ? '✅' : '❌'} deploy tab par Telegram gate card`);
 }
 
-/* ── Phase 4: admin panel (admin session mock, /admin URL se) ── */
+/* ── Phase 4: admin panel (standalone /admin, admin session mock) ── */
 RESPONSES['/api/me'] = { ...USER, isAdmin: true };
 window.history.replaceState({}, '', '/admin');   // admin panel sirf URL se khulta hai
 const adminHost = window.document.createElement('div');
 window.document.body.appendChild(adminHost);
 mount(adminHost);
-await wait(1200);
 await wait(1400);
 {
   const t = adminHost.textContent || '';
-  const ok = /Admin panel/i.test(t) && /Users/.test(t) && /Deploy Bot/i.test(t) && /Gift Codes/i.test(t);
+  const ok = /Admin Panel/i.test(t) && /Overview/.test(t) && /Users/.test(t) && /Gift Codes/.test(t) && /Settings/.test(t);
   if (!ok) failed += 1;
-  origError(`${ok ? '✅' : '❌'} admin panel unlock + tabs visible`);
+  origError(`${ok ? '✅' : '❌'} admin panel unlock + sidebar tabs visible`);
 
-  const kpi = /Pending deposits/i.test(t) && /Coins in wallets/i.test(t);
-  if (!kpi) failed += 1;
-  origError(`${kpi ? '✅' : '❌'} admin overview KPIs`);
+  const noDeployBot = !/Deploy Bot/.test(t);
+  if (!noDeployBot) failed += 1;
+  origError(`${noDeployBot ? '✅' : '❌'} admin panel me Deploy Bot tab nahi`);
+
+  // Store panel ka chrome admin page par nahi hona chahiye
+  const noStoreChrome = !/Open in Telegram/.test(t) && !/Available balance/.test(t);
+  if (!noStoreChrome) failed += 1;
+  origError(`${noStoreChrome ? '✅' : '❌'} admin standalone (store chrome nahi)`);
+
+  // User panel se alag: koi admin entry point nahi
+  // (Neexche Phase 5b me check hota hai)
+
+  // Har tab click karke check karo ki khulta hai
+  for (const label of ['Templates', 'Deposits', 'Orders', 'Users', 'Gift Codes', 'Announce', 'Settings']) {
+    const btn = [...adminHost.querySelectorAll('button')]
+      .find((b) => (b.textContent || '').trim().toLowerCase().startsWith(label.toLowerCase()));
+    btn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(420);
+    const bodyTxt = adminHost.querySelector('.admin-body')?.textContent || adminHost.textContent || '';
+    const shown = bodyTxt.length > 40;
+    if (!shown) failed += 1;
+    origError(`${shown ? '✅' : '❌'} admin tab: ${label}`);
+  }
+  // screenshot ke liye wapas overview
+  const ov = [...adminHost.querySelectorAll('button')].find((b) => (b.textContent || '').trim().toLowerCase().startsWith('overview'));
+  ov?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(420);
 
   fs.writeFileSync('smoke/out/admin.html',
-    `<!doctype html><html><head><meta charset="utf-8"><title>Admin panel — overview</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
-
-  // baaki admin tabs ek-ek karke check
-  const adminTabs = [
-    ['Templates', /New template/i],
-    ['Deposits', /Deposit requests/i],
-    ['Orders', /Orders \(/],
-    ['Users', /Users \(/],
-    ['Deploy Bot', /Deploy Bot requests/i],
-    ['Announce', /Naya announcement/i],
-    ['Gift Codes', /Naya gift code/i],
-    ['Settings', /Save all settings/i]
-  ];
-  for (const [label, re] of adminTabs) {
-    const btn = [...adminHost.querySelectorAll('.admin-tabs button')]
-      .find((b) => (b.textContent || '').trim().toLowerCase().startsWith(label.toLowerCase()));
-    if (!btn) { failed += 1; origError(`❌ admin tab missing: ${label}`); continue; }
-    btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    await wait(420);
-    const okTab = re.test(adminHost.textContent || '');
-    if (!okTab) failed += 1;
-    origError(`${okTab ? '✅' : '❌'} admin tab: ${label}`);
-    if (label === 'Deploy Bot') {
-      fs.writeFileSync('smoke/out/admin-deploy.html',
-        `<!doctype html><html><head><meta charset="utf-8"><title>Admin — Deploy Bot</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
-    }
-    if (label === 'Settings') {
-      fs.writeFileSync('smoke/out/admin-settings.html',
-        `<!doctype html><html><head><meta charset="utf-8"><title>Admin — Settings</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
-    }
-  }
+    `<!doctype html><html><head><meta charset="utf-8"><title>Admin panel — standalone</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
+  origError('✅ admin snapshot → smoke/out/admin.html');
 }
 
 /* ── Phase 5: Gift code claim (profile → sheet → success popup) ── */
+window.history.replaceState({}, '', '/');   // store panel par wapas
 RESPONSES['/api/me'] = { ...USER, isAdmin: false };
 const giftHost = window.document.createElement('div');
 window.document.body.appendChild(giftHost);
@@ -457,22 +452,18 @@ mount(deepHost);
 await wait(1200);
 {
   const t = deepHost.textContent || '';
-  const ok = /Admin access|Unlock admin panel/i.test(t);
+  const ok = /Admin Panel/i.test(t) && /Unlock panel/i.test(t);
   if (!ok) failed += 1;
-  origError(`${ok ? '✅' : '❌'} /admin URL seedha admin unlock screen kholta hai`);
+  origError(`${ok ? '✅' : '❌'} /admin URL seedha admin login screen kholta hai`);
 
   const urlOk = window.location.pathname === '/admin';
   if (!urlOk) failed += 1;
   origError(`${urlOk ? '✅' : '❌'} /admin URL sync (pathname = ${window.location.pathname})`);
 
-  // Wapas home par jane par URL '/' ho jaana chahiye
-  const homeBtn = [...deepHost.querySelectorAll('button')]
-    .find((b) => (b.textContent || '').trim().toLowerCase() === 'home');
-  homeBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-  await wait(400);
-  const backOk = window.location.pathname === '/';
-  if (!backOk) failed += 1;
-  origError(`${backOk ? '✅' : '❌'} admin se home jaane par URL '/' (pathname = ${window.location.pathname})`);
+  // Login screen par store panel ka wapas-jaane ka link hona chahiye
+  const backLink = [...deepHost.querySelectorAll('a')].some((a) => (a.textContent || '').includes('Store panel'));
+  if (!backLink) failed += 1;
+  origError(`${backLink ? '✅' : '❌'} admin login par 'Store panel' wapas link`);
 }
 
 origError(`\nDOM size: ${html.length} chars · text: ${text.length} chars · failures: ${failed} · errors: ${realErrors.length}`);

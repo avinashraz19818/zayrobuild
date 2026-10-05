@@ -15,13 +15,15 @@ uploads/, templates/   → design media + popup HTML files (DB me reference hote
 ---
 
 ## Admin panel kahan hai?
-Panel ke andar koi admin button nahi hai (jaan-boojh kar). Admin panel **sirf URL se** khulta hai:
+Admin panel ek **alag standalone page** hai (store panel se bilkul separate layout, apna sidebar
+aur 8 tabs) — store panel me iska koi button/tab nahi hai, jaan-boojh kar:
 
 ```
 https://jaiclub5vip.site/admin          (ya  #admin)
 ```
 
-Tel me username/password daalein (`ADMIN_USERNAME` + `ADMIN_PASSWORD_HASH` `.env` se).
+Wahan username/password daalein (`ADMIN_USERNAME` + `ADMIN_PASSWORD_HASH` `.env` se).
+Tabs: **Overview · Templates · Deposits · Orders · Users · Gift Codes · Announce · Settings**.
 Password bhool gaye? `node scripts/set-admin-password.js "NayaPassword"` → `pm2 restart zayro-panel --update-env`.
 
 Telegram ke andar URL type nahi hota, isliye bot me admin ke liye command rakhi hai —

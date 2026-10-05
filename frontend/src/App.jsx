@@ -10,7 +10,7 @@ import WalletView from './views/WalletView';
 import AccountView from './views/AccountView';
 import ReferView from './views/ReferView';
 import FakeSiteView from './views/FakeSiteView';
-import AdminView from './views/AdminView';
+import AdminApp from './views/admin/AdminApp';
 import DeployBotView from './views/DeployBotView';
 import TelegramGate from './components/TelegramGate';
 import BuildWizardModal from './components/BuildWizardModal';
@@ -19,7 +19,7 @@ import LogsModal from './components/LogsModal';
 import LiveLinksModal from './components/LiveLinksModal';
 import PanelIntroLoader from './components/PanelIntroLoader';
 
-const TAB_KEYS = ['home', 'templates', 'fakesite', 'refer', 'orders', 'account', 'wallet', 'deploy', 'admin'];
+const TAB_KEYS = ['home', 'templates', 'fakesite', 'refer', 'orders', 'account', 'wallet', 'deploy'];
 
 // Ye tabs Telegram account ke bina kholne ka koi matlab nahi — in par gate dikhta hai.
 const AUTH_TABS = ['orders', 'wallet', 'account', 'refer', 'fakesite', 'deploy'];
@@ -29,15 +29,7 @@ function Panel() {
   const { orders, config } = useStore();
   const { addToast } = useToast();
 
-  // /admin ya #admin se seedha admin tab khule (bookmark/share ke liye aasan).
-  const [tab, setTab] = useState(() => {
-    try {
-      const hash = String(window.location.hash || '').replace(/^#\/?/, '').toLowerCase();
-      const path = String(window.location.pathname || '').replace(/\/+$/, '').toLowerCase();
-      if (hash === 'admin' || path === '/admin') return 'admin';
-    } catch (_) { /* ignore */ }
-    return 'home';
-  });
+  const [tab, setTab] = useState('home');
   const [splashDone, setSplashDone] = useState(false);
   const [buildDesign, setBuildDesign] = useState(null);
   const [previewDesign, setPreviewDesign] = useState(null);
@@ -64,15 +56,6 @@ function Panel() {
     const name = String(config?.site_name || '').trim() || 'ZAYRO BUILD';
     document.title = `${name} · Premium APK Marketplace`;
   }, [config?.site_name]);
-
-  // Admin tab khula ho to URL me /admin rakho (refresh/share ke liye), warna hata do.
-  useEffect(() => {
-    try {
-      const path = window.location.pathname.replace(/\/+$/, '');
-      if (tab === 'admin' && path !== '/admin') window.history.replaceState({}, '', '/admin');
-      else if (tab !== 'admin' && path === '/admin') window.history.replaceState({}, '', '/');
-    } catch (_) { /* ignore */ }
-  }, [tab]);
 
   // Telegram back button -> pehla tab
   useEffect(() => {
@@ -131,8 +114,6 @@ function Panel() {
         return <FakeSiteView setTab={goTab} onOpenDesign={setBuildDesign} />;
       case 'deploy':
         return <DeployBotView setTab={goTab} />;
-      case 'admin':
-        return <AdminView />;
       case 'home':
       default:
         return <HomeView
@@ -201,6 +182,26 @@ function Panel() {
 }
 
 export default function App() {
+  // /admin (ya #admin) — alag standalone admin app, store panel ke shell ke bina.
+  const isAdminRoute = (() => {
+    try {
+      const path = String(window.location.pathname || '').replace(/\/+$/, '').toLowerCase();
+      const hash = String(window.location.hash || '').replace(/^#\/?/, '').toLowerCase();
+      return path === '/admin' || hash === 'admin';
+    } catch (_) { return false; }
+  })();
+
+  if (isAdminRoute) {
+    return (
+      <ToastProvider>
+        <AuthProvider>
+          <AdminApp />
+        </AuthProvider>
+      </ToastProvider>
+    );
+  }
+
+
   return (
     <ToastProvider>
       <AuthProvider>
