@@ -19,7 +19,7 @@ const MODES = [
 ];
 
 // Har style ka apna font look — taaki naam likhte hi input box me bhi wahi
-// style dikhe (styled Unicode label preview alag se launcher tile me aata hai).
+// style dikhe — aur style chips me build wala styled (Unicode) sample dikhta hai.
 const STYLE_CSS = {
   bold: { fontWeight: 900, letterSpacing: '0.3px' },
   sansbold: { fontWeight: 800, fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif', letterSpacing: '-0.2px' },
@@ -155,7 +155,7 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
   }, [design, isOpen]);
 
   // Font style samples server se aate hain (wahi Unicode mapping jo build me
-  // launcher label par lagti hai) — taaki preview bilkul final jaisa dikhe.
+  // app ke naam par lagti hai) — taaki preview bilkul final jaisa dikhe.
   useEffect(() => {
     if (!isOpen) return;
     const reqId = fontReq.current + 1;
@@ -297,7 +297,7 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
             </span>
           </div>
 
-          {/* Naam + live launcher preview — style chunte hi dono me turant dikhta hai */}
+          {/* Naam — input khud chuni hui style me render hota hai */}
           <div className="field">
             <span className="label">
               App name *
@@ -324,27 +324,6 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
             </span>
           </div>
 
-          <div className="launcher-card">
-            <div className="launcher-tile">
-              <span className="launcher-icon">
-                {iconPreview || design.preview_image
-                  ? <img src={iconPreview || getMediaUrl(design.preview_image)} alt="" />
-                  : <Layers size={26} />}
-              </span>
-              <span className="launcher-label" style={styleCss}>{styledName || 'App Name'}</span>
-            </div>
-            <div className="launcher-copy">
-              <div className="row-title"><Smartphone size={13} style={{ verticalAlign: -2 }} /> Launcher preview</div>
-              <div className="row-sub" style={{ marginTop: 4 }}>
-                Phone ke home screen par app aisa dikhega. Style badalne par label turant update hota hai.
-              </div>
-              <div className="flex-row gap-6" style={{ flexWrap: 'wrap', marginTop: 8 }}>
-                <span className="chip chip-ok"><Check size={11} /> {activeFont?.label || 'Bold'}</span>
-                <span className="chip">{iconPreview ? 'Custom icon' : 'Template icon'}</span>
-              </div>
-            </div>
-          </div>
-
           {fonts.length > 0 && (
             <div className="field">
               <span className="label">Name style</span>
@@ -365,14 +344,14 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
                   </button>
                 ))}
               </div>
-              <span className="hint">Ye style launcher par app ke naam me lagta hai (app ke andar ka text same rehta hai).</span>
+              <span className="hint">Ye style app ke naam par lagta hai (app ke andar ka text same rehta hai).</span>
             </div>
           )}
 
           <div className="field">
             <span className="label">App icon</span>
-            <label
-              className={`icon-drop${iconPreview ? ' has-img' : ''}${dragging ? ' drag' : ''}`}
+            <div
+              className={`icon-pick${iconPreview ? ' has-img' : ''}${dragging ? ' drag' : ''}`}
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
               onDrop={(e) => {
@@ -381,25 +360,23 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
                 takeIcon(e.dataTransfer?.files?.[0]);
               }}
             >
-              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onIcon} hidden />
-              {iconPreview ? (
-                <>
-                  <img src={iconPreview} alt="" />
-                  <span className="icon-drop-bar">
-                    <span className="icon-drop-hint"><ImageIcon size={13} /> Change</span>
-                    <button type="button" className="icon-drop-x" onClick={clearIcon} aria-label="Remove icon">
-                      <Trash2 size={13} /> Remove
-                    </button>
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="icon-drop-ico"><ImageIcon size={22} /></span>
-                  <b>Upload icon</b>
-                  <span>PNG / JPG · 512×512 · tap ya drag-drop</span>
-                </>
+              <label className="icon-pick-tap">
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={onIcon} hidden />
+                <span className="icon-pick-box">
+                  {iconPreview ? <img src={iconPreview} alt="" /> : <ImageIcon size={18} />}
+                </span>
+                <span className="icon-pick-meta">
+                  <span className="row-title">{iconPreview ? 'Icon ready' : 'Upload icon'}</span>
+                  <span className="row-sub">PNG / JPG · 512×512</span>
+                </span>
+                {!iconPreview && <span className="icon-pick-cta">Choose</span>}
+              </label>
+              {iconPreview && (
+                <button type="button" className="btn btn-ghost btn-xs danger" onClick={clearIcon} aria-label="Remove icon">
+                  <Trash2 size={12} /> Remove
+                </button>
               )}
-            </label>
+            </div>
             <span className="hint">Blank chhodein to template ka default icon lagega.</span>
           </div>
         </div>
@@ -441,9 +418,9 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
           <div className="wiz-summary">
             <Receipt size={14} />
             <span>
-              {mode === 'real' && '1 APK banega (main) · apna live-link firebase path.'}
-              {mode === 'both' && '2 APK banenge (main + fake) · dono ka firebase path alag rehta hai — data mix nahi hota.'}
-              {mode === 'fake' && '1 APK banega (sirf fake) · register button pe main link chhupa rehta hai.'}
+              {mode === 'real' && '1 APK banega — main app, aapke register link ke saath.'}
+              {mode === 'both' && '2 APK banenge (main + backup) — dono ka data alag rehta hai, mix nahi hota.'}
+              {mode === 'fake' && '1 APK banega (sirf backup) — register button pe main link chhupa rehta hai.'}
             </span>
           </div>
 
@@ -468,7 +445,7 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
                 value={fakeRegisterUrl}
                 onChange={setFakeRegisterUrl}
                 placeholder="https://backup-site.com/#/register?invitationCode=..."
-                hint="Fake build ka apna firebase path hota hai — data mix nahi hota."
+                hint="Backup build ka data alag rehta hai — main app se mix nahi hota."
               />
               {mode === 'both' && isHttpUrl(registerUrl) && fakeRegisterUrl !== registerUrl && (
                 <button

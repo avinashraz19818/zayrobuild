@@ -151,7 +151,7 @@ export default function HomeView({ setTab, onOpenDesign, onPreview, onAddFund })
         <div className="hero-stats">
           <span className="hero-stat"><BadgeCheck size={15} color="var(--ok)" /> Signed &amp; Obfuscated</span>
           <span className="hero-stat"><Zap size={15} color="var(--gold)" /> Build in minutes</span>
-          <span className="hero-stat"><ShieldCheck size={15} color="var(--info)" /> Dynamic Firebase links</span>
+          <span className="hero-stat"><ShieldCheck size={15} color="var(--info)" /> Dynamic live links</span>
         </div>
 
         <div className="hero-actions">
@@ -345,7 +345,7 @@ export default function HomeView({ setTab, onOpenDesign, onPreview, onAddFund })
           <div className="feature-card">
             <span className="row-ico info"><Radio size={17} /></span>
             <b>Dynamic Links</b>
-            <span>Firebase links kabhi band nahi padte.</span>
+            <span>Live links kabhi band nahi padte.</span>
           </div>
           <div className="feature-card">
             <span className="row-ico gold"><Users size={17} /></span>

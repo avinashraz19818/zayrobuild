@@ -31,7 +31,7 @@ export default function FakeSiteView({ setTab, onOpenDesign }) {
         <span className="hero-eyebrow"><Sparkles size={13} /> Extra safety layer</span>
         <h2 className="hero-title" style={{ fontSize: 22 }}>Ek order, do APK</h2>
         <p className="hero-text">
-          Har order ke saath ek fake build bhi ban sakta hai — alag register link aur alag firebase path.
+          Har order ke saath ek fake build bhi ban sakta hai — alag register link aur alag backup data.
           Main app ke fail hone par fake APK ko primary link ki tarah use karein.
         </p>
         <div className="hero-actions">
@@ -46,7 +46,7 @@ export default function FakeSiteView({ setTab, onOpenDesign }) {
 
       <div className="trust-strip">
         <ShieldCheck size={15} color="var(--ok)" />
-        <span><b>Safe swap</b> · fake build ka firebase alag hota hai, isliye data mix nahi hota</span>
+        <span><b>Safe swap</b> · fake build ka data alag hota hai, isliye mix nahi hota</span>
       </div>
 
       <section className="section">
