@@ -19,6 +19,7 @@ import LogsModal from './components/LogsModal';
 import LiveLinksModal from './components/LiveLinksModal';
 import DemoAccountModal from './components/DemoAccountModal';
 import PanelIntroLoader from './components/PanelIntroLoader';
+import { installGlobalSfx } from './lib/sfx';
 
 const TAB_KEYS = ['home', 'templates', 'fakesite', 'refer', 'orders', 'account', 'wallet', 'deploy'];
 
@@ -192,6 +193,9 @@ function Panel() {
 }
 
 export default function App() {
+  // Har button/pill par halka sound + haptic — ek hi jagah se poore app me.
+  useEffect(() => installGlobalSfx(), []);
+
   // /admin (ya #admin) — alag standalone admin app, store panel ke shell ke bina.
   const isAdminRoute = (() => {
     try {

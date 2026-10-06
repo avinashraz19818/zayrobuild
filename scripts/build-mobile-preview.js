@@ -66,6 +66,10 @@ const PHONES = [
   ['admin-orders.html', 'Admin · Orders', 'Rows: naam / meta / status alag line'],
   ['admin-settings.html', 'Admin Settings', 'Logo + loading screen'],
   ['admin-users.html', 'Admin · Users', 'Coins / APKs / TG transfer'],
+  ['build-step1.html', 'Build · Step 1', 'Naam + launcher preview + fonts + icon'],
+  ['build-step2.html', 'Build · Step 2', 'Build mode + link form + deposit chips'],
+  ['build-step3.html', 'Build · Step 3', 'Payment receipt + total + build CTA'],
+  ['account-sound.html', 'Account · Sound', 'Sound effects ON/OFF toggle'],
   ['demo-account.html', 'Add demo account (FREE)', 'Alag modal — koi coins nahi'],
   ['profile.html', 'Profile', 'Wallet + gift code card'],
   ['deploy.html', 'Deploy Bot', 'Plan cards'],
@@ -104,7 +108,7 @@ function writeHub(staged) {
 </style></head>
 <body>
   <h1>ZAYRO BUILD · mobile preview</h1>
-  <div class="sub">Round 17 — phone par rows overlap fix (title · meta · chips alag lines) + heading icons inline · demo account FREE · admin: Create Order (FREE), Users (coins / APKs / TG)</div>
+  <div class="sub">Round 18 — build wizard v2 (naam likhne par style turant dikhta hai, launcher preview, icon upload, naya mode/link form, payment receipt) + har button par sound effect (Account me ON/OFF)</div>
   <div class="grid">${cards}
   </div>
 </body></html>`;

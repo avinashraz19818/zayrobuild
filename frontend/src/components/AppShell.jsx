@@ -66,7 +66,7 @@ export function TopBar({ tab, setTab, user, orderCount, onAddFund, botLink }) {
             const Icon = item.icon;
             const active = tab === item.key || (tab === 'wallet' && item.key === 'account');
             return (
-              <button key={item.key} className={active ? 'active' : ''} onClick={() => setTab(item.key)}>
+              <button key={item.key} data-sfx="nav" className={active ? 'active' : ''} onClick={() => setTab(item.key)}>
                 <Icon size={15} />
                 {item.label}
               </button>
@@ -78,13 +78,13 @@ export function TopBar({ tab, setTab, user, orderCount, onAddFund, botLink }) {
 
         {user ? (
           <div className="topbar-user">
-            <button className="balance-chip" onClick={onAddFund} title="Wallet balance">
+            <button className="balance-chip" data-sfx="coin" onClick={onAddFund} title="Wallet balance">
               <CoinIco />
               <span>₹{Number(user.coins || 0).toLocaleString('en-IN')}</span>
             </button>
 
             {/* Profile button — Telegram naam ke saath, click par account/profile view */}
-            <button className={`profile-chip${tab === 'account' ? ' active' : ''}`} onClick={() => setTab('account')} title="My profile">
+            <button className={`profile-chip${tab === 'account' ? ' active' : ''}`} data-sfx="nav" onClick={() => setTab('account')} title="My profile">
               <span className="avatar-btn">
                 {user.photo_url ? <img src={user.photo_url} alt="" /> : initials(displayName(user))}
               </span>
@@ -118,7 +118,7 @@ export function BottomNav({ tab, setTab, orderCount }) {
         const Icon = item.icon;
         const active = tab === item.key || (tab === 'wallet' && item.key === 'account');
         return (
-          <button key={item.key} className={active ? 'active' : ''} onClick={() => setTab(item.key)}>
+          <button key={item.key} data-sfx="nav" className={active ? 'active' : ''} onClick={() => setTab(item.key)}>
             {active && <span className="nav-dot" />}
             {item.key === 'orders' && orderCount > 0 && <span className="nav-badge">{orderCount > 9 ? '9+' : orderCount}</span>}
             <span className="nav-ico"><Icon size={20} /></span>

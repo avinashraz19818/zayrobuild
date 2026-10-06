@@ -3,9 +3,16 @@ import {
   X, Copy, Check, PackageOpen, Loader2, AlertCircle, CheckCircle2, Info, CircleAlert
 } from 'lucide-react';
 import { copyText, statusOf } from '../lib/api';
+import sfx from '../lib/sfx';
 
 /* ─────────────────────────────  Sheet (modal)  ───────────────────────────── */
 export function Sheet({ open, title, subtitle, icon: Icon, onClose, children, footer, wide }) {
+  // Sheet khulte/band hote waqt halka whoosh — har modal me automatic.
+  useEffect(() => {
+    if (open) sfx.open();
+    return () => { if (open) sfx.close(); };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   User, Wallet, Package, Gift, Globe, Headphones, ShieldCheck, LogOut, ChevronRight,
-  Layers, Sparkles, BadgeCheck, Send, Activity, Ticket
+  Layers, Sparkles, BadgeCheck, Send, Activity, Ticket, Volume2, VolumeX
 } from 'lucide-react';
+import sfx, { sfxEnabled, setSfxEnabled, subscribeSfx } from '../lib/sfx';
 import { useAuth } from '../context/AuthContext';
 import { useStore } from '../context/StoreContext';
 import { EmptyState, SectionHead, Stat } from '../components/ui';
@@ -30,6 +31,12 @@ export default function AccountView({ setTab, onAddFund }) {
   const { user, logout, refreshUser, telegramUser } = useAuth();
   const { orders, referral, config } = useStore();
   const [giftOpen, setGiftOpen] = useState(false);
+  const [sound, setSound] = useState(sfxEnabled());
+
+  useEffect(() => {
+    const off = subscribeSfx(setSound);
+    return () => { off(); };
+  }, []);
 
   if (!user) {
     return <TelegramGate botLink={config?.bot_link} />;
@@ -118,6 +125,17 @@ export default function AccountView({ setTab, onAddFund }) {
       <section className="section">
         <SectionHead icon={ShieldCheck} title="Support & admin" />
         <div className="stack gap-8">
+          <MenuRow
+            icon={sound ? Volume2 : VolumeX}
+            tone={sound ? 'ok' : ''}
+            title="Sound effects"
+            sub={sound ? 'Tap, step aur success par halka sound + vibration' : 'Sound abhi band hai — tap karke on karein'}
+            trail={<span className={`chip ${sound ? 'chip-ok' : ''}`}>{sound ? 'ON' : 'OFF'}</span>}
+            onClick={() => {
+              const next = setSfxEnabled(!sound);
+              if (next) sfx.success();
+            }}
+          />
           <MenuRow
             icon={Headphones}
             tone="info"

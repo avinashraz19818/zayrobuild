@@ -108,6 +108,14 @@ window.fetch = async (url, init) => {
     if (!sent.user_key) return json({ error: 'Enter phone number or user key' }, 400);
     return json({ success: true, key: sent.user_key, price: 10, coins: 410 }, 200);
   }
+  if (key === '/api/font-styles') {
+    const text = new URL(String(url), 'https://panel.local/').searchParams.get('text') || 'App Name';
+    return json([
+      { key: 'bold', label: 'Bold', sample: fakeBold(text) },
+      { key: 'sansbold', label: 'Bold Sans', sample: String(text) },
+      { key: 'mono', label: 'Monospace', sample: String(text) }
+    ], 200);
+  }
   if (key === '/api/gift-codes/claim' && init) {
     const sent = JSON.parse(init.body || '{}');
     if (String(sent.code || '').toUpperCase() === 'ZR-TEST-100') {
@@ -126,7 +134,28 @@ function json(data, status) {
   return { ok: status < 400, status, json: async () => data, text: async () => JSON.stringify(data) };
 }
 
-window.navigator.clipboard = { writeText: async () => {} };
+// Bold Unicode mapping (server ke utils/fontstyles.js jaisa) — mock me bhi
+// wahi styled preview aaye jo asli API deta hai.
+const MATH_BOLD_UP = 0x1D400;
+const MATH_BOLD_LOW = 0x1D41A;
+const MATH_BOLD_DIG = 0x1D7CE;
+function fakeBold(text) {
+  let out = '';
+  for (const ch of String(text)) {
+    const c = ch.codePointAt(0);
+    if (c >= 65 && c <= 90) out += String.fromCodePoint(MATH_BOLD_UP + (c - 65));
+    else if (c >= 97 && c <= 122) out += String.fromCodePoint(MATH_BOLD_LOW + (c - 97));
+    else if (c >= 48 && c <= 57) out += String.fromCodePoint(MATH_BOLD_DIG + (c - 48));
+    else out += ch;
+  }
+  return out;
+}
+window.__fakeBold = fakeBold;
+
+window.navigator.clipboard = {
+  writeText: async () => {},
+  readText: async () => 'https://paste.example.com/#/register?invitationCode=PASTED'
+};
 window.matchMedia = window.matchMedia || (() => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} }));
 
 /* jsdom globals */
@@ -845,6 +874,202 @@ await wait(1200);
   const usersGrid = /\.admin-user-item\s*\{[^}]*grid-template-areas:[^}]*actions actions/.test(css);
   if (!usersGrid) failed += 1;
   origError(`${usersGrid ? '✅' : '❌'} CSS: Users row me action buttons poori width ki line par`);
+}
+
+/* ── Phase 10: Build wizard v2 — naam+icon+style preview, mode/link form, payment ── */
+{
+  RESPONSES['/api/me'] = { ...USER, isAdmin: false };
+  window.history.replaceState({}, '', '/');
+  const w = window.document.createElement('div');
+  window.document.body.appendChild(w);
+  mount(w);
+  await wait(1700);
+
+  const setValue = (el, val) => {
+    if (!el) return false;
+    const proto = Object.getPrototypeOf(el);
+    Object.getOwnPropertyDescriptor(proto, 'value')?.set?.call(el, val);
+    el.dispatchEvent(new window.Event('input', { bubbles: true }));
+    return true;
+  };
+  const clickIn = (scope, re) => {
+    const btn = [...scope.querySelectorAll('button')].find((b) => re.test((b.textContent || '').trim()));
+    if (btn) btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    return Boolean(btn);
+  };
+  const snap = (file, title) => {
+    fs.writeFileSync(`smoke/out/${file}`,
+      `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${w.innerHTML}</body></html>`);
+  };
+
+  // wizard kholo (store ke pehle template card se)
+  w.querySelector('.tpl-card')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(1000);
+  const sheet = w.querySelector('.sheet');
+  const t1 = sheet?.textContent || '';
+  const step1Ok = /Step 1\/3/.test(t1) && /Launcher preview/.test(t1)
+    && /Name style/.test(t1) && /App icon/.test(t1) && /Upload icon/.test(t1);
+  if (!step1Ok) failed += 1;
+  origError(`${step1Ok ? '✅' : '❌'} Wizard step 1: app name + launcher preview + name style + icon upload`);
+
+  // naam likho → input me hi style lagta hai (bold) aur launcher label styled Unicode me
+  const nameInput = sheet?.querySelector('.name-input');
+  setValue(nameInput, 'ZAYRO VIP');
+  await wait(700);
+  const labelText = w.querySelector('.launcher-label')?.textContent || '';
+  const boldOk = labelText === window.__fakeBold('ZAYRO VIP');
+  if (!boldOk) failed += 1;
+  origError(`${boldOk ? '✅' : '❌'} Naam likhte hi launcher label styled (Unicode bold) dikhta hai — '${labelText}'`);
+
+  const inputStyled = (nameInput?.getAttribute('style') || '').includes('900');
+  if (!inputStyled) failed += 1;
+  origError(`${inputStyled ? '✅' : '❌'} Input box khud selected style me render hota hai (font-weight 900)`);
+
+  // style chip select → chip active + label style badal jaata hai
+  const chips = [...(sheet?.querySelectorAll('.style-chip') || [])];
+  const chipOk = chips.length >= 3 && /Bold/.test(chips[0].textContent || '');
+  if (!chipOk) failed += 1;
+  origError(`${chipOk ? '✅' : '❌'} Name style grid ke chips (${chips.length}) live sample ke saath`);
+
+  chips[1]?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(400);
+  const monoChip = chips[2];
+  monoChip?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(400);
+  const afterChip = w.querySelector('.launcher-label')?.textContent || '';
+  const styleSwitchOk = /Monospace/.test(w.querySelector('.launcher-card')?.textContent || '')
+    && (nameInput?.getAttribute('style') || '').includes('monospace')
+    && afterChip === 'ZAYRO VIP' // mono mock sample plain text deta hai
+    && chips[2].className.includes('active');
+  if (!styleSwitchOk) failed += 1;
+  origError(`${styleSwitchOk ? '✅' : '❌'} Style chip badalne par input + launcher preview dono update`);
+
+  snap('build-step1.html', 'Build wizard · Step 1');
+
+  // ── Step 2: mode cards + URL validation + deposit chips ──
+  clickIn(sheet, /^Continue/);
+  await wait(500);
+  const t2 = sheet?.textContent || '';
+  const step2Ok = /Step 2\/3/.test(t2) && /Build mode/.test(t2) && /Real \+ Fake/.test(t2)
+    && /Register URL/.test(t2) && /Minimum deposit/.test(t2);
+  if (!step2Ok) failed += 1;
+  origError(`${step2Ok ? '✅' : '❌'} Wizard step 2: build mode cards + register URL + min deposit`);
+
+  const modeCards = [...(sheet?.querySelectorAll('.mode-card') || [])];
+  const modePriceOk = modeCards.length === 3 && /coins/.test(modeCards[0].textContent || '') && /Popular/.test(t2);
+  if (!modePriceOk) failed += 1;
+  origError(`${modePriceOk ? '✅' : '❌'} Mode cards par per-mode price + tag (${modeCards.length} cards)`);
+
+  // galat link → warn badge, sahi link → ok badge
+  const urlInput = sheet?.querySelector('.url-field .input');
+  setValue(urlInput, 'site-dot-com');
+  await wait(250);
+  const warnOk = /http\(s\) link daalein/.test(sheet?.textContent || '');
+  setValue(urlInput, 'https://bdgwina.biz/#/register?invitationCode=ABC');
+  await wait(250);
+  const okBadge = /Link theek hai/.test(sheet?.textContent || '');
+  if (!(warnOk && okBadge)) failed += 1;
+  origError(`${warnOk && okBadge ? '✅' : '❌'} Register URL live validation (galat → warn, sahi → 'Link theek hai')`);
+
+  // Paste button clipboard se bhar deta hai
+  const pasteBtn = sheet?.querySelector('.url-btn.paste');
+  pasteBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(300);
+  const pasteOk = /PASTED/.test(urlInput?.value || '');
+  if (!pasteOk) failed += 1;
+  origError(`${pasteOk ? '✅' : '❌'} URL field ka Paste button clipboard se link bharta hai`);
+
+  setValue(urlInput, 'https://bdgwina.biz/#/register?invitationCode=ABC');
+  await wait(200);
+
+  // Real + Fake mode → fake URL field + summary
+  const bothCard = modeCards.find((c) => /Real \+ Fake/.test(c.textContent || ''));
+  bothCard?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(400);
+  const t2b = sheet?.textContent || '';
+  const fakeOk = /Fake register URL/.test(t2b) && /2 APK banenge/.test(t2b) && /Main link jaisa hi rakhein/.test(t2b);
+  if (!fakeOk) failed += 1;
+  origError(`${fakeOk ? '✅' : '❌'} Real + Fake chunne par fake URL field + '2 APK banenge' summary`);
+
+  // main link jaisa hi rakhein → fake URL fill
+  clickIn(sheet, /Main link jaisa hi/);
+  await wait(300);
+  const fakeInput = [...(sheet?.querySelectorAll('.url-field .input') || [])][1];
+  const sameLinkOk = /bdgwina\.biz/.test(fakeInput?.value || '');
+  if (!sameLinkOk) failed += 1;
+  origError(`${sameLinkOk ? '✅' : '❌'} 'Main link jaisa hi rakhein' se fake URL bhar jaata hai`);
+
+  // deposit chips
+  clickIn(sheet, /^₹500$/);
+  await wait(250);
+  const depositOk = /₹500/.test(sheet?.textContent || '') && /Minimum deposit/.test(t2b);
+  if (!depositOk) failed += 1;
+  origError(`${depositOk ? '✅' : '❌'} Minimum deposit quick chips (₹100…₹1000)`);
+
+  snap('build-step2.html', 'Build wizard · Step 2');
+
+  // ── Step 3: receipt + total + CTA ──
+  const continue2 = [...(sheet?.querySelectorAll('button') || [])].find((b) => /^Continue/.test((b.textContent || '').trim()) && !b.disabled);
+  const enabled2 = Boolean(continue2);
+  if (!enabled2) failed += 1;
+  origError(`${enabled2 ? '✅' : '❌'} Step 2 valid hone par Continue enable hota hai`);
+  continue2?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(500);
+
+  const t3 = sheet?.textContent || '';
+  const step3Ok = /Step 3\/3/.test(t3) && /Total payable/.test(t3) && /Fake APK add-on/.test(t3)
+    && /Build ke baad balance/.test(t3) && /coins abhi kat jaayenge/i.test(t3);
+  if (!step3Ok) failed += 1;
+  origError(`${step3Ok ? '✅' : '❌'} Wizard step 3: receipt (total + add-on + balance) + "coins kat jaayenge" note`);
+
+  const ctaOk = /Pay 180 coins & build/.test(t3); // 120 (real) + 60 (fake addon)
+  if (!ctaOk) failed += 1;
+  origError(`${ctaOk ? '✅' : '❌'} CTA par poora total (180 coins = real 120 + fake 60)`);
+
+  const checklistOk = /checklist|check-item/.test(w.innerHTML) && /Bold Sans|Monospace/.test(t3);
+  if (!checklistOk) failed += 1;
+  origError(`${checklistOk ? '✅' : '❌'} Step 3 checklist: naam + style + link + mode chips`);
+
+  snap('build-step3.html', 'Build wizard · Step 3');
+
+  // ── Sound effects: module bundled + Account me toggle row + click par koi error nahi ──
+  const bundleName = (fs.readFileSync('../public/index.html', 'utf8').match(/assets\/(index-[A-Za-z0-9_-]+\.js)/) || [])[1];
+  const bundle = bundleName ? fs.readFileSync(`../public/assets/${bundleName}`, 'utf8') : '';
+  const sfxBundled = /zayro_sfx_v1/.test(bundle) && /AudioContext/.test(bundle);
+  if (!sfxBundled) failed += 1;
+  origError(`${sfxBundled ? '✅' : '❌'} Sound engine bundle me hai (Web Audio synth + localStorage preference)`);
+
+  const globalSfx = typeof globalThis.__zayroSfxInstalled !== 'undefined' && globalThis.__zayroSfxInstalled === true;
+  if (!globalSfx) failed += 1;
+  origError(`${globalSfx ? '✅' : '❌'} Global sound installer lag gaya (har button/pill par tap sound)`);
+
+  // AudioContext na hone par bhi click bina error ke chalta hai (JSDOM me nahi hota)
+  const noAudioCtx = typeof window.AudioContext === 'undefined';
+  sheet?.querySelector('.name-input')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  w.querySelector('.bottomnav button')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(200);
+  const sfxSafe = noAudioCtx && !errors.some((e) => /AudioContext|sfx/i.test(e));
+  if (!sfxSafe) failed += 1;
+  origError(`${sfxSafe ? '✅' : '❌'} AudioContext na hone par bhi sound calls chup-chaap safe rehte hain`);
+
+  // Account tab: sound toggle row
+  w.querySelector('.sheet .icon-btn')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(400);
+  w.querySelector('.profile-chip')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(600);
+  const accTxt = w.textContent || '';
+  const toggleOk = /Sound effects/.test(accTxt) && /ON|OFF/.test(accTxt);
+  if (!toggleOk) failed += 1;
+  origError(`${toggleOk ? '✅' : '❌'} Account me 'Sound effects' ON/OFF row`);
+
+  const soundToggle = [...w.querySelectorAll('button')].find((b) => /Sound effects/.test(b.textContent || ''));
+  soundToggle?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(300);
+  const offOk = /OFF/.test((soundToggle?.textContent || ''));
+  if (!offOk) failed += 1;
+  origError(`${offOk ? '✅' : '❌'} Sound toggle tap par OFF ho jaata hai (setting save hoti hai)`);
+
+  snap('account-sound.html', 'Account · sound toggle');
 }
 
 origError(`\nDOM size: ${html.length} chars · text: ${text.length} chars · failures: ${failed} · errors: ${realErrors.length}`);

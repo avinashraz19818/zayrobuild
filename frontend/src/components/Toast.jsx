@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import sfx from '../lib/sfx';
 
 const ToastContext = createContext(null);
 
@@ -11,6 +12,10 @@ export function ToastProvider({ children }) {
   }, []);
 
   const addToast = useCallback((message, type = 'info', duration = 3800) => {
+    // Success par chhota chime, error par soft blip — feedback sunai deta hai.
+    if (type === 'success') sfx.success();
+    else if (type === 'error') sfx.error();
+
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     setToasts((prev) => [...prev.slice(-3), { id, message, type }]);
     if (duration > 0) setTimeout(() => removeToast(id), duration);
