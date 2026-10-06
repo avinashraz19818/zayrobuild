@@ -79,12 +79,6 @@ const RESPONSES = {
   '/api/me/gift-claims': [
     { id: 1, code: 'ZR-WELCOME-50', coins: 50, created_at: '2026-10-02 11:00:00' }
   ],
-  '/api/admin/content-links': [
-    { id: 51, app_name: 'MAAN WIN VIP', username: 'builder', status: 'done', live_link_enabled: 1, path: 'users/7/orders/51', fake_path: 'users/7/orders/51_fake', popup_url: 'https://panel.example.com/api/app-content/users/7/orders/51', loading_url: 'https://panel.example.com/api/app-content/users/7/orders/51/loading', fake_popup_url: null, register_url: 'https://site.com/register', fake_register_url: null }
-  ],
-  '/api/admin/backups': [
-    { file: 'apkbuilder_20261005_120000.db', size: 188416, created_at: '2026-10-05T12:00:00.000Z' }
-  ],
   '/api/admin/users/7/orders': {
     user: { id: 7, username: 'builder', coins: 420 },
     orders: [{ id: 51, app_name: 'MAAN WIN VIP', status: 'done', apk_file: 'maan.apk', coins_spent: 120, design_name: 'Zayro Apex VIP', created_at: '2026-10-04 11:20:00', fake_sites_count: 1 }],
@@ -96,7 +90,6 @@ const RESPONSES = {
     telegram_support_user: 'zayrosupport', telegram_channel_url: '', telegram_admin_id: '8015937475',
     deploy_bot_enabled: '1',
     loading_html_file: 'redload.html', loading_html_files: ['redload.html', 'loading.html'],
-    android_project_ready: true, base_apks: { normal: true, dhani: false },
     deploy_bot_plans: JSON.stringify([
       { key: 'starter', name: 'Starter Bot', price: 699, days: 30, perks: ['Welcome message bot'] },
       { key: 'pro', name: 'Pro Bot', price: 1299, days: 90, perks: ['Welcome + broadcast'] },
@@ -515,53 +508,8 @@ await wait(1400);
     if (!loadingOk) failed += 1;
     origError(`${loadingOk ? '✅' : '❌'} Settings: Loading screen card (current file + upload + server list)`);
 
-    const engineOk = /Build engine/.test(st) && /ready/.test(st) && /Android project \(ZIP\)/.test(st) && /Base APKs/.test(st);
-    if (!engineOk) failed += 1;
-    origError(`${engineOk ? '✅' : '❌'} Settings: Build engine card (android project ZIP + base APKs + status)`);
     fs.writeFileSync('smoke/out/admin-settings.html',
       `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Settings</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
-  }
-
-  // ── Users: TG transfer + APKs + delete ──
-  {
-    const uBtn = [...adminHost.querySelectorAll('button')].find((b) => /^Users/i.test((b.textContent || '').trim()));
-    uBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    await wait(700);
-    const body = adminHost.querySelector('.admin-body') || adminHost;
-    const ut = body.textContent || '';
-    const rowOk = /builder/.test(ut) && /Coins/.test(ut) && /APKs/.test(ut) && /TG/.test(ut);
-    if (!rowOk) failed += 1;
-    origError(`${rowOk ? '✅' : '❌'} Users row: Coins + APKs + TG buttons`);
-
-    const searchOk = Boolean(body.querySelector('input[placeholder*="Telegram" i]'));
-    if (!searchOk) failed += 1;
-    origError(`${searchOk ? '✅' : '❌'} Users search box (ID / naam / Telegram)`);
-
-    const bulkOk = /Coin rate \(₹ per coin\)/.test(ut) && /Sab par apply/.test(ut);
-    if (!bulkOk) failed += 1;
-    origError(`${bulkOk ? '✅' : '❌'} Users: coin rate bulk apply row`);
-
-    // TG sheet khule
-    const tgBtn = [...body.querySelectorAll('button')].find((b) => /^TG$/i.test((b.textContent || '').trim()));
-    tgBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    await wait(400);
-    const tgTxt = body.textContent || '';
-    const tgOk = /Telegram ID ·/.test(tgTxt) && /8015937475/.test(tgTxt) && /Save Telegram ID/.test(tgTxt);
-    if (!tgOk) failed += 1;
-    origError(`${tgOk ? '✅' : '❌'} Users: Telegram ID sheet (current ID + clash-safe save)`);
-
-    // User ke orders (APKs) sheet
-    const apkBtn = [...body.querySelectorAll('button')].find((b) => /^APKs$/i.test((b.textContent || '').trim()));
-    apkBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    await wait(800);
-    const apkTxt = adminHost.querySelector('.sheet')?.textContent || '';
-    const apkOk = /MAAN WIN VIP/.test(apkTxt) && /Ready/.test(apkTxt);
-    if (!apkOk) failed += 1;
-    origError(`${apkOk ? '✅' : '❌'} Users → APKs sheet: user ke orders + stats`);
-    adminHost.querySelector('.sheet .icon-btn')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    await wait(300);
-    fs.writeFileSync('smoke/out/admin-users.html',
-      `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Users</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
   }
 
   // screenshot ke liye wapas overview
@@ -759,7 +707,7 @@ await wait(1200);
     `<!doctype html><html><head><meta charset="utf-8"><title>Add demo account (free)</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${olHost.innerHTML}</body></html>`);
 }
 
-/* ── Phase 8: Admin ke naye tabs (Content Links, Backups, Create Order FREE) ── */
+/* ── Phase 8: Admin — Create Order (FREE) hai, par Content Links / Backups / Build engine NAHI ── */
 {
   RESPONSES['/api/me'] = { ...USER, isAdmin: true };
   window.history.replaceState({}, '', '/admin');
@@ -769,9 +717,9 @@ await wait(1200);
   await wait(1500);
 
   const aTxt = a2.textContent || '';
-  const newTabs = /Content Links/.test(aTxt) && /Backups/.test(aTxt) && /Database safety copies/i.test(aTxt);
-  if (!newTabs) failed += 1;
-  origError(`${newTabs ? '✅' : '❌'} Admin nav me naye tabs: Content Links + Backups`);
+  const noExtraTabs = !/Content Links/.test(aTxt) && !/Database safety copies/i.test(aTxt);
+  if (!noExtraTabs) failed += 1;
+  origError(`${noExtraTabs ? '✅' : '❌'} Admin nav me Content Links / Backups tabs nahi (user ne hataya)`);
 
   // Admin nav buttons me label + sub ek hi button me hote hain ("OrdersBuilds & APKs")
   const clickAdmin = async (label, scoped = a2) => {
@@ -782,15 +730,6 @@ await wait(1200);
     return true;
   };
 
-  // Create Order button ka text me '(' ')' hote hain — seedha text match karo
-  const clickCreateOrder = async () => {
-    const btn = [...a2.querySelectorAll('button')].find((b) => (b.textContent || '').includes('Create Order (FREE)'));
-    if (!btn) return false;
-    btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    await wait(900);
-    return true;
-  };
-
   const clickedOrders = await clickAdmin('Orders');
   await wait(700);
   const oTxt = a2.textContent || '';
@@ -798,7 +737,14 @@ await wait(1200);
   if (!createBtn) failed += 1;
   origError(`${createBtn ? '✅' : '❌'} Admin Orders me 'Create Order (FREE)' button`);
 
-  // Create Order modal khule aur FREE dikhaye
+  // Create Order sheet khule aur FREE dikhaye
+  const clickCreateOrder = async () => {
+    const btn = [...a2.querySelectorAll('button')].find((b) => (b.textContent || '').includes('Create Order (FREE)'));
+    if (!btn) return false;
+    btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(900);
+    return true;
+  };
   await clickCreateOrder();
   await wait(1100);
   const cTxt = a2.textContent || '';
@@ -807,36 +753,59 @@ await wait(1200);
   if (!createOk) failed += 1;
   origError(`${createOk ? '✅' : '❌'} Create Order (FREE) sheet: user select + site fields + FREE CTA`);
 
-  fs.writeFileSync('smoke/out/admin-content-links.html',
-    `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Content links</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${a2.innerHTML}</body></html>`);
-}
-{
-  // Content Links tab ka snapshot
-  const clHost = window.document.createElement('div');
-  window.document.body.appendChild(clHost);
-  mount(clHost);
-  await wait(1400);
-  const btn = [...clHost.querySelectorAll('button')].find((b) => /^Content Links/i.test((b.textContent || '').trim()));
-  btn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-  await wait(900);
-  const cTxt = clHost.textContent || '';
-  const clOk = /Content links/.test(cTxt) && /users\/7\/orders\/51/.test(cTxt)
-    && /popup/.test(cTxt) && /loading/.test(cTxt) && /MAAN WIN VIP/.test(cTxt);
-  if (!clOk) failed += 1;
-  origError(`${clOk ? '✅' : '❌'} Content Links tab: har APK ka popup + loading URL (copy/open)`);
-  fs.writeFileSync('smoke/out/admin-content-links.html',
-    `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Content links</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${clHost.innerHTML}</body></html>`);
+  // Create order sheet band karo, Settings kholo — Build engine card nahi hona chahiye
+  a2.querySelector('.sheet .icon-btn')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(400);
+  await clickAdmin('Settings');
+  await wait(800);
+  const st = (a2.querySelector('.admin-body') || a2).textContent || '';
+  const noEngine = !/Build engine/.test(st) && !/Android project \(ZIP\)/.test(st) && !/Base APKs/.test(st) && !/Project ZIP upload/.test(st);
+  if (!noEngine) failed += 1;
+  origError(`${noEngine ? '✅' : '❌'} Settings me Build engine / Android project upload card nahi (user ne hataya)`);
 
-  // Backups tab
-  const bBtn = [...clHost.querySelectorAll('button')].find((b) => /^Backups/i.test((b.textContent || '').trim()));
-  bBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-  await wait(900);
-  const bTxt = clHost.textContent || '';
-  const bOk = /Backups \(1\)/.test(bTxt) && /apkbuilder_20261005_120000\.db/.test(bTxt) && /Download/.test(bTxt) && /Backup banayein/.test(bTxt);
-  if (!bOk) failed += 1;
-  origError(`${bOk ? '✅' : '❌'} Backups tab: list + size + Download + naya backup button`);
-  fs.writeFileSync('smoke/out/admin-backups.html',
-    `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Backups</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${clHost.innerHTML}</body></html>`);
+  const keepLoading = /Loading screen \(APK\)/.test(st) && /Upload loading HTML/.test(st);
+  if (!keepLoading) failed += 1;
+  origError(`${keepLoading ? '✅' : '❌'} Settings ka loading-screen card barkarar hai`);
+
+  fs.writeFileSync('smoke/out/admin-settings.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Settings</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${a2.innerHTML}</body></html>`);
+
+  // Users tab ke checks (Coins / APKs / TG)
+  await clickAdmin('Users');
+  await wait(800);
+  const body = a2.querySelector('.admin-body') || a2;
+  const ut = body.textContent || '';
+  const rowOk = /builder/.test(ut) && /Coins/.test(ut) && /APKs/.test(ut) && /TG/.test(ut);
+  if (!rowOk) failed += 1;
+  origError(`${rowOk ? '✅' : '❌'} Users row: Coins + APKs + TG buttons`);
+
+  const searchOk = Boolean(body.querySelector('input[placeholder*="Telegram" i]'));
+  if (!searchOk) failed += 1;
+  origError(`${searchOk ? '✅' : '❌'} Users search box (ID / naam / Telegram)`);
+
+  const bulkOk = /Coin rate \(₹ per coin\)/.test(ut) && /Sab par apply/.test(ut);
+  if (!bulkOk) failed += 1;
+  origError(`${bulkOk ? '✅' : '❌'} Users: coin rate bulk apply row`);
+
+  const tgBtn = [...body.querySelectorAll('button')].find((b) => /^TG$/i.test((b.textContent || '').trim()));
+  tgBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(400);
+  const tgTxt = body.textContent || '';
+  const tgOk = /Telegram ID ·/.test(tgTxt) && /8015937475/.test(tgTxt) && /Save Telegram ID/.test(tgTxt);
+  if (!tgOk) failed += 1;
+  origError(`${tgOk ? '✅' : '❌'} Users: Telegram ID sheet (current ID + clash-safe save)`);
+
+  const apkBtn = [...body.querySelectorAll('button')].find((b) => /^APKs$/i.test((b.textContent || '').trim()));
+  apkBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(800);
+  const apkTxt = a2.querySelector('.sheet')?.textContent || '';
+  const apkOk = /MAAN WIN VIP/.test(apkTxt) && /Ready/.test(apkTxt);
+  if (!apkOk) failed += 1;
+  origError(`${apkOk ? '✅' : '❌'} Users → APKs sheet: user ke orders + stats`);
+  a2.querySelector('.sheet .icon-btn')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(300);
+  fs.writeFileSync('smoke/out/admin-users.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Users</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${a2.innerHTML}</body></html>`);
 }
 
 origError(`\nDOM size: ${html.length} chars · text: ${text.length} chars · failures: ${failed} · errors: ${realErrors.length}`);

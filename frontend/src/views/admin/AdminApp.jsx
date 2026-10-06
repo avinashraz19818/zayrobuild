@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Shield, Users, Settings, Coins, Package, Lock, Gauge, Megaphone, Gift, Layers,
-  RefreshCw, LogOut, Store, Loader2, CheckCircle2, Link2, DatabaseBackup
+  RefreshCw, LogOut, Store, Loader2, CheckCircle2
 } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
@@ -11,8 +11,6 @@ import TemplatesTab from './TemplatesTab';
 import AnnouncementsTab from './AnnouncementsTab';
 import GiftCodesTab from './GiftCodesTab';
 import SettingsTab from './SettingsTab';
-import ContentLinksTab from './ContentLinksTab';
-import BackupsTab from './BackupsTab';
 import CreateOrderModal from './CreateOrderModal';
 
 // Admin panel ke tabs — apna alag shell, main store panel se bilkul alag page.
@@ -22,10 +20,8 @@ const TABS = [
   { key: 'requests',  label: 'Deposits',   sub: 'Coin requests',        icon: Coins },
   { key: 'orders',    label: 'Orders',     sub: 'Builds & APKs',        icon: Package },
   { key: 'users',     label: 'Users',      sub: 'Accounts & coins',     icon: Users },
-  { key: 'links',     label: 'Content Links', sub: 'Remote HTML URLs',  icon: Link2 },
   { key: 'gift',      label: 'Gift Codes', sub: 'Codes & claims',       icon: Gift },
   { key: 'announce',  label: 'Announce',   sub: 'Popup news',           icon: Megaphone },
-  { key: 'backups',   label: 'Backups',    sub: 'Database safety copies', icon: DatabaseBackup },
   { key: 'settings',  label: 'Settings',   sub: 'Logo & store',         icon: Settings }
 ];
 
@@ -137,8 +133,6 @@ export default function AdminApp() {
       case 'templates': return <TemplatesTab act={act} />;
       case 'requests':  return <RequestsTab act={act} refreshStats={loadStats} />;
       case 'orders':    return <OrdersTab act={act} onCreate={() => setShowCreate(true)} />;
-      case 'links':     return <ContentLinksTab act={act} />;
-      case 'backups':   return <BackupsTab act={act} />;
       case 'users':     return <UsersTab act={act} />;
       case 'gift':      return <GiftCodesTab act={act} />;
       case 'announce':  return <AnnouncementsTab act={act} />;

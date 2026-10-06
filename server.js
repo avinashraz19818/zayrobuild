@@ -3664,14 +3664,6 @@ app.get('/api/admin/settings', requireAdmin, (req, res) => {
     const { loadingCandidates } = require('./utils/loading-html');
     result.loading_html_files = loadingCandidates();
   } catch (_) { result.loading_html_files = []; }
-  // Build engine ke critical assets ka status — admin ko panel se pata rahe.
-  try {
-    result.android_project_ready = fs.existsSync(path.join(__dirname, 'android-project', 'gradlew'));
-    result.base_apks = {
-      normal: fs.existsSync(path.join(__dirname, 'base-apks', 'base_normal.apk')),
-      dhani: fs.existsSync(path.join(__dirname, 'base-apks', 'base_dhani.apk'))
-    };
-  } catch (_) { result.android_project_ready = false; result.base_apks = { normal: false, dhani: false }; }
   res.json(result);
 });
 

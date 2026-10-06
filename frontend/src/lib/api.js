@@ -132,14 +132,6 @@ export const admin = {
   userOrders: (id) => api.get(`/api/admin/users/${id}/orders`),
   deleteUser: (id) => api.del(`/api/admin/users/${id}`),
   setTelegram: (id, telegram_id) => api.post(`/api/admin/users/${id}/telegram`, { telegram_id }),
-  // Content links — har APK ka remote HTML URL
-  contentLinks: () => api.get('/api/admin/content-links'),
-  // Database backups
-  backups: () => api.get('/api/admin/backups'),
-  createBackup: () => api.post('/api/admin/backups', {}),
-  // Build engine assets — android project zip + base APKs
-  uploadAndroidProject: (fd) => api.postForm('/api/admin/upload-android-project', fd),
-  uploadBaseApk: (fd) => api.postForm('/api/admin/upload-base-apk', fd),
   settings: () => api.get('/api/admin/settings'),
   saveSetting: (key, value) => api.post('/api/admin/settings', { [key]: value }),
   designs: () => api.get('/api/admin/designs'),
