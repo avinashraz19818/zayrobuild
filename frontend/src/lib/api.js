@@ -123,8 +123,23 @@ export const admin = {
   reject: (id) => api.post(`/api/admin/coin-requests/${id}/reject`, {}),
   users: () => api.get('/api/admin/users'),
   setCoins: (id, coins) => api.post(`/api/admin/users/${id}/coins`, { coins }),
-  orders: () => api.get('/api/admin/orders?limit=40'),
+  orders: (params = 'limit=40') => api.get(`/api/admin/orders?${typeof params === 'string' ? params : new URLSearchParams(params)}`),
   rebuild: (id) => api.post(`/api/admin/orders/${id}/rebuild`, {}),
+  // Order banane / delete karne ke helpers (admin = FREE, koi coins nahi kat-te)
+  createOrder: (fd) => api.postForm('/api/admin/orders/create', fd),
+  deleteOrder: (id) => api.del(`/api/admin/orders/${id}`),
+  deleteOrders: (ids) => api.del('/api/admin/orders', { body: { ids } }),
+  userOrders: (id) => api.get(`/api/admin/users/${id}/orders`),
+  deleteUser: (id) => api.del(`/api/admin/users/${id}`),
+  setTelegram: (id, telegram_id) => api.post(`/api/admin/users/${id}/telegram`, { telegram_id }),
+  // Content links — har APK ka remote HTML URL
+  contentLinks: () => api.get('/api/admin/content-links'),
+  // Database backups
+  backups: () => api.get('/api/admin/backups'),
+  createBackup: () => api.post('/api/admin/backups', {}),
+  // Build engine assets — android project zip + base APKs
+  uploadAndroidProject: (fd) => api.postForm('/api/admin/upload-android-project', fd),
+  uploadBaseApk: (fd) => api.postForm('/api/admin/upload-base-apk', fd),
   settings: () => api.get('/api/admin/settings'),
   saveSetting: (key, value) => api.post('/api/admin/settings', { [key]: value }),
   designs: () => api.get('/api/admin/designs'),

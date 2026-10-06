@@ -79,11 +79,24 @@ const RESPONSES = {
   '/api/me/gift-claims': [
     { id: 1, code: 'ZR-WELCOME-50', coins: 50, created_at: '2026-10-02 11:00:00' }
   ],
+  '/api/admin/content-links': [
+    { id: 51, app_name: 'MAAN WIN VIP', username: 'builder', status: 'done', live_link_enabled: 1, path: 'users/7/orders/51', fake_path: 'users/7/orders/51_fake', popup_url: 'https://panel.example.com/api/app-content/users/7/orders/51', loading_url: 'https://panel.example.com/api/app-content/users/7/orders/51/loading', fake_popup_url: null, register_url: 'https://site.com/register', fake_register_url: null }
+  ],
+  '/api/admin/backups': [
+    { file: 'apkbuilder_20261005_120000.db', size: 188416, created_at: '2026-10-05T12:00:00.000Z' }
+  ],
+  '/api/admin/users/7/orders': {
+    user: { id: 7, username: 'builder', coins: 420 },
+    orders: [{ id: 51, app_name: 'MAAN WIN VIP', status: 'done', apk_file: 'maan.apk', coins_spent: 120, design_name: 'Zayro Apex VIP', created_at: '2026-10-04 11:20:00', fake_sites_count: 1 }],
+    stats: { total: 1, completed: 1, failed: 0, pending: 0, building: 0 }
+  },
   '/api/admin/settings': {
     site_name: 'ZAYRO BUILD', site_url: 'https://panel.example.com', upi_id: 'zayro@upi',
     coin_rate: '1', addon_fake_price: '5', domain_change_price: '10', invite_code_change_price: '10',
     telegram_support_user: 'zayrosupport', telegram_channel_url: '', telegram_admin_id: '8015937475',
     deploy_bot_enabled: '1',
+    loading_html_file: 'redload.html', loading_html_files: ['redload.html', 'loading.html'],
+    android_project_ready: true, base_apks: { normal: true, dhani: false },
     deploy_bot_plans: JSON.stringify([
       { key: 'starter', name: 'Starter Bot', price: 699, days: 30, perks: ['Welcome message bot'] },
       { key: 'pro', name: 'Pro Bot', price: 1299, days: 90, perks: ['Welcome + broadcast'] },
@@ -491,6 +504,66 @@ await wait(1400);
     await wait(300);
   }
 
+  // ── Settings: loading screen + build engine cards ──
+  {
+    const sBtn = [...adminHost.querySelectorAll('button')].find((b) => /^Settings/i.test((b.textContent || '').trim()));
+    sBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(700);
+    const body = adminHost.querySelector('.admin-body') || adminHost;
+    const st = body.textContent || '';
+    const loadingOk = /Loading screen \(APK\)/.test(st) && /redload\.html/.test(st) && /Upload loading HTML/.test(st);
+    if (!loadingOk) failed += 1;
+    origError(`${loadingOk ? '✅' : '❌'} Settings: Loading screen card (current file + upload + server list)`);
+
+    const engineOk = /Build engine/.test(st) && /ready/.test(st) && /Android project \(ZIP\)/.test(st) && /Base APKs/.test(st);
+    if (!engineOk) failed += 1;
+    origError(`${engineOk ? '✅' : '❌'} Settings: Build engine card (android project ZIP + base APKs + status)`);
+    fs.writeFileSync('smoke/out/admin-settings.html',
+      `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Settings</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
+  }
+
+  // ── Users: TG transfer + APKs + delete ──
+  {
+    const uBtn = [...adminHost.querySelectorAll('button')].find((b) => /^Users/i.test((b.textContent || '').trim()));
+    uBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(700);
+    const body = adminHost.querySelector('.admin-body') || adminHost;
+    const ut = body.textContent || '';
+    const rowOk = /builder/.test(ut) && /Coins/.test(ut) && /APKs/.test(ut) && /TG/.test(ut);
+    if (!rowOk) failed += 1;
+    origError(`${rowOk ? '✅' : '❌'} Users row: Coins + APKs + TG buttons`);
+
+    const searchOk = Boolean(body.querySelector('input[placeholder*="Telegram" i]'));
+    if (!searchOk) failed += 1;
+    origError(`${searchOk ? '✅' : '❌'} Users search box (ID / naam / Telegram)`);
+
+    const bulkOk = /Coin rate \(₹ per coin\)/.test(ut) && /Sab par apply/.test(ut);
+    if (!bulkOk) failed += 1;
+    origError(`${bulkOk ? '✅' : '❌'} Users: coin rate bulk apply row`);
+
+    // TG sheet khule
+    const tgBtn = [...body.querySelectorAll('button')].find((b) => /^TG$/i.test((b.textContent || '').trim()));
+    tgBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(400);
+    const tgTxt = body.textContent || '';
+    const tgOk = /Telegram ID ·/.test(tgTxt) && /8015937475/.test(tgTxt) && /Save Telegram ID/.test(tgTxt);
+    if (!tgOk) failed += 1;
+    origError(`${tgOk ? '✅' : '❌'} Users: Telegram ID sheet (current ID + clash-safe save)`);
+
+    // User ke orders (APKs) sheet
+    const apkBtn = [...body.querySelectorAll('button')].find((b) => /^APKs$/i.test((b.textContent || '').trim()));
+    apkBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(800);
+    const apkTxt = adminHost.querySelector('.sheet')?.textContent || '';
+    const apkOk = /MAAN WIN VIP/.test(apkTxt) && /Ready/.test(apkTxt);
+    if (!apkOk) failed += 1;
+    origError(`${apkOk ? '✅' : '❌'} Users → APKs sheet: user ke orders + stats`);
+    adminHost.querySelector('.sheet .icon-btn')?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(300);
+    fs.writeFileSync('smoke/out/admin-users.html',
+      `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Users</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${adminHost.innerHTML}</body></html>`);
+  }
+
   // screenshot ke liye wapas overview
   const ov = [...adminHost.querySelectorAll('button')].find((b) => (b.textContent || '').trim().toLowerCase().startsWith('overview'));
   ov?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
@@ -623,7 +696,7 @@ await wait(1200);
   origError(`${backLink ? '✅' : '❌'} admin login par 'Store panel' wapas link`);
 }
 
-/* ── Phase 7: Orders → Dynamic links + Demo accounts (price dikhna chahiye) ── */
+/* ── Phase 7: Orders → Dynamic links (price) + Demo account (FREE, alag modal) ── */
 {
   window.history.replaceState({}, '', '/');
   RESPONSES['/api/me'] = USER;
@@ -642,24 +715,32 @@ await wait(1200);
 
   await clickBtn(/^orders$/i);
   const cardOk = await clickBtn(/^dynamic links$/i);
-  let dlTxt = olHost.textContent || '';
+  const dlTxt = olHost.querySelector('.sheet')?.textContent || '';
   const priceOk = cardOk && /Main domain/.test(dlTxt) && /Full invite code/.test(dlTxt)
     && /10 coins/.test(dlTxt) && /change karne ka charge/.test(dlTxt)
     && /Update live link · 10 coins/.test(dlTxt);
   if (!priceOk) failed += 1;
   origError(`${priceOk ? '✅' : '❌'} Dynamic links sheet: dono change types ka price + CTA par coins (10 coins)`);
 
-  // sheet band karo, phir Demo accounts kholo
-  await clickBtn(/^cancel$/i);
-  await clickBtn(/^add demo account$/i);
-  await wait(500);
-  const dTxt = olHost.textContent || '';
-  const demoOk = /Demo accounts/.test(dTxt) && /10 coins \/ account/.test(dTxt)
-    && /9876543210/.test(dTxt) && /Add · 10 coins/.test(dTxt);
-  if (!demoOk) failed += 1;
-  origError(`${demoOk ? '✅' : '❌'} Demo accounts section: price chip (10 coins / account) + list + Add button par price`);
+  // Live links sheet me demo ka koi zikr nahi hona chahiye (dono alag features hain)
+  const noDemoInside = !/Demo account/i.test(dlTxt);
+  if (!noDemoInside) failed += 1;
+  origError(`${noDemoInside ? '✅' : '❌'} Live links sheet me Demo ka mix nahi (dono alag features)`);
 
-  // naya demo account add karo → POST jaye
+  await clickBtn(/^cancel$/i);
+
+  // Ab alag "Add demo account" modal
+  const demoBtnOk = await clickBtn(/^add demo account$/i);
+  await wait(600);
+  const dTxt = olHost.textContent || '';
+  const demoOk = demoBtnOk
+    && /Add Demo Account/.test(dTxt) && /Free — koi coins nahi kat-te/.test(dTxt)
+    && /9876543210/.test(dTxt) && /Add Demo/.test(dTxt)
+    && !/coins chahiye/i.test(dTxt);
+  if (!demoOk) failed += 1;
+  origError(`${demoOk ? '✅' : '❌'} Demo account apna alag modal: 'Free — koi coins nahi kat-te' + list + Add Demo`);
+
+  // number daal kar add karo → POST jaye, koi price nahi
   const inp = olHost.querySelector('input[inputmode="tel"]');
   if (inp) {
     const proto = Object.getPrototypeOf(inp);
@@ -667,16 +748,95 @@ await wait(1200);
     inp.dispatchEvent(new window.Event('input', { bubbles: true }));
     await wait(150);
   }
-  await clickBtn(/^add ·/i);
+  await clickBtn(/^add demo$/i);
   await wait(900);
   const posted = window.__REQS.some((r) => r.method === 'POST' && /\/api\/orders\/51\/demo-users$/.test(r.path));
-  const addedTxt = olHost.textContent || '';
-  const addOk = posted && /Demo account add ho gaya/.test(addedTxt);
+  const addOk = posted && /Demo account add ho gaya/.test(olHost.textContent || '');
   if (!addOk) failed += 1;
-  origError(`${addOk ? '✅' : '❌'} Demo account add → POST /api/orders/51/demo-users + success toast`);
+  origError(`${addOk ? '✅' : '❌'} Demo account add → POST /api/orders/51/demo-users (free)`);
 
-  fs.writeFileSync('smoke/out/demo-accounts.html',
-    `<!doctype html><html><head><meta charset="utf-8"><title>Demo accounts + live links</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${olHost.innerHTML}</body></html>`);
+  fs.writeFileSync('smoke/out/demo-account.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Add demo account (free)</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${olHost.innerHTML}</body></html>`);
+}
+
+/* ── Phase 8: Admin ke naye tabs (Content Links, Backups, Create Order FREE) ── */
+{
+  RESPONSES['/api/me'] = { ...USER, isAdmin: true };
+  window.history.replaceState({}, '', '/admin');
+  const a2 = window.document.createElement('div');
+  window.document.body.appendChild(a2);
+  mount(a2);
+  await wait(1500);
+
+  const aTxt = a2.textContent || '';
+  const newTabs = /Content Links/.test(aTxt) && /Backups/.test(aTxt) && /Database safety copies/i.test(aTxt);
+  if (!newTabs) failed += 1;
+  origError(`${newTabs ? '✅' : '❌'} Admin nav me naye tabs: Content Links + Backups`);
+
+  // Admin nav buttons me label + sub ek hi button me hote hain ("OrdersBuilds & APKs")
+  const clickAdmin = async (label, scoped = a2) => {
+    const btn = [...scoped.querySelectorAll('button')].find((b) => new RegExp(`^${label}`, 'i').test((b.textContent || '').trim()));
+    if (!btn) return false;
+    btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(800);
+    return true;
+  };
+
+  // Create Order button ka text me '(' ')' hote hain — seedha text match karo
+  const clickCreateOrder = async () => {
+    const btn = [...a2.querySelectorAll('button')].find((b) => (b.textContent || '').includes('Create Order (FREE)'));
+    if (!btn) return false;
+    btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await wait(900);
+    return true;
+  };
+
+  const clickedOrders = await clickAdmin('Orders');
+  await wait(700);
+  const oTxt = a2.textContent || '';
+  const createBtn = clickedOrders && /Create Order \(FREE\)/.test(oTxt);
+  if (!createBtn) failed += 1;
+  origError(`${createBtn ? '✅' : '❌'} Admin Orders me 'Create Order (FREE)' button`);
+
+  // Create Order modal khule aur FREE dikhaye
+  await clickCreateOrder();
+  await wait(1100);
+  const cTxt = a2.textContent || '';
+  const createOk = /Create Order/.test(cTxt) && /User ke coins nahi kat-te/.test(cTxt)
+    && /Select user/.test(cTxt) && /Register URL/.test(cTxt) && /Order banayein · FREE/.test(cTxt);
+  if (!createOk) failed += 1;
+  origError(`${createOk ? '✅' : '❌'} Create Order (FREE) sheet: user select + site fields + FREE CTA`);
+
+  fs.writeFileSync('smoke/out/admin-content-links.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Content links</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${a2.innerHTML}</body></html>`);
+}
+{
+  // Content Links tab ka snapshot
+  const clHost = window.document.createElement('div');
+  window.document.body.appendChild(clHost);
+  mount(clHost);
+  await wait(1400);
+  const btn = [...clHost.querySelectorAll('button')].find((b) => /^Content Links/i.test((b.textContent || '').trim()));
+  btn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(900);
+  const cTxt = clHost.textContent || '';
+  const clOk = /Content links/.test(cTxt) && /users\/7\/orders\/51/.test(cTxt)
+    && /popup/.test(cTxt) && /loading/.test(cTxt) && /MAAN WIN VIP/.test(cTxt);
+  if (!clOk) failed += 1;
+  origError(`${clOk ? '✅' : '❌'} Content Links tab: har APK ka popup + loading URL (copy/open)`);
+  fs.writeFileSync('smoke/out/admin-content-links.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Content links</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${clHost.innerHTML}</body></html>`);
+
+  // Backups tab
+  const bBtn = [...clHost.querySelectorAll('button')].find((b) => /^Backups/i.test((b.textContent || '').trim()));
+  bBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(900);
+  const bTxt = clHost.textContent || '';
+  const bOk = /Backups \(1\)/.test(bTxt) && /apkbuilder_20261005_120000\.db/.test(bTxt) && /Download/.test(bTxt) && /Backup banayein/.test(bTxt);
+  if (!bOk) failed += 1;
+  origError(`${bOk ? '✅' : '❌'} Backups tab: list + size + Download + naya backup button`);
+  fs.writeFileSync('smoke/out/admin-backups.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Backups</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${clHost.innerHTML}</body></html>`);
 }
 
 origError(`\nDOM size: ${html.length} chars · text: ${text.length} chars · failures: ${failed} · errors: ${realErrors.length}`);

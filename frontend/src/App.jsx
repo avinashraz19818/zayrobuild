@@ -17,6 +17,7 @@ import BuildWizardModal from './components/BuildWizardModal';
 import TemplatePreview from './components/TemplatePreview';
 import LogsModal from './components/LogsModal';
 import LiveLinksModal from './components/LiveLinksModal';
+import DemoAccountModal from './components/DemoAccountModal';
 import PanelIntroLoader from './components/PanelIntroLoader';
 
 const TAB_KEYS = ['home', 'templates', 'fakesite', 'refer', 'orders', 'account', 'wallet', 'deploy'];
@@ -35,7 +36,7 @@ function Panel() {
   const [previewDesign, setPreviewDesign] = useState(null);
   const [logsOrder, setLogsOrder] = useState(null);
   const [linksOrder, setLinksOrder] = useState(null);
-  const [linksSection, setLinksSection] = useState('links');
+  const [demoOrder, setDemoOrder] = useState(null);
 
   // Server auth redirect errors (?err=...) ko friendly message me badlo
   useEffect(() => {
@@ -102,8 +103,8 @@ function Panel() {
       case 'orders':
         return <OrdersView
           onOpenLogs={(id) => setLogsOrder(id)}
-          onOpenLiveLinks={(order) => { setLinksSection('links'); setLinksOrder(order); }}
-          onOpenDemoUsers={(order) => { setLinksSection('demo'); setLinksOrder(order); }}
+          onOpenLiveLinks={(order) => setLinksOrder(order)}
+          onOpenDemoAccounts={(order) => setDemoOrder(order)}
           setTab={goTab}
         />;
       case 'wallet':
@@ -176,9 +177,15 @@ function Panel() {
       <LiveLinksModal
         order={linksOrder}
         isOpen={Boolean(linksOrder)}
-        section={linksSection}
         onClose={() => setLinksOrder(null)}
         onUpdated={() => setLinksOrder(null)}
+      />
+
+      {/* Demo account — free feature, live links se bilkul alag */}
+      <DemoAccountModal
+        order={demoOrder}
+        isOpen={Boolean(demoOrder)}
+        onClose={() => setDemoOrder(null)}
       />
     </div>
   );

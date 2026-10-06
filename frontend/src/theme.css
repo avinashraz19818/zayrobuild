@@ -2230,3 +2230,56 @@ a { color: var(--brand-2); text-decoration: none; }
   letter-spacing: 0.06em;
   font-weight: 800;
 }
+
+/* ── Demo account sheet (free feature) ── */
+.demo-empty {
+  text-align: center;
+  padding: 18px 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: var(--r-sm);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.demo-empty b { color: var(--text); }
+
+/* ── Admin: content links ── */
+.cl-link {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.028);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.cl-tag {
+  flex-shrink: 0;
+  font-size: 9.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 6px;
+  color: var(--brand-2); background: var(--brand-soft);
+}
+.cl-tag.ok { color: var(--ok); background: var(--ok-soft); }
+.cl-tag.gold { color: var(--gold); background: var(--gold-soft); }
+.cl-url {
+  flex: 1; min-width: 0;
+  font-size: 10.5px;
+  word-break: break-all;
+  color: var(--dim);
+}
+.cl-path { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; }
+.cl-path code { color: var(--cyan, #5ec8ff); }
+
+/* ── Admin: user list bulk row ── */
+.user-bulk {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 12px; margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: var(--r-sm);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* ── Admin: user orders stat row ── */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 8px; }
+
+/* ── Admin: search icon spacing (search-wrap already defined) ── */
+.admin-body .search-wrap .input { padding-left: 38px; }

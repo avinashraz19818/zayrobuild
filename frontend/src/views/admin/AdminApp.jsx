@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Shield, Users, Settings, Coins, Package, Lock, Gauge, Megaphone, Gift, Layers,
-  RefreshCw, LogOut, Store, Loader2, CheckCircle2
+  RefreshCw, LogOut, Store, Loader2, CheckCircle2, Link2, DatabaseBackup
 } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
@@ -11,6 +11,9 @@ import TemplatesTab from './TemplatesTab';
 import AnnouncementsTab from './AnnouncementsTab';
 import GiftCodesTab from './GiftCodesTab';
 import SettingsTab from './SettingsTab';
+import ContentLinksTab from './ContentLinksTab';
+import BackupsTab from './BackupsTab';
+import CreateOrderModal from './CreateOrderModal';
 
 // Admin panel ke tabs — apna alag shell, main store panel se bilkul alag page.
 const TABS = [
@@ -19,8 +22,10 @@ const TABS = [
   { key: 'requests',  label: 'Deposits',   sub: 'Coin requests',        icon: Coins },
   { key: 'orders',    label: 'Orders',     sub: 'Builds & APKs',        icon: Package },
   { key: 'users',     label: 'Users',      sub: 'Accounts & coins',     icon: Users },
+  { key: 'links',     label: 'Content Links', sub: 'Remote HTML URLs',  icon: Link2 },
   { key: 'gift',      label: 'Gift Codes', sub: 'Codes & claims',       icon: Gift },
   { key: 'announce',  label: 'Announce',   sub: 'Popup news',           icon: Megaphone },
+  { key: 'backups',   label: 'Backups',    sub: 'Database safety copies', icon: DatabaseBackup },
   { key: 'settings',  label: 'Settings',   sub: 'Logo & store',         icon: Settings }
 ];
 
@@ -90,6 +95,7 @@ export default function AdminApp() {
   const [recent, setRecent] = useState([]);
   const [loadingStats, setLoadingStats] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
 
   const loadStats = useCallback(async () => {
     setLoadingStats(true);
@@ -130,7 +136,9 @@ export default function AdminApp() {
     switch (tab) {
       case 'templates': return <TemplatesTab act={act} />;
       case 'requests':  return <RequestsTab act={act} refreshStats={loadStats} />;
-      case 'orders':    return <OrdersTab act={act} />;
+      case 'orders':    return <OrdersTab act={act} onCreate={() => setShowCreate(true)} />;
+      case 'links':     return <ContentLinksTab act={act} />;
+      case 'backups':   return <BackupsTab act={act} />;
       case 'users':     return <UsersTab act={act} />;
       case 'gift':      return <GiftCodesTab act={act} />;
       case 'announce':  return <AnnouncementsTab act={act} />;
@@ -191,6 +199,13 @@ export default function AdminApp() {
       </aside>
 
       {navOpen && <button className="admin-scrim" aria-label="close" onClick={() => setNavOpen(false)} />}
+
+      {/* Create Order (FREE) — admin kisi bhi user ke liye order bana sakta hai */}
+      <CreateOrderModal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        onDone={() => { loadStats(); setTab('orders'); }}
+      />
 
       {/* Content */}
       <main className="admin-main">

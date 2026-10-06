@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Server, Save, Upload, Trash2, QrCode, RefreshCw, Sparkles, FileCode, CheckCircle2 } from 'lucide-react';
+import { Server, Save, Upload, Trash2, QrCode, RefreshCw, Sparkles, FileCode, CheckCircle2, Cpu, AlertTriangle } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { Loader, Notice } from '../../components/ui';
 import { admin, api } from '../../lib/api';
@@ -12,7 +12,6 @@ const FIELDS = [
   { key: 'addon_fake_price', label: 'Fake addon price (coins)' },
   { key: 'domain_change_price', label: 'Domain change price (coins)' },
   { key: 'invite_code_change_price', label: 'Invite change price (coins)' },
-  { key: 'demo_user_price', label: 'Demo account price (coins)', hint: '0 = free' },
   { key: 'telegram_support_user', label: 'Support username', hint: '@ ke bina likhein' },
   { key: 'telegram_channel_url', label: 'Channel URL' },
   { key: 'telegram_admin_id', label: 'Admin Telegram ID' },
@@ -31,6 +30,9 @@ export default function SettingsTab({ act }) {
   const [logoFile, setLogoFile] = useState(null);
   const [qrFile, setQrFile] = useState(null);
   const [loadingFile, setLoadingFile] = useState(null);
+  const [projectZip, setProjectZip] = useState(null);
+  const [baseNormal, setBaseNormal] = useState(null);
+  const [baseDhani, setBaseDhani] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -54,6 +56,23 @@ export default function SettingsTab({ act }) {
       if (qrFile) fd.append('upi_qr_image', qrFile);
       if (loadingFile) fd.append('loading_html', loadingFile);
       await api.postForm('/api/admin/settings', fd);
+      if (projectZip) {
+        const pfd = new FormData();
+        pfd.append('zip', projectZip);
+        await api.postForm('/api/admin/upload-android-project', pfd);
+        setProjectZip(null);
+      }
+      if (baseNormal || baseDhani) {
+        for (const [file, type] of [[baseNormal, 'normal'], [baseDhani, 'dhani']]) {
+          if (!file) continue;
+          const bfd = new FormData();
+          bfd.append('apk', file);
+          bfd.append('type', type);
+          await api.postForm('/api/admin/upload-base-apk', bfd);
+        }
+        setBaseNormal(null);
+        setBaseDhani(null);
+      }
       addToast('Settings save ho gayi — panel me turant live', 'success');
       setLogoFile(null);
       setQrFile(null);
@@ -175,6 +194,60 @@ export default function SettingsTab({ act }) {
               build fail nahi hoti — built-in default loading screen lag jaati hai.
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* ── Build engine — Android project + base APK (build inke bina fail hota hai) ── */}
+      <div className="card card-pad stack gap-12">
+        <div className="flex-row gap-8">
+          <Cpu size={15} color="var(--brand-2)" />
+          <span className="row-title">Build engine</span>
+          <span className={`chip ${values.android_project_ready ? 'chip-ok' : 'chip-danger'}`} style={{ marginLeft: 'auto' }}>
+            {values.android_project_ready ? <><CheckCircle2 size={11} /> ready</> : <><AlertTriangle size={11} /> missing</>}
+          </span>
+        </div>
+
+        {!values.android_project_ready && (
+          <div className="trust-strip" style={{ background: 'var(--danger-soft)', boxShadow: 'inset 0 0 0 1px rgba(251,113,133,.25)' }}>
+            <AlertTriangle size={14} color="var(--danger)" />
+            <span>Android project <b>server par nahi hai</b> — koi bhi APK build nahi banega. Neeche se project ZIP upload karein.</span>
+          </div>
+        )}
+
+        <div className="field">
+          <span className="label">Android project (ZIP)</span>
+          <label className="btn btn-soft btn-sm" style={{ alignSelf: 'flex-start' }}>
+            <input type="file" hidden accept=".zip,application/zip"
+              onChange={(e) => setProjectZip(e.target.files?.[0] || null)} />
+            <Upload size={13} /> {projectZip ? projectZip.name.slice(0, 26) : 'Project ZIP upload karein'}
+          </label>
+          <span className="hint">
+            Ye wahi android project hai jo har APK ka base banta hai (gradlew ke saath pura folder ZIP me).
+            Save karte hi server par replace ho jaayega — purane builds par koi asar nahi.
+          </span>
+        </div>
+
+        <div className="divider" />
+
+        <div className="stack gap-8">
+          <span className="label">Base APKs (optional)</span>
+          <div className="flex-row gap-8 wrap">
+            {[['normal', 'Normal base APK', baseNormal, setBaseNormal, values.base_apks?.normal],
+              ['dhani', 'Dhani base APK', baseDhani, setBaseDhani, values.base_apks?.dhani]].map(([key, label, file, setFile, present]) => (
+              <div className="field grow" key={key} style={{ minWidth: 200 }}>
+                <span className="flex-row gap-6" style={{ alignItems: 'center', fontSize: 12, fontWeight: 700 }}>
+                  <span className={`chip ${present ? 'chip-ok' : 'chip-brand'}`}>{present ? 'set' : 'nahi hai'}</span>
+                  {label}
+                </span>
+                <label className="btn btn-soft btn-sm" style={{ alignSelf: 'flex-start' }}>
+                  <input type="file" hidden accept=".apk,application/vnd.android.package-archive"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                  <Upload size={13} /> {file ? file.name.slice(0, 20) : 'Upload APK'}
+                </label>
+              </div>
+            ))}
+          </div>
+          <span className="hint">Sirf tab chahiye jab aap apna ready-made base APK use karna chahte hain. Save par upload ho jaata hai.</span>
         </div>
       </div>
 

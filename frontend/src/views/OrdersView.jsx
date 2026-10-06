@@ -14,7 +14,7 @@ const FILTERS = [
   { key: 'failed', label: 'Failed' }
 ];
 
-export default function OrdersView({ onOpenLogs, onOpenLiveLinks, onOpenDemoUsers, setTab }) {
+export default function OrdersView({ onOpenLogs, onOpenLiveLinks, onOpenDemoAccounts, setTab }) {
   const { orders, loading, refreshOrders, config } = useStore();
   const { user, openAuth } = useAuth();
   const [filter, setFilter] = useState('all');
@@ -123,8 +123,8 @@ export default function OrdersView({ onOpenLogs, onOpenLiveLinks, onOpenDemoUser
                 </button>
                 <button
                   className="btn btn-ghost btn-sm"
-                  onClick={() => (onOpenDemoUsers || onOpenLiveLinks)?.(order)}
-                  title="App me test/login karne ke liye demo account add karein"
+                  onClick={() => onOpenDemoAccounts?.(order)}
+                  title="Free — app me login/registration bypass karne ke liye number add karein"
                 >
                   <Users size={14} /> Add demo account
                 </button>

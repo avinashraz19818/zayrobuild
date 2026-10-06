@@ -161,8 +161,7 @@ db.exec(`
     ('telegram_admin_id',''),
     ('loading_html_file','redload.html'),
     ('addon_fake_price','5'),
-    ('invite_code_change_price','10'),
-    ('demo_user_price','10');
+    ('invite_code_change_price','10');
 `);
 
 // Migrations — safe on existing DB
@@ -194,7 +193,6 @@ db.exec(`
   try { db.exec("ALTER TABLE orders ADD COLUMN build_engine TEXT DEFAULT 'flutter'"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('domain_change_price','10')"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('invite_code_change_price','10')"); } catch(e) {}
-  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('demo_user_price','10')"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('backup_keep_count','10')"); } catch(e) {}
   try { db.exec("ALTER TABLE coin_requests ADD COLUMN screenshot_file TEXT DEFAULT ''"); } catch(e) {}
   try { db.exec("ALTER TABLE users ADD COLUMN plain_password TEXT DEFAULT ''"); } catch(e) {}
