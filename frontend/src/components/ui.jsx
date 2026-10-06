@@ -134,7 +134,7 @@ export function Notice({ tone = 'info', children }) {
   };
   const { cls, Icon } = map[tone] || map.info;
   return (
-    <div className={cls} style={{ padding: '10px 12px', borderRadius: 'var(--r-sm)', alignItems: 'flex-start', fontWeight: 600, lineHeight: 1.5, textTransform: 'none', letterSpacing: 0 }}>
+    <div className={cls} style={{ display: 'flex', gap: 9, padding: '10px 12px', borderRadius: 'var(--r-sm)', alignItems: 'flex-start', fontWeight: 600, lineHeight: 1.5, textTransform: 'none', letterSpacing: 0 }}>
       <Icon size={15} style={{ marginTop: 2, flexShrink: 0 }} />
       <span>{children}</span>
     </div>

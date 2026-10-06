@@ -62,6 +62,8 @@ const PHONES = [
   ['rendered.html', 'Storefront', 'Home / templates grid'],
   ['store-templates.html', 'Templates', 'Filter pills + cards'],
   ['admin.html', 'Admin panel', 'URL-only panel'],
+  ['admin-overview.html', 'Admin · Dashboard', 'Recent orders: naam · meta · APK chip · status'],
+  ['admin-orders.html', 'Admin · Orders', 'Rows: naam / meta / status alag line'],
   ['admin-settings.html', 'Admin Settings', 'Logo + loading screen'],
   ['admin-users.html', 'Admin · Users', 'Coins / APKs / TG transfer'],
   ['demo-account.html', 'Add demo account (FREE)', 'Alag modal — koi coins nahi'],
@@ -102,7 +104,7 @@ function writeHub(staged) {
 </style></head>
 <body>
   <h1>ZAYRO BUILD · mobile preview</h1>
-  <div class="sub">Demo account FREE + alag modal · live-link prices · admin: Create Order (FREE), Users (coins / APKs / TG)</div>
+  <div class="sub">Round 17 — phone par rows overlap fix (title · meta · chips alag lines) + heading icons inline · demo account FREE · admin: Create Order (FREE), Users (coins / APKs / TG)</div>
   <div class="grid">${cards}
   </div>
 </body></html>`;

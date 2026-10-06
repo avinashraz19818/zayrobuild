@@ -29,8 +29,9 @@ const USER = {
 };
 
 const ORDERS = [
-  { id: 51, app_name: 'MAAN WIN VIP', package_name: 'com.zayro.maanwin', status: 'done', apk_file: 'maan.apk', fake_apk_file: 'maan_fake.apk', coins_spent: 120, created_at: '2026-10-04 11:20:00', live_link_enabled: 1, design_name: 'Zayro Apex VIP', register_url: 'https://site.com/register?ref=abc' },
-  { id: 52, app_name: 'TIGER PLAY', package_name: 'com.zayro.tiger', status: 'building', apk_file: null, fake_apk_file: null, coins_spent: 90, created_at: '2026-10-05 09:00:00', live_link_enabled: 1, design_name: 'Dhani Win Core', register_url: 'https://play.com/register?ref=xy' }
+  { id: 51, user_name: 'Rahul', apk_count: 2, app_name: 'MAAN WIN VIP', package_name: 'com.zayro.maanwin', status: 'done', apk_file: 'maan.apk', fake_apk_file: 'maan_fake.apk', coins_spent: 120, created_at: '2026-10-04 11:20:00', live_link_enabled: 1, design_name: 'Zayro Apex VIP', register_url: 'https://site.com/register?ref=abc' },
+  { id: 52, user_name: 'Sahil', apk_count: 1, app_name: 'TIGER PLAY', package_name: 'com.zayro.tiger', status: 'building', apk_file: null, fake_apk_file: null, coins_spent: 90, created_at: '2026-10-05 09:00:00', live_link_enabled: 1, design_name: 'Dhani Win Core', register_url: 'https://play.com/register?ref=xy' },
+  { id: 53, user_name: 'Imran', apk_count: 0, app_name: 'SUPER LUDO CHAMPIONS VIP CLUB', package_name: 'com.zayro.ludo', status: 'failed', apk_file: null, fake_apk_file: null, coins_spent: 60, created_at: '2026-10-05 18:45:00', live_link_enabled: 0, design_name: 'Zayro Apex VIP', register_url: 'https://ludo.com/register?ref=zz' }
 ];
 
 const RESPONSES = {
@@ -717,6 +718,16 @@ await wait(1200);
   await wait(1500);
 
   const aTxt = a2.textContent || '';
+
+  // Dashboard (Overview) ke 'Recent orders' rows — phone par overlap ka main case
+  const recentTxt = a2.textContent || '';
+  const recentRows = a2.querySelectorAll('.row-item').length;
+  const recentOk = recentRows >= 2 && /Recent orders/.test(recentTxt) && / APK/.test(recentTxt);
+  if (!recentOk) failed += 1;
+  origError(`${recentOk ? '✅' : '❌'} Admin Dashboard 'Recent orders' rows (${recentRows}) me APK chip render hota hai`);
+  fs.writeFileSync('smoke/out/admin-overview.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Dashboard</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${a2.innerHTML}</body></html>`);
+
   const noExtraTabs = !/Content Links/.test(aTxt) && !/Database safety copies/i.test(aTxt);
   if (!noExtraTabs) failed += 1;
   origError(`${noExtraTabs ? '✅' : '❌'} Admin nav me Content Links / Backups tabs nahi (user ne hataya)`);
@@ -736,6 +747,9 @@ await wait(1200);
   const createBtn = clickedOrders && /Create Order \(FREE\)/.test(oTxt);
   if (!createBtn) failed += 1;
   origError(`${createBtn ? '✅' : '❌'} Admin Orders me 'Create Order (FREE)' button`);
+
+  fs.writeFileSync('smoke/out/admin-orders.html',
+    `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Orders</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${a2.innerHTML}</body></html>`);
 
   // Create Order sheet khule aur FREE dikhaye
   const clickCreateOrder = async () => {
@@ -806,6 +820,31 @@ await wait(1200);
   await wait(300);
   fs.writeFileSync('smoke/out/admin-users.html',
     `<!doctype html><html><head><meta charset="utf-8"><title>Admin · Users</title><link rel="stylesheet" href="../../../public/assets/${liveCssName()}"></head><body>${a2.innerHTML}</body></html>`);
+}
+
+/* ── Phase 9: CSS regression — phone par icon inline + row title/sub block (Round 17) ── */
+{
+  const cssName = liveCssName();
+  const css = cssName ? fs.readFileSync(`../public/assets/${cssName}`, 'utf8') : '';
+  const noBlockSvg = !/img,\s*svg,\s*video\s*\{\s*display:\s*block/.test(css);
+  if (!noBlockSvg) failed += 1;
+  origError(`${noBlockSvg ? '✅' : '❌'} CSS: global 'img, svg, video { display: block }' hata (heading icons apni line par nahi jaate)`);
+
+  const inlineSvg = /svg\s*\{[^}]*display:\s*inline-block/.test(css);
+  if (!inlineSvg) failed += 1;
+  origError(`${inlineSvg ? '✅' : '❌'} CSS: svg text ke andar inline rehta hai`);
+
+  const rowBlock = /\.row-main\s*[> ]\s*\.row-title[^{]*\{[^}]*display:\s*block/.test(css);
+  if (!rowBlock) failed += 1;
+  origError(`${rowBlock ? '✅' : '❌'} CSS: row-title / row-sub block (title upar, meta neeche — overlap nahi)`);
+
+  const mobileWrap = /\.admin-app\s+\.row-item\s*\{[^}]*flex-wrap:\s*wrap/.test(css);
+  if (!mobileWrap) failed += 1;
+  origError(`${mobileWrap ? '✅' : '❌'} CSS: phone par admin row chips agli line par wrap hote hain`);
+
+  const usersGrid = /\.admin-user-item\s*\{[^}]*grid-template-areas:[^}]*actions actions/.test(css);
+  if (!usersGrid) failed += 1;
+  origError(`${usersGrid ? '✅' : '❌'} CSS: Users row me action buttons poori width ki line par`);
 }
 
 origError(`\nDOM size: ${html.length} chars · text: ${text.length} chars · failures: ${failed} · errors: ${realErrors.length}`);

@@ -98,7 +98,11 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-img, svg, video { display: block; max-width: 100%; }
+img, video { display: block; max-width: 100%; }
+/* Icon (svg) text ke andar inline rehna chahiye — warna heading ka icon apni
+   alag line par chala jaata hai ('Users (2)' ke upar icon). Flex/grid ka child
+   hone par inline-block khud block ki tarah behave karta hai, isliye safe hai. */
+svg { display: inline-block; vertical-align: middle; max-width: 100%; }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { background: none; border: 0; cursor: pointer; }
 a { color: var(--brand-2); text-decoration: none; }
@@ -2283,3 +2287,52 @@ a { color: var(--brand-2); text-decoration: none; }
 
 /* ── Admin: search icon spacing (search-wrap already defined) ── */
 .admin-body .search-wrap .input { padding-left: 38px; }
+
+/* ══════════════════════════════════════════════════════════
+   v3.9 — Mobile rows + inline icon fix (phone par text overlap)
+   • Global `svg { display: block }` ki wajah se heading ke andar ka icon
+     apni line par chala jaata tha ("Users (2)", "Orders (2)" …)
+   • `.row-title` / `.row-sub` inline the → dono ek hi line par chipak jaate the
+     ("new vip #2Zayro_o") aur lamba text FAILED badge / date ke upar chad jaata
+     tha (inline box par `overflow: hidden` kaam nahi karta)
+   ══════════════════════════════════════════════════════════ */
+
+/* List row: title upar, sub neeche — truncate (…) sahi kaam kare */
+.row-main { display: flex; flex-direction: column; min-width: 0; }
+.row-main .row-title,
+.row-main .row-sub { display: block; max-width: 100%; min-width: 0; }
+
+/* Bada coin number (52500) badge apni jagah par hi rahe */
+.admin-user-item > .row-ico { flex-shrink: 0; }
+
+/* ── Phone: chips agli line par, buttons poori width ki line par ── */
+@media (max-width: 620px) {
+  .admin-app .row-item {
+    flex-wrap: wrap;
+    row-gap: 9px;
+    align-items: flex-start;
+  }
+  .admin-app .row-item > .row-ico { margin-top: 1px; }
+  .admin-app .row-item > .row-main { flex: 1 1 60%; }
+  .admin-app .row-item > .flex-row {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .admin-app .row-item > .flex-row > .btn { flex: 1 1 auto; justify-content: center; }
+
+  /* Lamba naam/username kata na jaaye — wrap ho jaaye */
+  .admin-user-item .row-title.truncate,
+  .admin-user-item .row-sub.truncate { white-space: normal; overflow: visible; text-overflow: clip; }
+
+  /* Users row (grid layout) — actions poori width ki apni line par */
+  .admin-user-item {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "ico main" "actions actions";
+    row-gap: 10px;
+  }
+  .admin-user-item > .row-ico { grid-area: ico; }
+  .admin-user-item > .row-main { grid-area: main; }
+  .admin-user-item > .flex-row { grid-area: actions; width: 100%; flex-wrap: wrap; gap: 6px; }
+  .admin-user-item > .flex-row > .btn { flex: 1 1 auto; justify-content: center; }
+}
