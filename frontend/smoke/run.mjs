@@ -152,6 +152,12 @@ function fakeBold(text) {
 }
 window.__fakeBold = fakeBold;
 
+// JSDOM me createObjectURL nahi hota — icon preview ke liye stub
+// Node ka URL.createObjectURL jsdom ke File ko accept nahi karta — override karo
+const mockObjectUrl = () => 'blob:mock-icon-preview';
+window.URL.createObjectURL = mockObjectUrl;
+globalThis.URL.createObjectURL = mockObjectUrl;
+
 window.navigator.clipboard = {
   writeText: async () => {},
   readText: async () => 'https://paste.example.com/#/register?invitationCode=PASTED'
@@ -907,19 +913,32 @@ await wait(1200);
   await wait(1000);
   const sheet = w.querySelector('.sheet');
   const t1 = sheet?.textContent || '';
-  const step1Ok = /Step 1\/3/.test(t1) && /Launcher preview/.test(t1)
-    && /Name style/.test(t1) && /App icon/.test(t1) && /Upload icon/.test(t1);
+  const step1Ok = /Step 1\/3/.test(t1) && /Name style/.test(t1)
+    && /App icon/.test(t1) && /Upload icon/.test(t1) && /App name/.test(t1);
   if (!step1Ok) failed += 1;
-  origError(`${step1Ok ? '✅' : '❌'} Wizard step 1: app name + launcher preview + name style + icon upload`);
+  origError(`${step1Ok ? '✅' : '❌'} Wizard step 1: app name + name style + icon upload`);
+
+  // User ne bada launcher tile hataya — wapas na aaye
+  const noLauncher = !/Launcher preview/.test(t1) && !w.querySelector('.launcher-card, .launcher-tile');
+  if (!noLauncher) failed += 1;
+  origError(`${noLauncher ? '✅' : '❌'} Launcher preview card hata (user ne hataya)`);
+
+  // Icon picker compact hai (chhota box, bada drop-zone nahi)
+  const picker = sheet?.querySelector('.icon-pick');
+  const pickerOk = Boolean(picker) && !sheet.querySelector('.icon-drop')
+    && /Upload icon/.test(picker.textContent || '') && /Choose/.test(picker.textContent || '');
+  if (!pickerOk) failed += 1;
+  origError(`${pickerOk ? '✅' : '❌'} App icon ka compact picker (chhota box + Choose, bada drop-zone nahi)`);
 
   // naam likho → input me hi style lagta hai (bold) aur launcher label styled Unicode me
   const nameInput = sheet?.querySelector('.name-input');
   setValue(nameInput, 'ZAYRO VIP');
   await wait(700);
-  const labelText = w.querySelector('.launcher-label')?.textContent || '';
-  const boldOk = labelText === window.__fakeBold('ZAYRO VIP');
+  const chipsPre = [...(sheet?.querySelectorAll('.style-chip') || [])];
+  const chipSample = (chipsPre[0]?.querySelector('.style-sample')?.textContent || '').trim();
+  const boldOk = chipSample === window.__fakeBold('ZAYRO VIP');
   if (!boldOk) failed += 1;
-  origError(`${boldOk ? '✅' : '❌'} Naam likhte hi launcher label styled (Unicode bold) dikhta hai — '${labelText}'`);
+  origError(`${boldOk ? '✅' : '❌'} Naam likhte hi style sample styled (Unicode bold) aata hai — '${chipSample}'`);
 
   const inputStyled = (nameInput?.getAttribute('style') || '').includes('900');
   if (!inputStyled) failed += 1;
@@ -936,13 +955,35 @@ await wait(1200);
   const monoChip = chips[2];
   monoChip?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await wait(400);
-  const afterChip = w.querySelector('.launcher-label')?.textContent || '';
-  const styleSwitchOk = /Monospace/.test(w.querySelector('.launcher-card')?.textContent || '')
-    && (nameInput?.getAttribute('style') || '').includes('monospace')
-    && afterChip === 'ZAYRO VIP' // mono mock sample plain text deta hai
+  const styleSwitchOk = (nameInput?.getAttribute('style') || '').includes('monospace')
+    && (nameInput?.value || '') === 'ZAYRO VIP' // styling se value nahi badalti
     && chips[2].className.includes('active');
   if (!styleSwitchOk) failed += 1;
-  origError(`${styleSwitchOk ? '✅' : '❌'} Style chip badalne par input + launcher preview dono update`);
+  origError(`${styleSwitchOk ? '✅' : '❌'} Style chip badalne par input box ka style turant update hota hai`);
+
+  // Icon upload ke baad compact picker me preview + Remove
+  const iconInput = sheet?.querySelector('.icon-pick input[type="file"]');
+  const pngBytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  const iconFile = new window.File([pngBytes], 'icon.png', { type: 'image/png' });
+  if (iconInput) {
+    Object.defineProperty(iconInput, 'files', { value: [iconFile], configurable: true });
+    iconInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+    await wait(500);
+  }
+  const pickerAfter = sheet?.querySelector('.icon-pick');
+  const iconOk = Boolean(pickerAfter?.className.includes('has-img'))
+    && Boolean(pickerAfter.querySelector('.icon-pick-box img'))
+    && /Icon ready/.test(pickerAfter.textContent || '')
+    && /Remove/.test(pickerAfter.textContent || '');
+  if (!iconOk) failed += 1;
+  origError(`${iconOk ? '✅' : '❌'} Icon upload ke baad compact preview + Remove button`);
+
+  const removeBtn = [...(pickerAfter?.querySelectorAll('button') || [])].find((b) => /Remove/.test(b.textContent || ''));
+  removeBtn?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await wait(300);
+  const iconCleared = /Upload icon/.test(sheet?.querySelector('.icon-pick')?.textContent || '');
+  if (!iconCleared) failed += 1;
+  origError(`${iconCleared ? '✅' : '❌'} Remove tap par icon hat jaata hai (default icon wapas)`);
 
   snap('build-step1.html', 'Build wizard · Step 1');
 
@@ -1030,11 +1071,21 @@ await wait(1200);
   if (!checklistOk) failed += 1;
   origError(`${checklistOk ? '✅' : '❌'} Step 3 checklist: naam + style + link + mode chips`);
 
+  // User ne kaha tha: 'firebase' jaisi technical baat user ko dikhni nahi chahiye
+  const userText = `${t1} ${t2} ${sheet?.textContent || ''} ${w.textContent || ''}`;
+  const noFirebaseUi = !/firebase/i.test(userText);
+  if (!noFirebaseUi) failed += 1;
+  origError(`${noFirebaseUi ? '✅' : '❌'} Wizard me 'firebase' ka zikr nahi (sirf 'data alag rehta hai')`);
+
   snap('build-step3.html', 'Build wizard · Step 3');
 
   // ── Sound effects: module bundled + Account me toggle row + click par koi error nahi ──
   const bundleName = (fs.readFileSync('../public/index.html', 'utf8').match(/assets\/(index-[A-Za-z0-9_-]+\.js)/) || [])[1];
   const bundle = bundleName ? fs.readFileSync(`../public/assets/${bundleName}`, 'utf8') : '';
+  const noFirebaseBundle = !/irebase/i.test(bundle);
+  if (!noFirebaseBundle) failed += 1;
+  origError(`${noFirebaseBundle ? '✅' : '❌'} Bundle me kahin 'firebase' text nahi (users ko technical baat nahi dikhti)`);
+
   const sfxBundled = /zayro_sfx_v1/.test(bundle) && /AudioContext/.test(bundle);
   if (!sfxBundled) failed += 1;
   origError(`${sfxBundled ? '✅' : '❌'} Sound engine bundle me hai (Web Audio synth + localStorage preference)`);
