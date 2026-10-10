@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -219,7 +220,7 @@ class _GameScreenState extends State<GameScreen> {
                   useHybridComposition: true,
                   hardwareAcceleration: true,
                   cacheEnabled: true,
-                  overScrollMode: OverScrollMode.OVER_SCROLL_NEVER,
+                  overScrollMode: OverScrollMode.NEVER,
                   userAgent:
                       'Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
                 ),

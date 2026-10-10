@@ -153,8 +153,8 @@ function OrderRows({ rows, selected, setSelected, onManage, onDelete, onRebuild,
       {o.fake_apk_file && <a className="btn btn-soft btn-xs" href={`/api/orders/${o.id}/download-fake`}>Fake 1 APK</a>}
       {o.fake_sites?.filter(f => f.apk_file).map((f, i) => <a className="btn btn-soft btn-xs" key={f.id} href={`/api/admin/orders/${o.id}/fake-sites/${f.id}/download`}>Fake {f.fake_number || i + 2} APK</a>)}
       <button className="btn btn-primary btn-xs" onClick={() => onManage(o)}><Settings size={13} /> Manage links & demo</button>
-      <button className="btn btn-soft btn-xs" disabled={busy || active(o)} onClick={() => onRebuild(o)}><RotateCcw size={13} /> Rebuild</button>
-      <button className="btn btn-ghost btn-xs danger" disabled={busy || active(o)} onClick={() => onDelete([o.id])}><Trash2 size={13} /> Delete</button>
+      <button className="btn btn-soft btn-xs" disabled={busy} onClick={() => onRebuild(o)}><RotateCcw size={13} /> Rebuild</button>
+      <button className="btn btn-ghost btn-xs danger" disabled={busy} onClick={() => onDelete([o.id])}><Trash2 size={13} /> Delete</button>
     </div>
     <details><summary className="hint">Admin build diagnostics</summary><pre className="console" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{o.build_log || 'No build output.'}</pre></details>
   </article>)}</div>;

@@ -78,10 +78,19 @@ const COOKIE_SECURE = NODE_ENV === 'production'
 const SESSION_COOKIE_NAME = COOKIE_SECURE ? '__Host-zayro.sid' : 'zayro.sid';
 const sessionStore = new SQLiteSessionStore(db, SESSION_TTL_MS);
 
-// ── Dirs ──
 ['builds','uploads','templates/assets','base-apks','keystore','backups'].forEach(d => {
   fs.mkdirSync(path.join(__dirname, d), { recursive: true });
 });
+
+// Recover any orders left stuck in 'building' due to server restart / crash
+try {
+  const recovered = db.prepare("UPDATE orders SET status='failed', build_log=COALESCE(build_log,'') || '\n[Build interrupted: server restarted]' WHERE status='building'").run();
+  if (recovered.changes > 0) {
+    console.log(`Recovered ${recovered.changes} stuck building order(s) to 'failed' status on startup.`);
+  }
+} catch (e) {
+  console.error('Order status recovery error:', e.message);
+}
 
 async function createDatabaseBackup(reason = 'manual') {
   const backupDir = path.join(__dirname, 'backups');
