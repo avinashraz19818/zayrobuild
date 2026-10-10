@@ -118,13 +118,12 @@ function ensureAudioGate(html) {
     '    var n=String(f||"").toLowerCase();',
     '    var now=Date.now();',
     '    if(n.indexOf("register")>=0){',
-    '      /* Gate khud register timing handle karta hai — template ka delayed',
-    '         call duplicate hota hai to 10 sec window me block */',
-    '      if(now - __g.regAt < 10000) return false;',
+    '      /* Cooldown to prevent duplicate immediate double-trigger */',
+    '      if(now - __g.regAt < 3000) return false;',
     '      return true;',
     '    }',
-    '    /* Startup protection: first 10 seconds me premature successful / deposit block */',
-    '    if(now - __g.startAt < 10000 && __blocked(f)) return false;',
+    '    /* Startup protection: first 8 seconds me premature successful / deposit block */',
+    '    if(now - __g.startAt < 8000 && __blocked(f)) return false;',
     '    /* successful.mp3 requires user to have actually been on register/login screen */',
     '    if(n.indexOf("successful")>=0 && !__g.wasInAuth) return false;',
     '    return !__blocked(f) || __g.on;',
@@ -367,32 +366,6 @@ function mapResultSpeechToSound(html) {
   );
 }
 
-// ── GPU hardware layer isolation for smooth 60/120 FPS floating panel ──
-function injectPerformanceStyles(html) {
-  if (!html) return html;
-  const style = [
-    '<style id="zayro-perf-boost">',
-    '#panel, #panelShell, .panel-shell, .panel-inner, #miniBtn, #warnOverlay {',
-    '  transform: translate3d(0,0,0) !important;',
-    '  -webkit-transform: translate3d(0,0,0) !important;',
-    '  backface-visibility: hidden !important;',
-    '  -webkit-backface-visibility: hidden !important;',
-    '  will-change: transform !important;',
-    '  contain: layout style paint !important;',
-    '}',
-    '#target-game-frame, #gameFrame {',
-    '  contain: strict !important;',
-    '  transform: translate3d(0,0,0) !important;',
-    '  -webkit-transform: translate3d(0,0,0) !important;',
-    '}',
-    '* { -webkit-tap-highlight-color: transparent !important; }',
-    '</style>'
-  ].join('\n');
-  if (/<head[^>]*>/i.test(html)) {
-    return html.replace(/<head[^>]*>/i, '$&\n' + style);
-  }
-  return style + html;
-}
 
 // ── APK build implementation ──
 // This implementation intentionally runs inside apkbuilder-worker.js. It uses
@@ -470,7 +443,7 @@ async function buildApkInWorker(order, design, buildId, logCallback) {
     }
 
     log('Injecting parameters into HTML...');
-    const processedPopup   = injectPerformanceStyles(mapResultSpeechToSound(normalizeRegisterDelay(ensureAudioGate(injectParams(popupHtml, params)))));
+    const processedPopup   = mapResultSpeechToSound(normalizeRegisterDelay(ensureAudioGate(injectParams(popupHtml, params))));
     const processedLoading = stripFirebaseLiveScript(stripIntroSnippet(injectLoadingParams(loadingHtml, params)));
 
     // ── PER-BUILD UNIQUE ENCRYPTION PASSWORD (Java engine) ──
