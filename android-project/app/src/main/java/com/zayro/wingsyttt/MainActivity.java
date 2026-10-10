@@ -180,7 +180,9 @@ public class MainActivity extends Activity {
 		s.setCacheMode(WebSettings.LOAD_DEFAULT);
 		try {
 			s.setRenderPriority(WebSettings.RenderPriority.HIGH);
-			s.setEnableSmoothTransition(true);
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+				s.setSafeBrowsingEnabled(false);
+			}
 		} catch (Exception e) {}
 		s.setUserAgentString("Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 	}
@@ -304,7 +306,7 @@ public class MainActivity extends Activity {
 		container.setBackgroundColor(Color.WHITE);
 
 		final WebView popup = new WebView(context);
-		popup.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+		popup.setLayerType(View.LAYER_TYPE_NONE, null);
 		configureWebSettings(popup.getSettings());
 		popup.setBackgroundColor(Color.WHITE);
 		try {
@@ -483,8 +485,8 @@ public class MainActivity extends Activity {
 		final android.webkit.WebView wL = new android.webkit.WebView(this);
 		this.mainWebView = wP;
 		
-		wP.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
-		wL.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
+		wP.setLayerType(android.view.View.LAYER_TYPE_NONE, null);
+		wL.setLayerType(android.view.View.LAYER_TYPE_NONE, null);
 		
 		// ── ADVANCED WEBSETTINGS CONFIGURATION ──
 		android.webkit.CookieManager cm = android.webkit.CookieManager.getInstance();
