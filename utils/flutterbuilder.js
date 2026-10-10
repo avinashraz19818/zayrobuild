@@ -408,7 +408,7 @@ async function buildFlutterApkInWorker(order, design, buildId, logCallback) {
 
     // ── flutter build apk (release + obfuscate) ──
     const sdiDir = path.join(buildDir, 'symbols');
-    const buildArgs = ['build', 'apk', '--release', '--obfuscate', `--split-debug-info=${sdiDir}`];
+    const buildArgs = ['build', 'apk', '--release', '--obfuscate', `--split-debug-info=${sdiDir}`, '--android-skip-build-dependency-validation'];
     log('Compiling Flutter APK with AOT Machine Code Obfuscation...');
     const runFlutter = (args) => {
       try {
@@ -425,7 +425,7 @@ async function buildFlutterApkInWorker(order, design, buildId, logCallback) {
     let fr = runFlutter(buildArgs);
     if (!fr.ok) {
       log('Obfuscated build failed — retrying standard release build...');
-      fr = runFlutter(['build', 'apk', '--release']);
+      fr = runFlutter(['build', 'apk', '--release', '--android-skip-build-dependency-validation']);
       if (!fr.ok) throw new Error('flutter build apk failed: ' + fr.out.slice(-2000));
       log('Standard release build succeeded.');
     } else {
