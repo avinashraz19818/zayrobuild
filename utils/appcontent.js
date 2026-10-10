@@ -213,11 +213,7 @@ async function buildAppContent(pathKey, kind = 'popup', kid = null, opts = {}) {
   }
 }
 
-// ── NATIVE THEME JSON (Flutter engine — HYBRID design update) ──
-// Flutter APK ka UI compiled Dart me hota hai. Design ke VARIABLE parts
-// (links, colors, texts, amounts, selectors, sound map) yahan se encrypted
-// JSON me aate hain — server pe edit karo, app next launch pe naya theme
-// le leti hai. Bina APK rebuild ke rozmarra ke changes.
+// ── NATIVE THEME JSON (Dynamic design update) ──
 async function buildAppTheme(pathKey, kid = null) {
   const sp0 = splitPathKid(pathKey);
   pathKey = sp0.key;
@@ -238,7 +234,7 @@ async function buildAppTheme(pathKey, kid = null) {
     const designRow = db.prepare('SELECT native_key, name FROM designs WHERE id=?').get(row.design_id);
     const theme = {
       v: 1,
-      engine: 'flutter',
+      engine: 'java',
       designKey: (designRow && designRow.native_key) ? designRow.native_key : 'default',
       brandTitle: params.brandTitle || '',
       minDeposit: params.minDeposit || 300,

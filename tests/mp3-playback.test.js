@@ -38,8 +38,8 @@ test('shared MP3s have valid MP3 headers', () => {
   }
 });
 
-test('Android and Flutter bundled MP3s are identical to the shared copies (no stale files)', () => {
-  for (const dir of ['android-project/app/src/main/assets', 'flutter-project/assets/media']) {
+test('Android bundled MP3s are identical to the shared copies (no stale files)', () => {
+  for (const dir of ['android-project/app/src/main/assets']) {
     for (const f of fs.readdirSync(path.join(ROOT, dir)).filter((x) => x.endsWith('.mp3'))) {
       assert.ok(bundled.includes(f), `${dir}/${f} has no shared copy`);
       assert.ok(

@@ -1,9 +1,8 @@
 'use strict';
 
-// APK compilation uses Gradle or Flutter child processes.
+// APK compilation uses Gradle child processes.
 // Running in this short-lived worker process prevents blocking the API server.
 const { buildApkInWorker } = require('./apkbuilder');
-const { buildFlutterApkInWorker } = require('./flutterbuilder');
 
 function sendToParent(message, exitCode = 0) {
   if (!process.connected) {
@@ -32,17 +31,8 @@ process.once('message', async message => {
     const design = message.design;
     const buildId = message.buildId;
 
-    // Default engine: Native Android Java (Classic original builder)
-    const engine = (process.env.APK_BUILD_ENGINE === 'flutter' || (order && order.build_engine === 'flutter_force')) ? 'flutter' : 'java';
-
-    let result;
-    if (engine === 'flutter') {
-      log('Building with Flutter Engine...');
-      result = await buildFlutterApkInWorker(order, design, buildId, log);
-    } else {
-      log('Building with Native Android Java Engine (Classic)...');
-      result = await buildApkInWorker(order, design, buildId, log);
-    }
+    log('Building with Native Android Java Engine (Classic)...');
+    const result = await buildApkInWorker(order, design, buildId, log);
 
     sendToParent({ type: 'result', result });
   } catch (error) {
