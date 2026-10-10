@@ -1,10 +1,484 @@
-.animated-icon{flex-shrink:0;overflow:visible;vertical-align:middle}
-.store-icon{color:inherit}
-.app-shell .bottomnav .store-icon{width:23px;height:23px}
-.app-shell .bottomnav .active .store-icon{color:#ccb0ff}
-.row-ico .store-icon{color:inherit}
-/* SMIL timelines are paused offscreen, under modals, in hidden tabs and for reduced motion. */
+/* ══════════════════════════════════════════════════════════════════════════
+   3D ANIMATED ICONS & HOLOGRAPHIC DEPTH SYSTEM — ZAYRO V3
+   High-end futuristic, glassmorphic 3D icons with floating physics,
+   volumetric lighting, specular reflections, and animated micro-interactions.
+   ══════════════════════════════════════════════════════════════════════════ */
 
-.store-icon .icon-gold{color:var(--gold,#ffd27a)}
-.app-shell .bottomnav .nav-ico{border-radius:11px;padding:5px;box-sizing:content-box;background:#b598ff0b;border:1px solid #b598ff16}
-.app-shell .bottomnav .active .nav-ico{background:linear-gradient(145deg,#ab81ff24,#7050b910);border-color:#b598ff38}
+/* ── 3D Keyframe Animations ── */
+@keyframes icon3dFloat {
+  0%, 100% {
+    transform: translateY(0px) rotateX(0deg) rotateY(0deg) translateZ(0px);
+    filter: drop-shadow(0 6px 14px rgba(124, 58, 237, 0.38));
+  }
+  25% {
+    transform: translateY(-3.5px) rotateX(6deg) rotateY(-8deg) translateZ(8px);
+    filter: drop-shadow(0 10px 18px rgba(124, 58, 237, 0.52));
+  }
+  50% {
+    transform: translateY(-6px) rotateX(0deg) rotateY(0deg) translateZ(12px);
+    filter: drop-shadow(0 14px 26px rgba(124, 58, 237, 0.65));
+  }
+  75% {
+    transform: translateY(-2.5px) rotateX(-6deg) rotateY(8deg) translateZ(7px);
+    filter: drop-shadow(0 9px 16px rgba(124, 58, 237, 0.45));
+  }
+}
+
+@keyframes icon3dFloatSubtle {
+  0%, 100% {
+    transform: translateY(0px) rotateX(0deg) rotateY(0deg);
+  }
+  50% {
+    transform: translateY(-3px) rotateX(5deg) rotateY(-5deg);
+  }
+}
+
+@keyframes icon3dPulse {
+  0%, 100% {
+    transform: scale(1) translateZ(0px);
+    box-shadow: 0 8px 24px -4px rgba(124, 58, 237, 0.5), inset 0 2px 3px rgba(255, 255, 255, 0.45);
+  }
+  50% {
+    transform: scale(1.08) translateZ(10px);
+    box-shadow: 0 16px 36px -2px rgba(168, 85, 247, 0.8), 0 0 28px 4px rgba(192, 132, 252, 0.55), inset 0 2px 4px rgba(255, 255, 255, 0.75);
+  }
+}
+
+@keyframes icon3dActivePulse {
+  0%, 100% {
+    transform: translateY(-2px) scale(1) translateZ(8px);
+    box-shadow: 0 10px 28px -2px rgba(168, 85, 247, 0.65), 0 0 18px 2px rgba(147, 51, 234, 0.45), inset 0 2px 3px rgba(255, 255, 255, 0.6);
+  }
+  50% {
+    transform: translateY(-5px) scale(1.1) translateZ(16px);
+    box-shadow: 0 18px 38px -2px rgba(168, 85, 247, 0.9), 0 0 32px 6px rgba(192, 132, 252, 0.7), inset 0 2px 4px rgba(255, 255, 255, 0.85);
+  }
+}
+
+@keyframes icon3dShine {
+  0% {
+    background-position: -200% -200%;
+  }
+  25%, 100% {
+    background-position: 200% 200%;
+  }
+}
+
+@keyframes coin3dRotate {
+  0%, 100% {
+    transform: rotateY(0deg) translateY(0);
+    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.45), inset 0 2px 2px rgba(255, 255, 255, 0.65), inset 0 -2px 3px rgba(180, 83, 9, 0.7);
+  }
+  25% {
+    transform: rotateY(25deg) translateY(-2px);
+    box-shadow: -4px 8px 22px rgba(245, 158, 11, 0.6), inset 0 2px 3px rgba(255, 255, 255, 0.8), inset 0 -2px 3px rgba(180, 83, 9, 0.7);
+  }
+  50% {
+    transform: rotateY(0deg) translateY(-4.5px);
+    box-shadow: 0 12px 28px rgba(245, 158, 11, 0.75), inset 0 2px 4px rgba(255, 255, 255, 0.9), inset 0 -2px 4px rgba(180, 83, 9, 0.8);
+  }
+  75% {
+    transform: rotateY(-25deg) translateY(-2px);
+    box-shadow: 4px 8px 22px rgba(245, 158, 11, 0.6), inset 0 2px 3px rgba(255, 255, 255, 0.8), inset 0 -2px 3px rgba(180, 83, 9, 0.7);
+  }
+}
+
+@keyframes icon3dGlowRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(168, 85, 247, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+  }
+}
+
+/* ── Base Animated Icon & SVG depth ── */
+.animated-icon {
+  flex-shrink: 0;
+  overflow: visible;
+  vertical-align: middle;
+  transform-style: preserve-3d;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
+}
+
+.store-icon {
+  color: inherit;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), filter 0.28s ease;
+}
+
+.store-icon .icon-gold {
+  color: var(--gold, #ffd27a);
+  filter: drop-shadow(0 0 6px rgba(255, 210, 122, 0.65));
+}
+
+/* ── Universal 3D Icon Box: .row-ico ── */
+.row-ico {
+  display: inline-grid;
+  place-items: center;
+  position: relative;
+  flex-shrink: 0;
+  perspective: 600px;
+  transform-style: preserve-3d;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(139, 92, 246, 0.35) 50%, rgba(99, 102, 241, 0.22) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    0 8px 22px -4px rgba(124, 58, 237, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.35);
+  color: #fff;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.32s ease, border-color 0.32s ease;
+  animation: icon3dFloat 6s ease-in-out infinite;
+}
+
+.row-ico::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, transparent 60%);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.row-ico > svg,
+.row-ico > .store-icon {
+  transform: translateZ(8px);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.row-ico:hover {
+  transform: translateY(-5px) translateZ(18px) rotateX(10deg) rotateY(-8deg) scale(1.12);
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 16px 36px -6px rgba(147, 51, 234, 0.7),
+    0 0 26px 4px rgba(192, 132, 252, 0.45),
+    inset 0 2px 4px rgba(255, 255, 255, 0.7),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.45);
+}
+
+.row-ico:hover > svg,
+.row-ico:hover > .store-icon {
+  transform: translateZ(16px) scale(1.1);
+}
+
+/* ── 3D Mobile BottomNav: .nav-ico ── */
+.app-shell .bottomnav .nav-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  perspective: 600px;
+  transform-style: preserve-3d;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.1) 0%, rgba(139, 92, 246, 0.22) 50%, rgba(99, 102, 241, 0.14) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 6px 16px -4px rgba(0, 0, 0, 0.6),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.35),
+    inset 0 -1.5px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.26s ease, background 0.26s ease;
+  animation: icon3dFloatSubtle 5s ease-in-out infinite;
+}
+
+.app-shell .bottomnav .nav-ico > svg,
+.app-shell .bottomnav .nav-ico > .store-icon {
+  width: 21px;
+  height: 21px;
+  transform: translateZ(6px);
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), color 0.26s ease;
+}
+
+.app-shell .bottomnav button:hover .nav-ico {
+  transform: translateY(-3px) scale(1.08) translateZ(10px);
+  border-color: rgba(192, 132, 252, 0.45);
+  box-shadow:
+    0 10px 24px -2px rgba(147, 51, 234, 0.55),
+    0 0 18px 2px rgba(192, 132, 252, 0.35),
+    inset 0 2px 3px rgba(255, 255, 255, 0.55);
+}
+
+.app-shell .bottomnav button.active .nav-ico {
+  background: linear-gradient(140deg, rgba(168, 85, 247, 0.45) 0%, rgba(124, 58, 237, 0.35) 50%, rgba(236, 72, 153, 0.25) 100%);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+  animation: icon3dActivePulse 3s ease-in-out infinite;
+}
+
+.app-shell .bottomnav button.active .nav-ico > svg,
+.app-shell .bottomnav button.active .nav-ico > .store-icon {
+  color: #ffffff;
+  transform: translateZ(12px) scale(1.12);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.65)) drop-shadow(0 4px 8px rgba(124, 58, 237, 0.8));
+}
+
+/* ── 3D Admin Sidebar: .admin-side-ico ── */
+.admin-side-ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  flex: 0 0 36px;
+  perspective: 600px;
+  transform-style: preserve-3d;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.12) 0%, rgba(139, 92, 246, 0.22) 50%, rgba(99, 102, 241, 0.12) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 6px 18px -4px rgba(0, 0, 0, 0.55),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.35),
+    inset 0 -1.5px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.26s ease, border-color 0.26s ease;
+  animation: icon3dFloatSubtle 6s ease-in-out infinite;
+}
+
+.admin-side-ico > svg {
+  transform: translateZ(6px);
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
+  transition: transform 0.26s ease;
+}
+
+.admin-side-item:hover .admin-side-ico {
+  transform: translateY(-3px) translateZ(12px) rotateX(8deg) rotateY(-8deg) scale(1.1);
+  border-color: rgba(192, 132, 252, 0.45);
+  box-shadow:
+    0 12px 28px -4px rgba(147, 51, 234, 0.6),
+    0 0 20px 2px rgba(192, 132, 252, 0.35),
+    inset 0 2px 3px rgba(255, 255, 255, 0.55);
+}
+
+.admin-side-item.active .admin-side-ico {
+  background: linear-gradient(140deg, rgba(168, 85, 247, 0.48) 0%, rgba(124, 58, 237, 0.4) 50%, rgba(236, 72, 153, 0.25) 100%);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 10px 28px -2px rgba(168, 85, 247, 0.7),
+    0 0 22px 2px rgba(192, 132, 252, 0.5),
+    inset 0 2px 3px rgba(255, 255, 255, 0.65);
+  animation: icon3dActivePulse 3s ease-in-out infinite;
+}
+
+.admin-side-item.active .admin-side-ico > svg {
+  color: #fff;
+  transform: translateZ(10px) scale(1.1);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7));
+}
+
+/* ── 3D Golden Currency Coin: .coin-dot ── */
+.coin-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  position: relative;
+  perspective: 500px;
+  transform-style: preserve-3d;
+  background: radial-gradient(circle at 35% 30%, #fff7d1 0%, #ffc83b 40%, #d97706 80%, #92400e 100%);
+  border: 1px solid rgba(255, 235, 150, 0.85);
+  box-shadow:
+    0 6px 16px rgba(245, 158, 11, 0.45),
+    inset 0 2px 2px rgba(255, 255, 255, 0.7),
+    inset 0 -2px 3px rgba(180, 83, 9, 0.7);
+  color: #3b2000;
+  font-weight: 900;
+  flex-shrink: 0;
+  animation: coin3dRotate 5s ease-in-out infinite;
+}
+
+.coin-dot::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+.coin-dot > span {
+  position: relative;
+  z-index: 2;
+  transform: translateZ(4px);
+  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.4));
+}
+
+/* ── 3D Brand & Store Emblem: .brand-logo, .store-logo, .admin-side-logo ── */
+.brand-logo,
+.store-logo,
+.admin-side-logo,
+.admin-login-badge {
+  perspective: 700px;
+  transform-style: preserve-3d;
+  background: linear-gradient(135deg, #a855f7 0%, #6366f1 50%, #3b82f6 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 12px 30px -4px rgba(124, 58, 237, 0.6),
+    0 0 20px 2px rgba(168, 85, 247, 0.35),
+    inset 0 2px 3px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4) !important;
+  animation: icon3dFloat 6.5s ease-in-out infinite;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.brand-logo:hover,
+.store-logo:hover,
+.admin-side-logo:hover {
+  transform: translateY(-4px) translateZ(16px) rotateX(10deg) rotateY(-10deg) scale(1.1);
+  box-shadow:
+    0 18px 40px -4px rgba(124, 58, 237, 0.8),
+    0 0 32px 6px rgba(192, 132, 252, 0.55),
+    inset 0 2px 4px rgba(255, 255, 255, 0.8) !important;
+}
+
+.brand-logo b,
+.store-logo b,
+.admin-side-logo svg,
+.admin-login-badge svg {
+  transform: translateZ(10px);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+}
+
+/* ── 3D Avatar Profile: .avatar-btn, .admin-avatar ── */
+.avatar-btn,
+.admin-avatar {
+  perspective: 600px;
+  transform-style: preserve-3d;
+  background: linear-gradient(140deg, #ec4899 0%, #8b5cf6 50%, #3b82f6 100%) !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow:
+    0 8px 22px -3px rgba(168, 85, 247, 0.55),
+    inset 0 2px 3px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.35);
+  animation: icon3dFloatSubtle 5.5s ease-in-out infinite;
+  transition: transform 0.28s ease, box-shadow 0.28s ease;
+}
+
+.avatar-btn:hover,
+.admin-avatar:hover {
+  transform: translateY(-3px) scale(1.08) translateZ(12px);
+  box-shadow:
+    0 14px 32px -2px rgba(168, 85, 247, 0.75),
+    0 0 24px 2px rgba(236, 72, 153, 0.45),
+    inset 0 2px 4px rgba(255, 255, 255, 0.75);
+}
+
+/* ── 3D Service Cards & Quick Action Tiles ── */
+.service-card .row-ico,
+.quick-action .row-ico {
+  animation: icon3dFloat 5s ease-in-out infinite;
+}
+
+.service-card:hover .row-ico,
+.quick-action:hover .row-ico {
+  transform: translateY(-6px) translateZ(22px) rotateX(12deg) rotateY(-10deg) scale(1.15);
+  box-shadow:
+    0 18px 40px -4px rgba(147, 51, 234, 0.75),
+    0 0 30px 4px rgba(192, 132, 252, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.75);
+}
+
+/* ── 3D Announcement & Empty State Badges ── */
+.announce-ico,
+.empty-ico {
+  perspective: 700px;
+  transform-style: preserve-3d;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(139, 92, 246, 0.35) 50%, rgba(99, 102, 241, 0.2) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 10px 26px -4px rgba(124, 58, 237, 0.5),
+    inset 0 2px 3px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.35);
+  animation: icon3dFloat 6s ease-in-out infinite;
+}
+
+.announce-ico > svg,
+.empty-ico > svg {
+  transform: translateZ(8px);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+/* ── 3D Color Tone Variants ── */
+/* Gold / Coins / VIP */
+.row-ico.gold,
+.row-ico.tone-gold,
+.chip-gold > svg {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(245, 158, 11, 0.45) 50%, rgba(217, 119, 6, 0.3) 100%);
+  border-color: rgba(255, 214, 102, 0.45);
+  color: #ffdb8f;
+  box-shadow:
+    0 8px 24px -4px rgba(245, 158, 11, 0.5),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 3px rgba(180, 83, 9, 0.4);
+}
+
+/* OK / Emerald / Verified */
+.row-ico.ok,
+.row-ico.tone-ok,
+.chip-ok > svg {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(16, 185, 129, 0.42) 50%, rgba(5, 150, 105, 0.25) 100%);
+  border-color: rgba(110, 231, 183, 0.45);
+  color: #6ee7b7;
+  box-shadow:
+    0 8px 24px -4px rgba(16, 185, 129, 0.5),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.55),
+    inset 0 -2px 3px rgba(4, 120, 87, 0.4);
+}
+
+/* Info / Electric Cyan / Websites */
+.row-ico.info,
+.row-ico.tone-info,
+.chip-info > svg {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(6, 182, 212, 0.42) 50%, rgba(14, 165, 233, 0.25) 100%);
+  border-color: rgba(103, 232, 249, 0.45);
+  color: #67e8f9;
+  box-shadow:
+    0 8px 24px -4px rgba(6, 182, 212, 0.5),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.55),
+    inset 0 -2px 3px rgba(3, 105, 161, 0.4);
+}
+
+/* Danger / Ruby Flame */
+.row-ico.danger,
+.row-ico.tone-danger,
+.chip-danger > svg {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(244, 63, 94, 0.45) 50%, rgba(225, 29, 72, 0.28) 100%);
+  border-color: rgba(253, 164, 175, 0.45);
+  color: #fda4af;
+  box-shadow:
+    0 8px 24px -4px rgba(244, 63, 94, 0.5),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.55),
+    inset 0 -2px 3px rgba(159, 18, 57, 0.4);
+}
+
+/* ── 3D Button Micro-Icons ── */
+.btn > svg {
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), filter 0.24s ease;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.btn:hover > svg {
+  transform: translateY(-2px) scale(1.15) translateZ(8px);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+}
+
+.btn-primary:hover > svg {
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8)) drop-shadow(0 4px 8px rgba(124, 58, 237, 0.9));
+}
+
+.btn-gold:hover > svg {
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.85)) drop-shadow(0 4px 8px rgba(180, 83, 9, 0.9));
+}
+
+/* ── Refresh / Spinning 3D Icons ── */
+.animate-spin-3d {
+  animation: icon3dSpinSlow 3s linear infinite;
+}
