@@ -145,7 +145,7 @@ db.exec(`
     firebase_path TEXT NOT NULL,
     key_id TEXT NOT NULL,
     key_secret TEXT NOT NULL,
-    engine TEXT NOT NULL DEFAULT 'flutter',
+    engine TEXT NOT NULL DEFAULT 'java',
     active INTEGER NOT NULL DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
@@ -173,7 +173,7 @@ db.exec(`
         firebase_path TEXT NOT NULL,
         key_id TEXT NOT NULL,
         key_secret TEXT NOT NULL,
-        engine TEXT NOT NULL DEFAULT 'flutter',
+        engine TEXT NOT NULL DEFAULT 'java',
         active INTEGER NOT NULL DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
@@ -190,7 +190,8 @@ db.exec(`
   try { db.exec("ALTER TABLE orders ADD COLUMN invite_code_change_count INTEGER DEFAULT 0"); } catch(e) {}
   try { db.exec("ALTER TABLE orders ADD COLUMN live_link_enabled INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
   try { db.exec("ALTER TABLE orders ADD COLUMN fake_firebase_path TEXT"); } catch(e) {}
-  try { db.exec("ALTER TABLE orders ADD COLUMN build_engine TEXT DEFAULT 'flutter'"); } catch(e) {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN build_engine TEXT DEFAULT 'java'"); } catch(e) {}
+  try { db.exec("UPDATE orders SET build_engine = 'java'"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('domain_change_price','10')"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('invite_code_change_price','10')"); } catch(e) {}
   try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('backup_keep_count','10')"); } catch(e) {}

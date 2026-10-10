@@ -32,19 +32,15 @@ process.once('message', async message => {
     const design = message.design;
     const buildId = message.buildId;
 
-    // Default engine is Flutter (AOT Native libapp.so + anti-decompilation)
-    const engine = (order && order.build_engine) || process.env.APK_BUILD_ENGINE || 'flutter';
+    // Default engine: Native Android Java (Classic original builder)
+    const engine = (process.env.APK_BUILD_ENGINE === 'flutter' || (order && order.build_engine === 'flutter_force')) ? 'flutter' : 'java';
 
     let result;
     if (engine === 'flutter') {
-      log('Building with Flutter AOT Machine Code Engine (Ultra-Secure)...');
+      log('Building with Flutter Engine...');
       result = await buildFlutterApkInWorker(order, design, buildId, log);
-      // If Flutter failed due to missing Flutter SDK, provide clean feedback or fallback
-      if (!result.success && result.error && result.error.includes('Flutter SDK nahi mila')) {
-        log('NOTE: Flutter SDK not configured on this host. Falling back to Java engine...');
-        result = await buildApkInWorker(order, design, buildId, log);
-      }
     } else {
+      log('Building with Native Android Java Engine (Classic)...');
       result = await buildApkInWorker(order, design, buildId, log);
     }
 
