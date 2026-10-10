@@ -142,6 +142,14 @@ function Panel() {
 
   return (
     <div className="app-shell">
+      {/* ── Dynamic Cosmic Aurora & Stardust Background Canvas ── */}
+      <div className="cosmic-canvas" aria-hidden="true">
+        <div className="cosmic-nebula nebula-1" />
+        <div className="cosmic-nebula nebula-2" />
+        <div className="cosmic-nebula nebula-3" />
+        <div className="cosmic-stars" />
+        <div className="cosmic-grid-shimmer" />
+      </div>
 
 
       <TopBar

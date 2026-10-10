@@ -29,7 +29,7 @@ function observe(node){
 function makeIcon(name){
  function Icon({size=24,className='',...props}){
   const ref=useRef(null);useEffect(()=>observe(ref.current),[]);
-  return <svg ref={ref} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props} className={`animated-icon store-icon animated-${name.toLowerCase()} ${className}`} dangerouslySetInnerHTML={{__html:drawings[name]}}/>;
+  return <svg ref={ref} width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props} className={`animated-icon store-icon icon-3d animated-${name.toLowerCase()} ${className}`} dangerouslySetInnerHTML={{__html:drawings[name]}}/>;
  }
  Icon.displayName=`Animated${name}`;return Icon;
 }

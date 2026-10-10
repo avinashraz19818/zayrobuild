@@ -2563,6 +2563,121 @@ a { color: var(--brand-2); text-decoration: none; }
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* Dynamic Aurora Ambient Mesh Lighting behind the Glass */
+/* ══════════════════════════════════════════════════════════════════════════
+   DYNAMIC COSMIC AURORA & STARDUST BACKGROUND ENGINE
+   ══════════════════════════════════════════════════════════════════════════ */
+.app-shell {
+  background: transparent !important;
+  position: relative;
+  min-height: 100vh;
+}
+
+.cosmic-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 0%, #0e122b 0%, #080a18 55%, #04050d 100%) !important;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+/* Floating High-Definition Nebula Orbs */
+.cosmic-nebula {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.68;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0);
+}
+
+.nebula-1 {
+  width: 580px;
+  height: 580px;
+  top: -120px;
+  left: -90px;
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.48) 0%, rgba(124, 58, 237, 0.28) 50%, transparent 70%);
+  animation: cosmicDriftOne 22s ease-in-out infinite alternate;
+}
+
+.nebula-2 {
+  width: 520px;
+  height: 520px;
+  top: 15%;
+  right: -130px;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.42) 0%, rgba(59, 130, 246, 0.25) 50%, transparent 70%);
+  animation: cosmicDriftTwo 26s ease-in-out infinite alternate;
+}
+
+.nebula-3 {
+  width: 620px;
+  height: 620px;
+  bottom: -160px;
+  left: 15%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.35) 0%, rgba(139, 92, 246, 0.22) 50%, transparent 70%);
+  animation: cosmicDriftThree 30s ease-in-out infinite alternate;
+}
+
+@keyframes cosmicDriftOne {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(70px, 90px, 0) scale(1.18); opacity: 0.85; }
+  100% { transform: translate3d(-40px, 130px, 0) scale(0.92); opacity: 0.6; }
+}
+
+@keyframes cosmicDriftTwo {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-90px, 70px, 0) scale(1.15); opacity: 0.8; }
+  100% { transform: translate3d(-50px, -50px, 0) scale(0.95); opacity: 0.55; }
+}
+
+@keyframes cosmicDriftThree {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(60px, -70px, 0) scale(1.14); opacity: 0.8; }
+  100% { transform: translate3d(-80px, 40px, 0) scale(0.9); opacity: 0.6; }
+}
+
+/* Twinkling Stardust Particles Grid */
+.cosmic-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.8px 1.8px at 15% 12%, rgba(255, 255, 255, 0.95), transparent),
+    radial-gradient(1.4px 1.4px at 35% 28%, rgba(192, 132, 252, 0.9), transparent),
+    radial-gradient(2.2px 2.2px at 72% 18%, rgba(56, 189, 248, 0.95), transparent),
+    radial-gradient(1.4px 1.4px at 85% 42%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(1.8px 1.8px at 22% 65%, rgba(244, 63, 94, 0.9), transparent),
+    radial-gradient(1.4px 1.4px at 60% 75%, rgba(254, 240, 138, 0.9), transparent),
+    radial-gradient(2px 2px at 45% 90%, rgba(56, 189, 248, 0.85), transparent),
+    radial-gradient(1.4px 1.4px at 90% 88%, rgba(192, 132, 252, 0.9), transparent),
+    radial-gradient(1.2px 1.2px at 8% 45%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1.6px 1.6px at 52% 48%, rgba(255, 255, 255, 0.9), transparent);
+  background-size: 360px 360px;
+  animation: cosmicStarTwinkle 5s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes cosmicStarTwinkle {
+  0% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.02); }
+  100% { opacity: 0.55; transform: scale(0.99); }
+}
+
+/* Horizon Ambient Grid / Perspective Mesh */
+.cosmic-grid-shimmer {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(147, 51, 234, 0.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(147, 51, 234, 0.05) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(ellipse 90% 60% at 50% 50%, #000 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 60% at 50% 50%, #000 30%, transparent 80%);
+  pointer-events: none;
+}
+
 body::before {
   content: '';
   position: fixed;
@@ -2570,10 +2685,10 @@ body::before {
   z-index: -2;
   pointer-events: none;
   background-image:
-    radial-gradient(1100px 650px at 8% -10%, rgba(168, 85, 247, 0.32), transparent 60%),
-    radial-gradient(900px 550px at 98% 5%, rgba(56, 189, 248, 0.20), transparent 58%),
-    radial-gradient(1000px 700px at 50% 115%, rgba(139, 92, 246, 0.24), transparent 62%),
-    radial-gradient(750px 520px at -5% 60%, rgba(236, 72, 153, 0.16), transparent 55%),
+    radial-gradient(1100px 650px at 8% -10%, rgba(168, 85, 247, 0.36), transparent 60%),
+    radial-gradient(900px 550px at 98% 5%, rgba(56, 189, 248, 0.24), transparent 58%),
+    radial-gradient(1000px 700px at 50% 115%, rgba(139, 92, 246, 0.28), transparent 62%),
+    radial-gradient(750px 520px at -5% 60%, rgba(236, 72, 153, 0.2), transparent 55%),
     linear-gradient(180deg, #090b1c 0%, #060714 100%) !important;
   transform: translateZ(0);
 }
@@ -2585,16 +2700,16 @@ body::after {
   z-index: -1;
   pointer-events: none;
   background-image:
-    radial-gradient(700px 450px at 85% 65%, rgba(99, 102, 241, 0.16), transparent 60%),
-    radial-gradient(600px 400px at 20% 85%, rgba(16, 185, 129, 0.12), transparent 55%),
-    radial-gradient(550px 380px at 50% 30%, rgba(245, 158, 11, 0.08), transparent 50%);
+    radial-gradient(750px 480px at 85% 65%, rgba(99, 102, 241, 0.2), transparent 60%),
+    radial-gradient(650px 420px at 20% 85%, rgba(16, 185, 129, 0.15), transparent 55%),
+    radial-gradient(580px 400px at 50% 30%, rgba(245, 158, 11, 0.1), transparent 50%);
   animation: glassAuroraDrift 14s ease-in-out infinite alternate;
   transform: translateZ(0);
 }
 
 @keyframes glassAuroraDrift {
   0% {
-    opacity: 0.65;
+    opacity: 0.7;
     transform: scale(1) translate(0, 0);
   }
   50% {
@@ -2602,49 +2717,142 @@ body::after {
     transform: scale(1.08) translate(15px, -10px);
   }
   100% {
-    opacity: 0.75;
+    opacity: 0.8;
     transform: scale(0.96) translate(-10px, 15px);
   }
 }
 
 /* Glassmorphic Sticky Header (TopBar) */
 .topbar {
-  background: rgba(10, 13, 32, 0.68) !important;
-  backdrop-filter: blur(24px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 10px 35px -10px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.16) !important;
+  background: rgba(10, 13, 32, 0.72) !important;
+  backdrop-filter: blur(28px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(210%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 10px 35px -10px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.18) !important;
 }
 
 .topbar::after {
   background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.7), rgba(56, 189, 248, 0.6), transparent) !important;
 }
 
-/* Floating Glassmorphic Dock Bottom Navigation */
+/* ══════════════════════════════════════════════════════════════════════════
+   ULTRA-LUXURY LIQUID GLASS FLOATING DOCK (BOTTOM NAVIGATION)
+   ══════════════════════════════════════════════════════════════════════════ */
 .bottomnav {
-  left: 14px !important;
-  right: 14px !important;
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
-  max-width: 520px !important;
-  margin: 0 auto !important;
-  border-radius: 26px !important;
-  background: rgba(13, 16, 38, 0.75) !important;
-  backdrop-filter: blur(28px) saturate(210%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(210%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  position: fixed !important;
+  left: 50% !important;
+  transform: translateX(-50%) translateZ(0) !important;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  width: min(500px, calc(100vw - 20px)) !important;
+  height: 64px !important;
+  margin: 0 !important;
+  border-radius: 9999px !important;
+  background: rgba(11, 14, 29, 0.76) !important;
+  backdrop-filter: blur(32px) saturate(220%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(220%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
   box-shadow:
-    0 22px 50px -10px rgba(0, 0, 0, 0.88),
-    0 0 28px -4px rgba(147, 51, 234, 0.35),
-    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.32),
-    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.4) !important;
-  padding: 6px 8px !important;
+    0 24px 50px -10px rgba(0, 0, 0, 0.9),
+    0 0 35px -5px rgba(139, 92, 246, 0.45),
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.5) !important;
+  padding: 4px 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-around !important;
+  z-index: 80 !important;
+  box-sizing: border-box !important;
 }
 
-.bottomnav button.active {
-  background: linear-gradient(180deg, rgba(168, 85, 247, 0.28), rgba(124, 58, 237, 0.1)) !important;
-  border: 1px solid rgba(192, 132, 252, 0.35) !important;
-  box-shadow: 0 4px 18px -2px rgba(168, 85, 247, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25) !important;
+.bottomnav button {
+  flex: 1 !important;
+  height: 100% !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  padding: 4px 2px !important;
+  border-radius: 20px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  color: rgba(203, 213, 225, 0.72) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.15px !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
+
+.bottomnav button:active {
+  transform: scale(0.92) !important;
+}
+
+/* Inactive Icon container: completely clean, no square box! */
+.bottomnav .nav-ico {
+  display: grid !important;
+  place-items: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.bottomnav button:hover .nav-ico {
+  transform: translateY(-2px) scale(1.08) !important;
+}
+
+/* Active Dock Item: Floating Glowing Jewel Pill */
+.bottomnav button.active {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(99, 102, 241, 0.18) 100%) !important;
+  border: 1px solid rgba(216, 180, 254, 0.48) !important;
+  border-radius: 20px !important;
+  box-shadow:
+    0 4px 18px -2px rgba(168, 85, 247, 0.58),
+    0 0 16px rgba(192, 132, 252, 0.35),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.5) !important;
+}
+
+.bottomnav button.active .nav-ico {
+  transform: translateY(-2px) scale(1.15) !important;
+}
+
+.bottomnav button.active span {
+  color: #ffffff !important;
+  font-weight: 750 !important;
+  text-shadow: 0 0 10px rgba(192, 132, 252, 0.85) !important;
+}
+
+/* Floating Laser Beam Indicator */
+.bottomnav .nav-dot {
+  position: absolute !important;
+  top: 3px !important;
+  width: 20px !important;
+  height: 3px !important;
+  border-radius: 99px !important;
+  background: linear-gradient(90deg, #38bdf8, #c084fc, #ec4899) !important;
+  box-shadow: 0 0 10px #c084fc, 0 0 4px #ffffff !important;
+  animation: navDotGlow 2s ease-in-out infinite !important;
+}
+
+@keyframes navDotGlow {
+  0%, 100% { opacity: 0.85; transform: scaleX(1); }
+  50% { opacity: 1; transform: scaleX(1.25); box-shadow: 0 0 14px #e879f9, 0 0 6px #ffffff; }
+}
+
+/* Telegram Floating Medallion position adjustment */
+.telegram-support {
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+  z-index: 75 !important;
+}
+
 
 /* Glass Cards & Containers */
 .card,

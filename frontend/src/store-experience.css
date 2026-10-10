@@ -12,13 +12,6 @@
 /* Compact wallet; the oversized home bot promotion has been removed. */
 .home-premium .premium-wallet{padding:15px 16px;border-radius:19px;gap:10px;flex-wrap:nowrap}.home-premium .premium-wallet .grow{min-width:0}.home-premium .premium-wallet .balance-value{font-size:clamp(23px,6.5vw,30px);margin:6px 0;letter-spacing:-1px;overflow-wrap:anywhere}.home-premium .premium-wallet .balance-value svg{width:20px;height:20px}.home-premium .premium-wallet .label{font-size:9px;letter-spacing:1.6px}.home-premium .premium-wallet .balance-note{font-size:9px}.home-premium .wallet-fund-btn{min-height:39px;padding:9px 12px;font-size:10px;gap:6px;flex-shrink:0}.home-premium .wallet-fund-icon svg{width:18px;height:18px}.home-premium .wallet-fund-btn>svg{display:none}
 /* Avoid repainting the whole page through fixed blurred surfaces during scrolling. */
-.overlay{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(4,6,16,.82)}
-.app-shell .bottomnav,.app-shell .topbar{backdrop-filter:none;-webkit-backdrop-filter:none;background:#101023}
-.app-shell .bottomnav button.active svg{filter:none}
-@media(max-width:700px){.app-shell .service-card,.app-shell .tpl-card,.app-shell .site-product{box-shadow:none}}
-/* Stop catalog-wide shimmer/layout loops; motion is concentrated in visible icons. */
-.app-shell::before{animation:none;filter:none}
-.app-shell .tpl-shine{display:none}
-.app-shell .store-banner-orb,.app-shell .deploy-hero-glow,.app-shell .gift-burst{animation:none;filter:none}
-.app-shell .gift-cta::after{animation:none;display:none}
-.app-shell .btn-primary::after,.overlay .btn-primary::after{animation:none;display:none}
+/* Glassmorphic dock and ambient lighting active */
+.app-shell .bottomnav button.active { transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+

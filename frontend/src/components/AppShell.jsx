@@ -120,7 +120,7 @@ export function BottomNav({ tab, setTab, orderCount }) {
           <button key={item.key} data-sfx="nav" className={active ? 'active' : ''} onClick={() => setTab(item.key)}>
             {active && <span className="nav-dot" />}
             {item.key === 'orders' && orderCount > 0 && <span className="nav-badge">{orderCount > 9 ? '9+' : orderCount}</span>}
-            <span className="nav-ico"><Icon size={20} /></span>
+            <span className="nav-ico"><Icon size={24} /></span>
             <span>{item.label}</span>
           </button>
         );
