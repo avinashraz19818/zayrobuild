@@ -13,6 +13,26 @@ subprojects {
     project.evaluationDependsOn(':app')
 }
 
+subprojects {
+    project.configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'androidx.core' && (details.requested.name == 'core' || details.requested.name == 'core-ktx')) {
+                details.useVersion '1.13.1'
+                details.because 'Compatible with compileSdk 34 and AGP 8.7'
+            }
+            if (details.requested.group == 'androidx.activity') {
+                details.useVersion '1.9.3'
+            }
+            if (details.requested.group == 'androidx.fragment') {
+                details.useVersion '1.8.5'
+            }
+            if (details.requested.group == 'androidx.browser') {
+                details.useVersion '1.8.0'
+            }
+        }
+    }
+}
+
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }

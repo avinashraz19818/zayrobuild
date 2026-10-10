@@ -18,7 +18,7 @@ const os = require('os');
 const path = require('path');
 const tls = require('tls');
 const crypto = require('crypto');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawn } = require('child_process');
 const sharp = require('sharp');
 const { encryptHtmlToBin, generateBuildPassword } = require('./encrypt');
 const { applyFontStyle } = require('./fontstyles');
@@ -397,35 +397,71 @@ async function buildFlutterApkInWorker(order, design, buildId, logCallback) {
       ANDROID_SDK_ROOT: ANDROID_HOME,
       PATH: `${process.env.PATH}:${ANDROID_HOME}/build-tools/34.0.0:${ANDROID_HOME}/platform-tools`
     };
+    // Ensure fast official Google repositories instead of throttled/laggy regional mirrors
+    if (buildEnv.FLUTTER_STORAGE_BASE_URL && buildEnv.FLUTTER_STORAGE_BASE_URL.includes('flutter-io.cn')) {
+      delete buildEnv.FLUTTER_STORAGE_BASE_URL;
+    }
+    if (buildEnv.PUB_HOSTED_URL && buildEnv.PUB_HOSTED_URL.includes('flutter-io.cn')) {
+      delete buildEnv.PUB_HOSTED_URL;
+    }
+
+    const runFlutterStream = (args) => {
+      return new Promise((resolve) => {
+        let out = '';
+        const child = spawn(FLUTTER_BIN, args, {
+          cwd: projectDir,
+          env: buildEnv,
+          stdio: ['ignore', 'pipe', 'pipe']
+        });
+
+        const onData = (buf) => {
+          const s = buf.toString();
+          out += s;
+          const lines = s.split(/\r?\n/);
+          for (const rawLine of lines) {
+            const line = rawLine.trim();
+            if (!line) continue;
+            if (line.startsWith('Woah! You appear') || line.startsWith('We strongly recommend') || line.startsWith('Picked up JAVA_TOOL_OPTIONS')) continue;
+            log(line);
+          }
+        };
+
+        child.stdout.on('data', onData);
+        child.stderr.on('data', onData);
+
+        const timer = setTimeout(() => {
+          try { child.kill('SIGKILL'); } catch (_) {}
+          resolve({ ok: false, out: out + '\n[Flutter build timed out after 15 minutes]' });
+        }, 900000);
+
+        child.on('close', (code) => {
+          clearTimeout(timer);
+          resolve({ ok: code === 0, out });
+        });
+
+        child.on('error', (err) => {
+          clearTimeout(timer);
+          resolve({ ok: false, out: out + '\n' + (err.message || err) });
+        });
+      });
+    };
 
     // ── flutter pub get ──
     log('Resolving dependencies (flutter pub get)...');
-    try {
-      execFileSync(FLUTTER_BIN, ['pub', 'get'], { cwd: projectDir, stdio: 'pipe', timeout: 300000, env: buildEnv });
-    } catch (e) {
-      throw new Error('flutter pub get failed: ' + String(e.stdout || '') + String(e.stderr || '').slice(-800));
+    const pgr = await runFlutterStream(['pub', 'get']);
+    if (!pgr.ok) {
+      throw new Error('flutter pub get failed: ' + pgr.out.slice(-800));
     }
 
     // ── flutter build apk (release + obfuscate) ──
     const sdiDir = path.join(buildDir, 'symbols');
     const buildArgs = ['build', 'apk', '--release', '--obfuscate', `--split-debug-info=${sdiDir}`, '--android-skip-build-dependency-validation'];
     log('Compiling Flutter APK with AOT Machine Code Obfuscation...');
-    const runFlutter = (args) => {
-      try {
-        const r = execFileSync(FLUTTER_BIN, args, {
-          stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 32 * 1024 * 1024,
-          cwd: projectDir, env: buildEnv, timeout: 900000
-        });
-        return { ok: true, out: String(r) };
-      } catch (e) {
-        return { ok: false, out: String(e.stdout || '') + String(e.stderr || '') + String(e.message || '') };
-      }
-    };
 
-    let fr = runFlutter(buildArgs);
+    let fr = await runFlutterStream(buildArgs);
     if (!fr.ok) {
       log('Obfuscated build failed — retrying standard release build...');
-      fr = runFlutter(['build', 'apk', '--release', '--android-skip-build-dependency-validation']);
+      fr = await runFlutterStream(['build', 'apk', '--release', '--android-skip-build-dependency-validation']);
       if (!fr.ok) throw new Error('flutter build apk failed: ' + fr.out.slice(-2000));
       log('Standard release build succeeded.');
     } else {
