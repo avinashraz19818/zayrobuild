@@ -69,6 +69,10 @@ public class MainActivity extends Activity {
 	private volatile String pendingStartupSound = null;
 	private android.speech.tts.TextToSpeech ttsEngine;
 	private volatile boolean ttsReady = false;
+	private MediaPlayer introPlayer = null;
+	private MediaPlayer currentPlayer = null;
+	private final Object audioLock = new Object();
+	private final java.util.concurrent.atomic.AtomicReference<String> curPlayingSound = new java.util.concurrent.atomic.AtomicReference<>("");
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -506,9 +510,6 @@ public class MainActivity extends Activity {
 			}
 		}, "ZAYROUI");
 		
-		final java.util.concurrent.atomic.AtomicReference AP = new java.util.concurrent.atomic.AtomicReference(null);
-		final java.util.concurrent.atomic.AtomicReference CUR_NAME = new java.util.concurrent.atomic.AtomicReference("");
-		
 		final ZayroBridge BR = new ZayroBridge() {
 			@android.webkit.JavascriptInterface
 			public void speak(final String t) {
@@ -538,56 +539,94 @@ public class MainActivity extends Activity {
 				if (f == null) return;
 				String rawName = f.trim();
 				if (rawName.length() == 0) return;
-				final String soundName = new java.io.File(rawName).getName();
+				String soundName = new java.io.File(rawName).getName();
+				if (!soundName.toLowerCase(java.util.Locale.US).endsWith(".mp3")) {
+					soundName = soundName + ".mp3";
+				}
 				String lowerName = soundName.toLowerCase(java.util.Locale.US);
 				final String playableName = lowerName.equals("loginw.mp3") ? "bypass.mp3" : soundName;
+				
 				// While splash/loading is visible, ONLY intro.mp3 can play! Save requested startup sound
 				if (!loadingDismissed.get()) {
-					if (!lowerName.equals("intro.mp3")) {
-						pendingStartupSound = playableName;
+					if (lowerName.equals("intro.mp3")) {
 						return;
 					}
+					pendingStartupSound = playableName;
+					return;
 				}
-				new Thread(new Runnable() { public void run() {
-						android.media.MediaPlayer p = null;
-				try {
-							p = new android.media.MediaPlayer();
-							android.media.MediaPlayer cur = (android.media.MediaPlayer) AP.get();
-							if (playableName.equals(CUR_NAME.get()) && cur != null) {
-								try { if (cur.isPlaying()) { try { p.release(); } catch (Exception x) {} return; } } catch (Exception e) {}
-							}
-							android.content.res.AssetFileDescriptor a = getAssets().openFd(playableName);
-							p.setDataSource(a.getFileDescriptor(), a.getStartOffset(), a.getLength()); a.close();
-							android.media.MediaPlayer prev = (android.media.MediaPlayer) AP.getAndSet(p);
-							if (prev != null) {
-								try { if (prev.isPlaying()) prev.stop(); } catch (Exception e) {}
-								try { prev.release(); } catch (Exception e) {}
-							}
-							CUR_NAME.set(playableName);
-							final android.media.MediaPlayer fp = p;
-							p.setOnCompletionListener(new android.media.MediaPlayer.OnCompletionListener() {
-								public void onCompletion(android.media.MediaPlayer m) {
-									if (playableName.equals(CUR_NAME.get())) CUR_NAME.set("");
-									AP.compareAndSet(fp, null); m.release();
+				
+				new Handler(Looper.getMainLooper()).post(new Runnable() {
+					public void run() {
+						synchronized (audioLock) {
+							try {
+								if (playableName.equals(curPlayingSound.get()) && currentPlayer != null) {
+									try { if (currentPlayer.isPlaying()) return; } catch (Exception ignored) {}
 								}
-							});
-							p.setOnErrorListener(new android.media.MediaPlayer.OnErrorListener() {
-								public boolean onError(android.media.MediaPlayer m, int what, int extra) {
-									if (playableName.equals(CUR_NAME.get())) CUR_NAME.set("");
-									AP.compareAndSet(fp, null); m.release(); return true;
+								if (currentPlayer != null) {
+									try { if (currentPlayer.isPlaying()) currentPlayer.stop(); } catch (Exception ignored) {}
+									try { currentPlayer.release(); } catch (Exception ignored) {}
+									currentPlayer = null;
 								}
-							});
-							p.prepare(); p.start();
-						} catch (Exception e) {
-							if (playableName.equals(CUR_NAME.get())) CUR_NAME.set("");
-							if (p != null) { AP.compareAndSet(p, null); try { p.release(); } catch (Exception x) {} }
+								android.content.res.AssetFileDescriptor a = getAssets().openFd(playableName);
+								final MediaPlayer p = new MediaPlayer();
+								p.setDataSource(a.getFileDescriptor(), a.getStartOffset(), a.getLength());
+								a.close();
+								currentPlayer = p;
+								curPlayingSound.set(playableName);
+								p.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+									public void onCompletion(MediaPlayer m) {
+										synchronized (audioLock) {
+											if (currentPlayer == m) {
+												currentPlayer = null;
+												curPlayingSound.set("");
+											}
+										}
+										try { m.release(); } catch (Exception ignored) {}
+									}
+								});
+								p.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+									public boolean onError(MediaPlayer m, int what, int extra) {
+										synchronized (audioLock) {
+											if (currentPlayer == m) {
+												currentPlayer = null;
+												curPlayingSound.set("");
+											}
+										}
+										try { m.release(); } catch (Exception ignored) {}
+										return true;
+									}
+								});
+								p.prepare();
+								p.start();
+							} catch (Exception e) {
+								android.util.Log.e("DW", "playSound fail " + playableName + ": " + e.getMessage());
+								synchronized (audioLock) {
+									if (playableName.equals(curPlayingSound.get())) curPlayingSound.set("");
+									if (currentPlayer != null) {
+										try { currentPlayer.release(); } catch (Exception ignored) {}
+										currentPlayer = null;
+									}
+								}
+							}
 						}
-				}}).start();
+					}
+				});
 			}
 			
 			@android.webkit.JavascriptInterface
 			public void stopSound() {
-				// TTS removed; media playback is stopped by the MediaPlayer lifecycle.
+				new Handler(Looper.getMainLooper()).post(new Runnable() {
+					public void run() {
+						synchronized (audioLock) {
+							if (currentPlayer != null) {
+								try { if (currentPlayer.isPlaying()) currentPlayer.stop(); } catch (Exception ignored) {}
+								try { currentPlayer.release(); } catch (Exception ignored) {}
+								currentPlayer = null;
+								curPlayingSound.set("");
+							}
+						}
+					}
+				});
 			}
 			
 			@android.webkit.JavascriptInterface
@@ -942,34 +981,50 @@ public class MainActivity extends Activity {
 	private void playIntroAudioAndDismissLoading(final View loadingView, final ViewGroup root) {
 		new Thread(new Runnable() {
 			public void run() {
-				MediaPlayer mp = null;
 				int dur = 7000;
 				try {
 					android.content.res.AssetFileDescriptor afd = getAssets().openFd("intro.mp3");
-					mp = new MediaPlayer();
-					mp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
-					afd.close();
-					mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-						public void onCompletion(MediaPlayer m) {
-							dismissLoadingView(loadingView, root);
-							m.release();
+					synchronized (audioLock) {
+						if (introPlayer != null) {
+							try { introPlayer.release(); } catch (Exception ignored) {}
+							introPlayer = null;
 						}
-					});
-					mp.setOnErrorListener(new MediaPlayer.OnErrorListener() {
-						public boolean onError(MediaPlayer m, int what, int extra) {
-							dismissLoadingView(loadingView, root);
-							m.release();
-							return true;
-						}
-					});
-					mp.prepare();
-					dur = mp.getDuration();
-					mp.start();
+						introPlayer = new MediaPlayer();
+						introPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+						afd.close();
+						introPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+							public void onCompletion(MediaPlayer m) {
+								synchronized (audioLock) {
+									if (introPlayer == m) introPlayer = null;
+								}
+								try { m.release(); } catch (Exception ignored) {}
+								dismissLoadingView(loadingView, root);
+							}
+						});
+						introPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+							public boolean onError(MediaPlayer m, int what, int extra) {
+								synchronized (audioLock) {
+									if (introPlayer == m) introPlayer = null;
+								}
+								try { m.release(); } catch (Exception ignored) {}
+								dismissLoadingView(loadingView, root);
+								return true;
+							}
+						});
+						introPlayer.prepare();
+						try { dur = introPlayer.getDuration(); } catch (Exception ignored) {}
+						introPlayer.start();
+					}
 				} catch (Exception e) {
-					mp = null;
+					synchronized (audioLock) {
+						if (introPlayer != null) {
+							try { introPlayer.release(); } catch (Exception ignored) {}
+							introPlayer = null;
+						}
+					}
 					dur = 5000;
 				}
-				final int delayMs = (dur > 2000 && dur < 15000) ? dur : 7000;
+				final int delayMs = (dur > 2000 && dur < 15000) ? (dur + 1200) : 7000;
 				new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 					public void run() {
 						dismissLoadingView(loadingView, root);
@@ -1063,6 +1118,18 @@ public class MainActivity extends Activity {
 					ttsEngine.stop();
 					ttsEngine.shutdown();
 				} catch (Exception e) {}
+			}
+			synchronized (audioLock) {
+				if (introPlayer != null) {
+					try { introPlayer.stop(); } catch (Exception ignored) {}
+					try { introPlayer.release(); } catch (Exception ignored) {}
+					introPlayer = null;
+				}
+				if (currentPlayer != null) {
+					try { currentPlayer.stop(); } catch (Exception ignored) {}
+					try { currentPlayer.release(); } catch (Exception ignored) {}
+					currentPlayer = null;
+				}
 			}
 		} catch (Exception e) {}
 		super.onDestroy();

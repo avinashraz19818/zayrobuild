@@ -1,6 +1,6 @@
 'use strict';
 // Har sound jo game templates bajate hain, APK build me bundled hona chahiye.
-// Ye test naya missing sound, stale Android/Flutter copy aur galat MP3 header pakdta hai.
+// Ye test naya missing sound, stale Android copy aur galat MP3 header pakdta hai.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');

@@ -90,12 +90,10 @@ async function encryptToBuffer(html, password) {
   }
 }
 
-// ── PER-BUILD KEY RESOLVER (Flutter engine) ──
-// Flutter APK content fetch karte waqt ?kid=<key_id> bhejta hai. Uski apni
-// unique password se response encrypt hota hai — ek build crack hui to
-// sirf waheen tak blast radius. kid na ho / na mile (ya row inactive ho)
-// to FIXED_PASSWORD fallback — purane Java APKs waise hi chalte rahte hain
-// (key history: rebuild pe nayi kid aati hai, purani active hi rehti hai).
+// ── PER-BUILD KEY RESOLVER ──
+// APK content fetch karte waqt ?kid=<key_id> bhejta hai. Uski apni
+// unique password se response encrypt hota hai. kid na ho / na mile
+// to FIXED_PASSWORD fallback — purane APKs waise hi chalte rahte hain.
 function resolveContentPassword(pathKey, kid) {
   try {
     const k = String(kid || '').trim();
@@ -104,8 +102,6 @@ function resolveContentPassword(pathKey, kid) {
       'SELECT key_secret, engine FROM build_keys WHERE key_id=? AND firebase_path=? AND active=1 ORDER BY id DESC LIMIT 1'
     ).get(k, String(pathKey || ''));
     if (row && row.key_secret) {
-      // java builds: key_secret = plaintext base64 string (APK String se match).
-      // flutter builds: base64 enc bytes — dono engines ka format alag hai.
       return row.engine === 'java' ? row.key_secret : Buffer.from(row.key_secret, 'base64');
     }
   } catch (_) {}

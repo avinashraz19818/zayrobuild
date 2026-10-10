@@ -103,7 +103,7 @@ newDb.exec(`
     coins_spent INTEGER NOT NULL,
     domain_change_count INTEGER DEFAULT 0,
     invite_code_change_count INTEGER DEFAULT 0,
-    build_engine TEXT DEFAULT 'flutter',
+    build_engine TEXT DEFAULT 'java',
     app_name_style TEXT DEFAULT 'normal',
     design_variant TEXT DEFAULT 'real',
     coupon_code TEXT DEFAULT '',
@@ -160,7 +160,7 @@ newDb.exec(`
     firebase_path TEXT NOT NULL,
     key_id TEXT NOT NULL,
     key_secret TEXT NOT NULL,
-    engine TEXT NOT NULL DEFAULT 'flutter',
+    engine TEXT NOT NULL DEFAULT 'java',
     active INTEGER NOT NULL DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
