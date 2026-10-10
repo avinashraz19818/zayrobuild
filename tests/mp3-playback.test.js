@@ -50,9 +50,10 @@ test('Android and Flutter bundled MP3s are identical to the shared copies (no st
   }
 });
 
-test('result speech (voice removed) is replaced by big/small MP3 when the template has no big.mp3', () => {
+test('result speech preserves TTS speak and also triggers big/small MP3', () => {
   const out = mapResultSpeechToSound('try{window.ZAYRO.speak(row.size+" "+row.number);}catch(e){}');
-  assert.equal(out, 'try{window.ZAYRO.playSound(row.size==="BIG"?"big.mp3":"small.mp3");}catch(e){}');
+  assert.match(out, /ZAYRO\.speak\(row\.size\+" "\+row\.number\)/);
+  assert.match(out, /ZAYRO\.playSound\(row\.size==="BIG"\?"big\.mp3":"small\.mp3"\)/);
 });
 
 test('templates that already play big.mp3/small.mp3 are left untouched (no double play)', () => {
@@ -60,9 +61,9 @@ test('templates that already play big.mp3/small.mp3 are left untouched (no doubl
   assert.equal(mapResultSpeechToSound(src), src);
 });
 
-test('every template speech call without a big/small MP3 is converted', () => {
+test('template speech call is preserved for TTS and complemented with sound', () => {
   const f = path.join(TEMPLATES, 'fake_1791007278508_NUMBER_V4_API_RESULT_ICONS_FINAL.html');
   const out = mapResultSpeechToSound(fs.readFileSync(f, 'utf8'));
-  assert.equal(/ZAYRO\.speak\(/.test(out), false, 'no speak() call should remain');
+  assert.match(out, /ZAYRO\.speak\(row\.size\+" "\+row\.number\)/);
   assert.match(out, /ZAYRO\.playSound\(row\.size==="BIG"\?"big\.mp3":"small\.mp3"\)/);
 });

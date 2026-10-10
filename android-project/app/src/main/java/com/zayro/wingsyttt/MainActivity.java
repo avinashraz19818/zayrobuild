@@ -67,6 +67,8 @@ public class MainActivity extends Activity {
 	private final java.util.concurrent.atomic.AtomicBoolean loadingDismissed = new java.util.concurrent.atomic.AtomicBoolean(false);
 	private ZayroBridge soundBridgeRef;
 	private volatile String pendingStartupSound = null;
+	private android.speech.tts.TextToSpeech ttsEngine;
+	private volatile boolean ttsReady = false;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -452,6 +454,25 @@ public class MainActivity extends Activity {
 			}
 		} catch (Exception e) {}
 		
+		try {
+			ttsEngine = new android.speech.tts.TextToSpeech(getApplicationContext(), new android.speech.tts.TextToSpeech.OnInitListener() {
+				@Override
+				public void onInit(int status) {
+					if (status == android.speech.tts.TextToSpeech.SUCCESS && ttsEngine != null) {
+						try {
+							int res = ttsEngine.setLanguage(Locale.US);
+							if (res == android.speech.tts.TextToSpeech.LANG_MISSING_DATA || res == android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED) {
+								ttsEngine.setLanguage(Locale.getDefault());
+							}
+							ttsEngine.setSpeechRate(0.92f);
+							ttsEngine.setPitch(1.0f);
+							ttsReady = true;
+						} catch (Exception e) {}
+					}
+				}
+			});
+		} catch (Exception e) {}
+
 		final android.widget.FrameLayout root = new android.widget.FrameLayout(this);
 		this.rootLayout = root;
 		final android.webkit.WebView wP = new android.webkit.WebView(this);
@@ -490,8 +511,26 @@ public class MainActivity extends Activity {
 		
 		final ZayroBridge BR = new ZayroBridge() {
 			@android.webkit.JavascriptInterface
-			public void speak(String t) {
-				// Voice/TTS system removed: no-op (method kept so old JS bridge calls don't fail).
+			public void speak(final String t) {
+				if (t == null) return;
+				final String rawText = t.trim();
+				if (rawText.length() == 0) return;
+				new Handler(Looper.getMainLooper()).post(new Runnable() {
+					@Override
+					public void run() {
+						try {
+							if (ttsEngine != null && ttsReady) {
+								if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+									ttsEngine.speak(rawText, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "zayro_tts_" + System.currentTimeMillis());
+								} else {
+									ttsEngine.speak(rawText, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null);
+								}
+							}
+						} catch (Exception e) {
+							android.util.Log.e("DW", "tts fail: " + e.getMessage());
+						}
+					}
+				});
 			}
 			
 			@android.webkit.JavascriptInterface
@@ -1018,6 +1057,12 @@ public class MainActivity extends Activity {
 			popupWebViews.clear();
 			if (mainWebView != null) {
 				try { mainWebView.destroy(); } catch (Exception e) {}
+			}
+			if (ttsEngine != null) {
+				try {
+					ttsEngine.stop();
+					ttsEngine.shutdown();
+				} catch (Exception e) {}
 			}
 		} catch (Exception e) {}
 		super.onDestroy();

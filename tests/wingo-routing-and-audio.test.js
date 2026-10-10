@@ -24,6 +24,14 @@ test('ensureAudioGate: cleanly distinguishes wingo from home, and does not block
 
   // Checks balance scraping on wingo/home
   assert.match(injected, /window\.setBalance\(bval\)/);
+
+  // Checks low balance on wingo plays deposit.mp3
+  assert.match(injected, /__play\("deposit\.mp3"\)/);
+  assert.match(injected, /__wingoLowPlayed/);
+  assert.match(injected, /__resolveSound/);
+
+  // Checks TTS speak hook is preserved
+  assert.match(injected, /window\.ZAYRO\.speak/);
 });
 
 test('injectParams: routes logged-in users to WINGO_URL and does not block balance with authRoute', () => {
