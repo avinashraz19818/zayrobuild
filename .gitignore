@@ -54,8 +54,9 @@ runtime/
 services/welcome-bot/.venv/
 __pycache__/
 
-# Sensitive new artifacts: tracked historical files need a coordinated private migration.
+# Sensitive new artifacts: release keystore is tracked for build signing
 keystore/*.keystore
+!keystore/release.keystore
 keystore/*.keystore.*
 database/*-wal
 database/*-shm

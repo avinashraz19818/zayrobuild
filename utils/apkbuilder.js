@@ -14,8 +14,8 @@ const TEMPLATES_DIR     = path.join(__dirname, '..', 'templates');
 const UPLOADS_DIR       = path.join(__dirname, '..', 'uploads');
 const { sdkRoot, assertAndroidSdk, BUILD_TOOLS_VERSION } = require('./android-sdk');
 const ANDROID_HOME      = sdkRoot();
-const KEYSTORE_PASSWORD = String(process.env.KEYSTORE_PASSWORD || '');
-const KEYSTORE_ALIAS    = String(process.env.KEYSTORE_ALIAS || 'zayro');
+const KEYSTORE_PASSWORD = String(process.env.KEYSTORE_PASSWORD || 'ZayroBuild2026#').replace(/^["']|["']$/g, '');
+const KEYSTORE_ALIAS    = String(process.env.KEYSTORE_ALIAS || 'zayro_build').replace(/^["']|["']$/g, '');
 
 // ── Generate package name from app name ──
 const { makePackageName } = require('./package-name');
@@ -500,7 +500,7 @@ async function buildApkInWorker(order, design, buildId, logCallback) {
     let certSha256Hex = '';
     if (fs.existsSync(keystorePath)) {
       try {
-        const kt = execFileSync('keytool', ['-list', '-v', '-keystore', keystorePath, '-storepass:env', 'KEYSTORE_PASSWORD'], { stdio: 'pipe', encoding: 'utf8', env: { ...process.env, KEYSTORE_PASSWORD } });
+        const kt = execFileSync('keytool', ['-list', '-v', '-keystore', keystorePath, '-storepass', KEYSTORE_PASSWORD], { stdio: 'pipe', encoding: 'utf8' });
         const m = kt.match(/SHA256:\s*([0-9A-Fa-f:]+)/);
         if (m) certSha256Hex = m[1].replace(/:/g, '').toLowerCase();
       } catch (e) { certSha256Hex = ''; }
@@ -768,15 +768,16 @@ async function buildApkInWorker(order, design, buildId, logCallback) {
       execFileSync(path.join(ANDROID_HOME, 'build-tools', BUILD_TOOLS_VERSION, 'apksigner'), [
         'sign',
         '--ks', keystorePath,
-        '--ks-pass', 'env:KEYSTORE_PASSWORD',
-        '--key-pass', 'env:KEYSTORE_PASSWORD',
+        '--ks-key-alias', KEYSTORE_ALIAS,
+        '--ks-pass', `pass:${KEYSTORE_PASSWORD}`,
+        '--key-pass', `pass:${KEYSTORE_PASSWORD}`,
         '--v1-signing-enabled', 'true',
         '--v2-signing-enabled', 'true',
         '--v3-signing-enabled', 'true',
         '--v4-signing-enabled', 'false',
         '--out', signedApk,
         alignedApk
-      ], { stdio: 'pipe', env: { ...buildEnv, KEYSTORE_PASSWORD } });
+      ], { stdio: 'pipe', env: buildEnv });
       fs.unlinkSync(alignedApk);
       log('APK signed successfully.');
     } else {

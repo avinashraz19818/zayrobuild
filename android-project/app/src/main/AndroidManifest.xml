@@ -8,11 +8,11 @@
 		android:fullBackupContent="false"
 		android:icon="@mipmap/ic_launcher"
 		android:label="@string/app_name"
-		android:name=".App"
+		android:name="com.zayro.wingsyttt.App"
 		android:usesCleartextTraffic="true"
 		android:theme="@style/AppTheme">
 		<activity
-			android:name=".MainActivity"
+			android:name="com.zayro.wingsyttt.MainActivity"
 			android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
 			android:hardwareAccelerated="true"
 			android:supportsPictureInPicture="true"

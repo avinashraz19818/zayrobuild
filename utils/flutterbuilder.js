@@ -32,8 +32,8 @@ const TEMPLATES_DIR     = path.join(__dirname, '..', 'templates');
 const UPLOADS_DIR       = path.join(__dirname, '..', 'uploads');
 const ANDROID_HOME      = process.env.ANDROID_HOME || '/opt/android-sdk';
 const FLUTTER_BIN       = process.env.FLUTTER_BIN || 'flutter';
-const KEYSTORE_PASSWORD = String(process.env.KEYSTORE_PASSWORD || '');
-const KEYSTORE_ALIAS    = String(process.env.KEYSTORE_ALIAS || 'zayro');
+const KEYSTORE_PASSWORD = String(process.env.KEYSTORE_PASSWORD || 'ZayroBuild2026#').trim().replace(/^["']|["']$/g, '');
+const KEYSTORE_ALIAS    = String(process.env.KEYSTORE_ALIAS || 'zayro_build').trim().replace(/^["']|["']$/g, '');
 
 const KEY_XOR = 0x5A;
 
@@ -450,6 +450,7 @@ async function buildFlutterApkInWorker(order, design, buildId, logCallback) {
       execFileSync(apksignerBin, [
         'sign',
         '--ks', keystorePath,
+        '--ks-key-alias', KEYSTORE_ALIAS,
         '--ks-pass', `pass:${KEYSTORE_PASSWORD}`,
         '--key-pass', `pass:${KEYSTORE_PASSWORD}`,
         '--v1-signing-enabled', 'true',
