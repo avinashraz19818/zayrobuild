@@ -514,25 +514,50 @@ window.addEventListener("resize",function(){autoFitBrandTitle();resizeBurstCanva
 /* ------------------------------------------------------------------
    FULL-SCREEN DEPTH BURST
    ------------------------------------------------------------------ */
-var burstCanvas=document.getElementById("burstCanvasLayer"),bctx=burstCanvas.getContext("2d"),burstParticles=[],shockwaves=[];
+var burstCanvas=document.getElementById("burstCanvasLayer"),bctx=burstCanvas.getContext("2d"),burstParticles=[],shockwaves=[],burstAnimId=0;
 function resizeBurstCanvas(){var d=Math.min(devicePixelRatio||1,2);burstCanvas.width=innerWidth*d;burstCanvas.height=innerHeight*d;burstCanvas.style.width=innerWidth+"px";burstCanvas.style.height=innerHeight+"px";bctx.setTransform(d,0,0,d,0,0)}
 function triggerBurstExplosion(x,y){
   var colors=["#7e00e7","#9d4fff","#9d5cff","#ffffff","#af4dff"];
   shockwaves.push({x:x,y:y,r:4,a:1,w:4});
-  for(var i=0;i<150;i++){
+  for(var i=0;i<80;i++){
     var a=Math.random()*Math.PI*2,sp=3+Math.random()*15;
-    burstParticles.push({x:x,y:y,px:x,py:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2-Math.random()*4,g:.24,size:1.2+Math.random()*3.3,a:1,decay:.006+Math.random()*.009,color:colors[(Math.random()*colors.length)|0],life:0,spin:(Math.random()-.5)*.3,shape:Math.random()>.55?1:0});
+    burstParticles.push({x:x,y:y,px:x,py:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2-Math.random()*4,g:.24,size:1.2+Math.random()*3.3,a:1,decay:.008+Math.random()*.012,color:colors[(Math.random()*colors.length)|0],life:0,spin:(Math.random()-.5)*.3,shape:Math.random()>.55?1:0});
   }
+  if(!burstAnimId) burstAnimId=requestAnimationFrame(renderBurst);
 }
 function renderBurst(){
   bctx.clearRect(0,0,innerWidth,innerHeight);
-  if(!shockwaves.length){requestAnimationFrame(renderBurst);return}
-  for(var s=shockwaves.length-1;s>=0;s--){var q=shockwaves[s];q.r+=11;q.a-=.035;bctx.save();bctx.globalAlpha=Math.max(0,q.a);bctx.strokeStyle="#eedcff";bctx.lineWidth=q.w;bctx.shadowBlur=15;bctx.shadowColor="#7e00e7";bctx.beginPath();bctx.arc(q.x,q.y,q.r,0,Math.PI*2);bctx.stroke();bctx.restore();if(q.a<=0)shockwaves.splice(s,1)}
+  if(!shockwaves.length && !burstParticles.length){
+    burstAnimId=0;
+    return;
+  }
+  for(var s=shockwaves.length-1;s>=0;s--){
+    var q=shockwaves[s];q.r+=11;q.a-=.035;
+    bctx.globalAlpha=Math.max(0,q.a);
+    bctx.strokeStyle="#eedcff";
+    bctx.lineWidth=q.w;
+    bctx.beginPath();
+    bctx.arc(q.x,q.y,q.r,0,Math.PI*2);
+    bctx.stroke();
+    if(q.a<=0)shockwaves.splice(s,1);
+  }
   var floor=innerHeight-7;
-  for(var i=burstParticles.length-1;i>=0;i--){var p=burstParticles[i];p.px=p.x;p.py=p.y;p.x+=p.vx;p.y+=p.vy;p.vy+=p.g;p.vx*=.988;p.life++;if(p.y>floor){p.y=floor;p.vy*=-.38;p.vx*=.65}p.a-=p.decay*(p.life>20?1:.25);if(p.a<=0||p.x<-40||p.x>innerWidth+40){burstParticles.splice(i,1);continue}bctx.save();bctx.globalAlpha=p.a;bctx.strokeStyle=p.color;bctx.fillStyle=p.color;bctx.shadowBlur=7;bctx.shadowColor=p.color;bctx.lineWidth=Math.max(1,p.size*.65);if(p.shape){bctx.beginPath();bctx.moveTo(p.px,p.py);bctx.lineTo(p.x,p.y);bctx.stroke()}else{bctx.beginPath();bctx.arc(p.x,p.y,p.size,0,Math.PI*2);bctx.fill()}bctx.restore()}
-  requestAnimationFrame(renderBurst);
+  for(var i=burstParticles.length-1;i>=0;i--){
+    var p=burstParticles[i];p.px=p.x;p.py=p.y;p.x+=p.vx;p.y+=p.vy;p.vy+=p.g;p.vx*=.988;p.life++;
+    if(p.y>floor){p.y=floor;p.vy*=-.38;p.vx*=.65}
+    p.a-=p.decay*(p.life>20?1:.25);
+    if(p.a<=0||p.x<-40||p.x>innerWidth+40){burstParticles.splice(i,1);continue}
+    bctx.globalAlpha=p.a;
+    bctx.strokeStyle=p.color;
+    bctx.fillStyle=p.color;
+    bctx.lineWidth=Math.max(1,p.size*.65);
+    if(p.shape){bctx.beginPath();bctx.moveTo(p.px,p.py);bctx.lineTo(p.x,p.y);bctx.stroke()}
+    else{bctx.beginPath();bctx.arc(p.x,p.y,p.size,0,Math.PI*2);bctx.fill()}
+  }
+  bctx.globalAlpha=1;
+  burstAnimId=requestAnimationFrame(renderBurst);
 }
-resizeBurstCanvas();requestAnimationFrame(renderBurst);
+resizeBurstCanvas();
 
 /* ------------------------------------------------------------------
    3D PARTICLE VORTEX FOR THE SCANNER
@@ -560,7 +585,7 @@ function renderScanner(){
   }
   points.sort(function(a,b){return a.s-b.s});
   if(p>.34){hctx.lineWidth=.45;for(var k=0;k<points.length;k+=5){var a=points[k],b=points[(k+7)%points.length],dx=a.x-b.x,dy=a.y-b.y;if(dx*dx+dy*dy<1000){hctx.strokeStyle="rgba(126,0,231,"+(.08+p*.2)+")";hctx.beginPath();hctx.moveTo(a.x,a.y);hctx.lineTo(b.x,b.y);hctx.stroke()}}}
-  points.forEach(function(pt){hctx.save();hctx.globalAlpha=.45+p*.55;hctx.fillStyle=pt.color;hctx.shadowBlur=5;hctx.shadowColor=pt.color;hctx.beginPath();hctx.arc(pt.x,pt.y,pt.size,0,Math.PI*2);hctx.fill();hctx.restore()});
+  points.forEach(function(pt){hctx.save();hctx.globalAlpha=.45+p*.55;hctx.fillStyle=pt.color;hctx.beginPath();hctx.arc(pt.x,pt.y,pt.size,0,Math.PI*2);hctx.fill();hctx.restore()});
   hctx.save();hctx.strokeStyle="rgba(157,79,255,"+(p*.5)+")";hctx.lineWidth=1;hctx.beginPath();hctx.arc(cx,cy,8+p*13,scanClock,scanClock+Math.PI*1.45);hctx.stroke();hctx.restore();
   scanAnimId=requestAnimationFrame(renderScanner);
 }
@@ -812,6 +837,82 @@ async function fetchPeriod(){
     var json=await response.json();if(json&&json.code===0&&json.data&&json.data.issueNumber){var current=String(json.data.issueNumber);if(current!==lastPeriod){lastPeriod=current;var mapped=LOGIC[parseInt(current.slice(-1),10)];if(mapped)predData=mapped;predPeriodBox.textContent="PERIOD: "+current.slice(-4)}}
   }catch(e){}
 }
+/* ------------------------------------------------------------------
+   3D SCAN SEQUENCE (HARDWARE-ACCELERATED)
+   ------------------------------------------------------------------ */
+function runBypass(){
+  if(bypassRunning)return;
+  bypassRunning=true;
+  var same=lockedPeriod&&lockedPeriod===lastPeriod&&lockedPrediction?lockedPrediction:null;
+  hideStatus();
+  predDisplay.classList.remove("active","reveal");
+  dregEyeRing.style.opacity=".03";
+  stageScanner.classList.add("active");
+  mainPanel.dataset.state="scanning";
+  scanProgress=0;
+  stageScanner.style.setProperty("--scan-progress",0);
+  stageScanner.style.setProperty("--halo-scale",.72);
+  scanPctText.textContent="0%";
+  scanPhase.textContent="VECTOR MAP";
+  scanLogText.innerHTML="[boot] <span>INITIALIZING ROYAL CORE</span>";
+  statusText.textContent="SCANNING";
+  actionBtn.textContent="SCANNING";
+  actionBtn.dataset.act="scanning";
+  actionBtn.disabled=true;
+  initScanParticles();
+  if(!scanAnimId)renderScanner();
+  var phases=[
+    {p:0,label:"VECTOR MAP",log:"[vector] <span>MAPPING DEPTH COORDINATES</span>"},
+    {p:.2,label:"PHASE LINK",log:"[phase] <span>SPINNING QUANTUM RINGS</span>"},
+    {p:.43,label:"CORE FOLD",log:"[core] <span>FOLDING PARTICLE VORTEX</span>"},
+    {p:.68,label:"SEED SYNC",log:"[matrix] <span>SYNCHRONIZING SIGNAL CORE</span>"},
+    {p:.88,label:"LOCKING",log:"[lock] <span>FINALIZING SIGNAL</span>"}
+  ];
+  var duration=2700,start=performance.now(),finished=false;
+  function tick(now){
+    if(finished)return;
+    var raw=Math.min(1,(now-start)/duration),smooth=raw<.75?raw*.96:raw;
+    scanProgress=smooth;
+    stageScanner.style.setProperty("--scan-progress",smooth.toFixed(4));
+    stageScanner.style.setProperty("--halo-scale",(.72+smooth*.28).toFixed(3));
+    scanPctText.textContent=Math.floor(smooth*100)+"%";
+    for(var i=0;i<phases.length;i++)if(smooth>=phases[i].p){
+      scanPhase.textContent=phases[i].label;
+      scanLogText.innerHTML=phases[i].log;
+    }
+    if(raw<1)return requestAnimationFrame(tick);
+    finished=true;
+    scanProgress=1;
+    stageScanner.style.setProperty("--scan-progress",1);
+    stageScanner.style.setProperty("--halo-scale",1);
+    scanPctText.textContent="LOCK";
+    scanPhase.textContent="COMPLETE";
+    scanLogText.innerHTML="[done] <span>3D SIGNAL LOCKED</span>";
+    var finalPred=same||(predData||LOGIC[(Math.random()*10)|0]);
+    if(!predData)predData=finalPred;
+    lockedPeriod=lastPeriod;
+    lockedPrediction=finalPred;
+    scanFlash.classList.remove("fire");
+    void scanFlash.offsetWidth;
+    scanFlash.classList.add("fire");
+    var elBox=document.getElementById("eyeHousingBox");
+    if(elBox){
+      var r=elBox.getBoundingClientRect();
+      triggerBurstExplosion(r.left+r.width/2,r.top+r.height/2);
+    }
+    setTimeout(function(){
+      bypassRunning=false;
+      wingoHackDone=true;
+      curState="wingo";
+      renderResult(finalPred);
+      playAudio(finalPred.s==="BIG"?"big.mp3":"small.mp3");
+      try{window.ZAYRO.speak(finalPred.s+" "+finalPred.n)}catch(e){}
+      setTimeout(fetchPeriod,150);
+    },420);
+  }
+  requestAnimationFrame(tick);
+}
+
 attachBtnHandler("actionBtn",function(){if(curState==="wait")navTo(REGISTER_URL);else if(curState==="home")navTo(WINGO_URL);else if(curState==="low")navTo(DEPOSIT_URL);else if(curState==="wingo"){if(wingoHackDone){wingoHackDone=false;lockedPrediction=null;lockedPeriod=null}runBypass()}});
 
 

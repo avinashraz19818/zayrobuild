@@ -324,23 +324,24 @@ function injectParams(htmlContent, params) {
   );
 
   // ── BRAND TITLE (popup card header / warning popup / <title>) ──
-  // Kuch templates ke title ke andar nested elements hote hain (<span>,
-  // &nbsp; etc.) — isliye PURA inner content replace karte hain (lazy
-  // match closing </div> tak), sirf opening tag ke baad wala text nahi.
-  // NOTE: 'card-title' pattern me lookahead (?=[\s"']) hai taaki
-  // card-title-block / card-title-line1 (alag meaning) match na ho.
+  // Matches all known brand element tags (div, span, h1-h6, p, b, strong) and patterns
   const brandAttrPatterns = [
     /class=["'][^"']*brand-name[^"']*["']/,
     /class=["'][^"']*card-title-line1[^"']*["']/,
     /class=["'][^"']*card-title(?=[\s"'])[^"']*["']/,
     /id=["']mainBrandText["']/,
+    /id=["']panelBrand["']/,
+    /id=["']teleBadge["']/,
+    /data-zayro-brand-target=["']main["']/,
+    /data-brand-target=["']main["']/,
+    /class=["'][^"']*brand-caption[^"']*["']/,
     /class=["'][^"']*wo-title[^"']*["']/,
     /id=["']woTitle["']/
   ];
   for (const attr of brandAttrPatterns) {
     html = html.replace(
-      new RegExp(`(<div[^>]+(?:${attr.source})[^>]*>)[\\s\\S]*?<\\/div>`, 'g'),
-      (m, g1) => g1 + brandTitle + '</div>'
+      new RegExp(`(<(div|span|h[1-6]|p|b|strong)[^>]+(?:${attr.source})[^>]*>)[\\s\\S]*?<\\/\\2>`, 'g'),
+      (m, g1, g2) => g1 + brandTitle + `</${g2}>`
     );
   }
   // wo-head-title / card-brand headers me sirf MAIN line (cb-main) change
@@ -353,7 +354,7 @@ function injectParams(htmlContent, params) {
   // cb-main wale pehle se handle ho chuke hain, unhe skip karte hain
   // (negative lookahead) taaki duplicate text na bane.
   html = html.replace(
-    /(<div[^>]+class=["'][^"']*wo-head-title[^"']*["'][^>]*>)(?![^<]*<[^>]*cb-main)([\s\S]*?)<\/div>/g,
+    /(<(?:div|span)[^>]+class=["'][^"']*wo-head-title[^"']*["'][^>]*>)(?![^<]*<[^>]*cb-main)([\s\S]*?)<\/(?:div|span)>/g,
     (m, g1, g2) => g1 + brandTitle + '</div>'
   );
   // ══ RED-CORE/DHANI TEMPLATE FIX ══
@@ -367,19 +368,20 @@ function injectParams(htmlContent, params) {
     (m, g1, g2) => g1 + brandTitle + g2
   );
   html = html.replace(
-    /(window\.BRAND_NAME\s*=\s*window\.BRAND_NAME\s*\|\|\s*["'])[^"']*(["'])/g,
+    /((?:window\.|var\s+|let\s+|const\s+)BRAND_NAME\s*=\s*(?:window\.BRAND_NAME\s*\|\|\s*)?["'])[^"']*(["'])/g,
     (m, g1, g2) => g1 + brandTitle + g2
   );
-  // Backup: simple-text wale divs (agar upar wala match na hua ho)
+  // Backup: simple-text wale divs/spans (agar upar wala match na hua ho)
   const brandSimple = [
-    /(<div[^>]+class=["'][^"']*brand-name[^"']*["'][^>]*>)[^<]*/g,
-    /(<div[^>]+class=["'][^"']*card-title-line1[^"']*["'][^>]*>)[^<]*/g,
-    /(<div[^>]+class=["'][^"']*wo-title["'][^>]*>)[^<]*/g
+    /(<(?:div|span)[^>]+class=["'][^"']*brand-name[^"']*["'][^>]*>)[^<]*/g,
+    /(<(?:div|span)[^>]+class=["'][^"']*card-title-line1[^"']*["'][^>]*>)[^<]*/g,
+    /(<(?:div|span)[^>]+class=["'][^"']*wo-title["'][^>]*>)[^<]*/g,
+    /(<(?:div|span)[^>]+id=["'](?:mainBrandText|panelBrand|teleBadge)["'][^>]*>)[^<]*/g
   ];
   brandSimple.forEach(rx => {
     html = html.replace(rx, (m, g1) => g1 + brandTitle);
   });
-  html = html.replace(/(<title>)[^<]*/g, (m, g1) => g1 + brandTitle);
+  html = html.replace(/(<title\b[^>]*>)[^<]*/gi, (m, g1) => g1 + brandTitle);
 
   // ── APP ICON (my_icon.png → base64 data URI embedded) ──
   if (appIconBase64) {
