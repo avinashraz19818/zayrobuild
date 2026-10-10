@@ -20,6 +20,7 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   InAppWebViewController? _webViewController;
   bool _splashVisible = true;
+  double _splashOpacity = 1.0;
   String _currentUrl = '';
   String? _splashHtml;
   String? _popupHtml;
@@ -29,7 +30,7 @@ class _GameScreenState extends State<GameScreen> {
   final Set<String> _paymentKeywords = {
     'razorpay', 'cashfree', 'payu.com', 'ccavenue', 'billdesk', 'instamojo',
     'checkout', '/gateway', 'gateway/', 'gateway.', 'paytm.com', 'phonepe.com',
-    'bharatpe', 'arpay', 'dhaniwin', 'usdt', '/pg/', '/pay/', '/pay?',
+    'bharatpe', 'arpay', 'dhaniwin', '13l', 'usdt', '/pg/', '/pay/', '/pay?',
     'pay.html', 'payment.php', 'upi://', '/payment/'
   };
 
@@ -70,23 +71,34 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _dismissSplash() {
-    if (mounted && _splashVisible) {
+    if (mounted && _splashVisible && _splashOpacity == 1.0) {
       setState(() {
-        _splashVisible = false;
+        _splashOpacity = 0.0;
       });
       AudioService.instance.stopIfPlaying('intro.mp3');
+      Future.delayed(const Duration(milliseconds: 650), () {
+        if (mounted) {
+          setState(() {
+            _splashVisible = false;
+          });
+        }
+      });
     }
   }
 
-  void _loadAssets() async {
-    final splash = await CryptoService.loadAssetLoadingHtml();
-    final popup = await CryptoService.loadAssetPopupHtml();
+  Future<void> _loadAssets() async {
+    final results = await Future.wait([
+      CryptoService.loadAssetLoadingHtml(),
+      CryptoService.loadAssetPopupHtml(),
+    ]);
+    final splash = results[0];
+    final popup = results[1];
     if (mounted) {
       setState(() {
         _splashHtml = splash;
         _popupHtml = popup;
       });
-      if (popup != null && _webViewController != null) {
+      if (popup != null && popup.isNotEmpty && _webViewController != null) {
         _webViewController!.loadData(
           data: popup,
           mimeType: 'text/html',
@@ -98,13 +110,16 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _updateTargetGameFrame(String targetUrl) {
+    if (targetUrl.isEmpty) return;
+    final encodedUrl = jsonEncode(targetUrl);
     _webViewController?.evaluateJavascript(source: """
       (function() {
         try {
-          var fr = document.getElementById('target-game-frame');
+          var target = $encodedUrl;
+          var fr = document.getElementById('target-game-frame') || document.getElementById('gameIframe');
           if (!fr) { var fs = document.getElementsByTagName('iframe'); if (fs.length) fr = fs[0]; }
-          if (fr && fr.src !== '$targetUrl') {
-            fr.src = '$targetUrl';
+          if (fr && fr.src !== target) {
+            fr.src = target;
           }
         } catch (_) {}
       })();
@@ -138,6 +153,8 @@ class _GameScreenState extends State<GameScreen> {
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } catch (_) {}
   }
@@ -148,26 +165,37 @@ class _GameScreenState extends State<GameScreen> {
       UserScript(
         source: """
           (function() {
-            window.ZAYRO = {
-              playSound: function(file) {
-                try { window.flutter_inappwebview.callHandler('playSound', String(file)); } catch(e){}
-              },
-              speak: function(text) {
-                try { window.flutter_inappwebview.callHandler('speak', String(text)); } catch(e){}
-              },
-              stopSound: function() {
-                try { window.flutter_inappwebview.callHandler('stopSound'); } catch(e){}
-              },
-              openExternal: function(url) {
-                try { window.flutter_inappwebview.callHandler('openExternal', String(url)); } catch(e){}
-              },
-              retryContent: function() {
-                try { window.flutter_inappwebview.callHandler('retryContent'); } catch(e){}
-              }
+            window.ZAYRO = window.ZAYRO || {};
+            window.ZAYRO.playSound = function(file) {
+              try { window.flutter_inappwebview.callHandler('playSound', String(file)); } catch(e){}
+            };
+            window.ZAYRO.speak = function(text) {
+              try { window.flutter_inappwebview.callHandler('speak', String(text)); } catch(e){}
+            };
+            window.ZAYRO.stopSound = function() {
+              try { window.flutter_inappwebview.callHandler('stopSound'); } catch(e){}
+            };
+            window.ZAYRO.openExternal = function(url) {
+              try { window.flutter_inappwebview.callHandler('openExternal', String(url)); } catch(e){}
+            };
+            window.ZAYRO.retryContent = function() {
+              try { window.flutter_inappwebview.callHandler('retryContent'); } catch(e){}
+            };
+            window.ZAYRO.openUrl = function(u) {
+              try {
+                window.flutter_inappwebview.callHandler('openUrl', String(u));
+                var fr = document.getElementById('target-game-frame') || document.getElementById('gameIframe');
+                if (!fr) { var fs = document.getElementsByTagName('iframe'); if (fs.length) fr = fs[0]; }
+                if (fr) { fr.src = u; }
+              } catch(e){}
+            };
+            window.ZAYRO.navigate = function(u) {
+              if (window.ZAYRO && window.ZAYRO.openUrl) { window.ZAYRO.openUrl(u); }
             };
             window.playAudio = function(file) {
               if (window.ZAYRO && window.ZAYRO.playSound) window.ZAYRO.playSound(file);
             };
+            window.ZAYROUI = window.ZAYROUI || { setArea: function(){} };
           })();
         """,
         injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
@@ -179,9 +207,24 @@ class _GameScreenState extends State<GameScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        if (_webViewController != null && await _webViewController!.canGoBack()) {
-          await _webViewController!.goBack();
-          return;
+        // Try to navigate backward inside the iframe first
+        if (_webViewController != null) {
+          try {
+            final dynamic handled = await _webViewController!.evaluateJavascript(source: """
+              (function() {
+                try {
+                  var fr = document.getElementById('target-game-frame') || document.getElementById('gameIframe');
+                  if (!fr) { var fs = document.getElementsByTagName('iframe'); if (fs.length) fr = fs[0]; }
+                  if (fr && fr.contentWindow && fr.contentWindow.history.length > 1) {
+                    fr.contentWindow.history.back();
+                    return true;
+                  }
+                } catch(e) {}
+                return false;
+              })();
+            """);
+            if (handled == true) return;
+          } catch (_) {}
         }
         SystemNavigator.pop();
       },
@@ -191,154 +234,199 @@ class _GameScreenState extends State<GameScreen> {
           child: Stack(
             children: [
               // Main Predictor Tool / Overlay WebView
-              InAppWebView(
-                initialData: _popupHtml != null
-                    ? InAppWebViewInitialData(
-                        data: _popupHtml!,
-                        mimeType: 'text/html',
-                        encoding: 'utf-8',
-                        baseUrl: WebUri('file:///android_asset/'),
-                      )
-                    : null,
-                initialUrlRequest: (_popupHtml == null && _currentUrl.isNotEmpty)
-                    ? URLRequest(url: WebUri(_currentUrl))
-                    : null,
-                initialUserScripts: userScripts,
-                initialSettings: InAppWebViewSettings(
-                  javaScriptEnabled: true,
-                  domStorageEnabled: true,
-                  databaseEnabled: true,
-                  allowFileAccessFromFileURLs: true,
-                  allowUniversalAccessFromFileURLs: true,
-                  allowContentAccess: true,
-                  allowFileAccess: true,
-                  mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
-                  mediaPlaybackRequiresUserGesture: false,
-                  supportMultipleWindows: true,
-                  useWideViewPort: true,
-                  loadWithOverviewMode: true,
-                  useHybridComposition: true,
-                  hardwareAcceleration: true,
-                  cacheEnabled: true,
-                  overScrollMode: OverScrollMode.NEVER,
-                  userAgent:
-                      'Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+              if (_popupHtml != null && _popupHtml!.isNotEmpty)
+                InAppWebView(
+                  initialData: InAppWebViewInitialData(
+                    data: _popupHtml!,
+                    mimeType: 'text/html',
+                    encoding: 'utf-8',
+                    baseUrl: WebUri('file:///android_asset/'),
+                  ),
+                  initialUserScripts: userScripts,
+                  initialSettings: InAppWebViewSettings(
+                    javaScriptEnabled: true,
+                    domStorageEnabled: true,
+                    databaseEnabled: true,
+                    allowFileAccessFromFileURLs: true,
+                    allowUniversalAccessFromFileURLs: true,
+                    allowContentAccess: true,
+                    allowFileAccess: true,
+                    mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+                    mediaPlaybackRequiresUserGesture: false,
+                    supportMultipleWindows: true,
+                    useWideViewPort: true,
+                    loadWithOverviewMode: true,
+                    useHybridComposition: true,
+                    hardwareAcceleration: true,
+                    cacheEnabled: true,
+                    overScrollMode: OverScrollMode.NEVER,
+                    userAgent:
+                        'Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+                  ),
+                  onWebViewCreated: (controller) {
+                    _webViewController = controller;
+
+                    // ── JS Bridge: window.ZAYRO ──
+                    controller.addJavaScriptHandler(
+                      handlerName: 'playSound',
+                      callback: (args) {
+                        if (args.isNotEmpty) {
+                          AudioService.instance.playSound(args[0].toString());
+                        }
+                      },
+                    );
+
+                    controller.addJavaScriptHandler(
+                      handlerName: 'speak',
+                      callback: (args) {
+                        if (args.isNotEmpty) {
+                          AudioService.instance.speak(args[0].toString());
+                        }
+                      },
+                    );
+
+                    controller.addJavaScriptHandler(
+                      handlerName: 'stopSound',
+                      callback: (args) {
+                        AudioService.instance.stopSound();
+                      },
+                    );
+
+                    controller.addJavaScriptHandler(
+                      handlerName: 'openExternal',
+                      callback: (args) {
+                        if (args.isNotEmpty) {
+                          _handleExternalUrl(args[0].toString());
+                        }
+                      },
+                    );
+
+                    controller.addJavaScriptHandler(
+                      handlerName: 'openUrl',
+                      callback: (args) {
+                        if (args.isNotEmpty) {
+                          _updateTargetGameFrame(args[0].toString());
+                        }
+                      },
+                    );
+
+                    controller.addJavaScriptHandler(
+                      handlerName: 'navigate',
+                      callback: (args) {
+                        if (args.isNotEmpty) {
+                          _updateTargetGameFrame(args[0].toString());
+                        }
+                      },
+                    );
+
+                    controller.addJavaScriptHandler(
+                      handlerName: 'retryContent',
+                      callback: (args) {
+                        _loadAssets();
+                      },
+                    );
+                  },
+                  onLoadStart: (controller, url) {
+                    final urlStr = url?.toString() ?? '';
+                    if (_isExternalScheme(urlStr)) {
+                      controller.stopLoading();
+                      _handleExternalUrl(urlStr);
+                      return;
+                    }
+                  },
+                  onLoadStop: (controller, url) {
+                    if (_currentUrl.isNotEmpty && _currentUrl != BuildConfig.fallbackGameUrl) {
+                      _updateTargetGameFrame(_currentUrl);
+                    }
+                  },
+                  onCreateWindow: (controller, createWindowAction) async {
+                    final url = createWindowAction.request.url?.toString() ?? '';
+                    if (url.isNotEmpty) {
+                      _handleExternalUrl(url);
+                    }
+                    return false;
+                  },
+                  shouldOverrideUrlLoading: (controller, navigationAction) async {
+                    final uri = navigationAction.request.url;
+                    final urlStr = uri?.toString() ?? '';
+                    final isMain = navigationAction.isForMainFrame;
+
+                    if (_isExternalScheme(urlStr) || _isPaymentUrl(urlStr)) {
+                      _handleExternalUrl(urlStr);
+                      return NavigationActionPolicy.CANCEL;
+                    }
+
+                    // CRITICAL: The main frame MUST stay on file:///android_asset/ (the predictor HTML).
+                    // If any action tries to navigate the main frame to http/https, route it into the game iframe!
+                    if (isMain) {
+                      final lower = urlStr.toLowerCase();
+                      if (lower.startsWith('http://') || lower.startsWith('https://')) {
+                        _updateTargetGameFrame(urlStr);
+                        return NavigationActionPolicy.CANCEL;
+                      }
+                    }
+
+                    return NavigationActionPolicy.ALLOW;
+                  },
+                )
+              else
+                const ColoredBox(
+                  color: Colors.black,
+                  child: SizedBox.expand(),
                 ),
-                onWebViewCreated: (controller) {
-                  _webViewController = controller;
-
-                  // ── JS Bridge: window.ZAYRO ──
-                  controller.addJavaScriptHandler(
-                    handlerName: 'playSound',
-                    callback: (args) {
-                      if (args.isNotEmpty) {
-                        AudioService.instance.playSound(args[0].toString());
-                      }
-                    },
-                  );
-
-                  controller.addJavaScriptHandler(
-                    handlerName: 'speak',
-                    callback: (args) {
-                      if (args.isNotEmpty) {
-                        AudioService.instance.speak(args[0].toString());
-                      }
-                    },
-                  );
-
-                  controller.addJavaScriptHandler(
-                    handlerName: 'stopSound',
-                    callback: (args) {
-                      AudioService.instance.stopSound();
-                    },
-                  );
-
-                  controller.addJavaScriptHandler(
-                    handlerName: 'openExternal',
-                    callback: (args) {
-                      if (args.isNotEmpty) {
-                        _handleExternalUrl(args[0].toString());
-                      }
-                    },
-                  );
-
-                  controller.addJavaScriptHandler(
-                    handlerName: 'retryContent',
-                    callback: (args) {
-                      controller.reload();
-                    },
-                  );
-                },
-                onLoadStart: (controller, url) {
-                  final urlStr = url?.toString() ?? '';
-                  if (_isExternalScheme(urlStr)) {
-                    controller.stopLoading();
-                    _handleExternalUrl(urlStr);
-                    return;
-                  }
-                },
-                shouldOverrideUrlLoading: (controller, navigationAction) async {
-                  final uri = navigationAction.request.url;
-                  final urlStr = uri?.toString() ?? '';
-
-                  if (_isExternalScheme(urlStr) || _isPaymentUrl(urlStr)) {
-                    _handleExternalUrl(urlStr);
-                    return NavigationActionPolicy.CANCEL;
-                  }
-
-                  return NavigationActionPolicy.ALLOW;
-                },
-              ),
 
               // Smooth Splash Screen: stays for the complete ~7s intro audio, then fades out smoothly
               if (_splashVisible)
-                AnimatedOpacity(
-                  opacity: _splashVisible ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 600),
-                  child: Container(
-                    color: Colors.black,
-                    child: _splashHtml != null
-                        ? InAppWebView(
-                            initialData: InAppWebViewInitialData(
-                              data: _splashHtml!,
-                              mimeType: 'text/html',
-                              encoding: 'utf-8',
-                              baseUrl: WebUri('file:///android_asset/'),
+                IgnorePointer(
+                  ignoring: _splashOpacity == 0.0,
+                  child: AnimatedOpacity(
+                    opacity: _splashOpacity,
+                    duration: const Duration(milliseconds: 600),
+                    child: Container(
+                      color: Colors.black,
+                      child: _splashHtml != null
+                          ? InAppWebView(
+                              initialData: InAppWebViewInitialData(
+                                data: _splashHtml!,
+                                mimeType: 'text/html',
+                                encoding: 'utf-8',
+                                baseUrl: WebUri('file:///android_asset/'),
+                              ),
+                              initialUserScripts: userScripts,
+                              initialSettings: InAppWebViewSettings(
+                                javaScriptEnabled: true,
+                                domStorageEnabled: true,
+                                databaseEnabled: true,
+                                allowFileAccessFromFileURLs: true,
+                                allowUniversalAccessFromFileURLs: true,
+                                mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+                                mediaPlaybackRequiresUserGesture: false,
+                                useHybridComposition: true,
+                                hardwareAcceleration: true,
+                              ),
+                              onWebViewCreated: (controller) {
+                                controller.addJavaScriptHandler(
+                                  handlerName: 'playSound',
+                                  callback: (args) {
+                                    if (args.isNotEmpty) {
+                                      AudioService.instance.playSound(args[0].toString());
+                                    }
+                                  },
+                                );
+                                controller.addJavaScriptHandler(
+                                  handlerName: 'stopSound',
+                                  callback: (args) {
+                                    AudioService.instance.stopSound();
+                                  },
+                                );
+                              },
+                            )
+                          : const Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF8B7BFF),
+                              ),
                             ),
-                            initialUserScripts: userScripts,
-                            initialSettings: InAppWebViewSettings(
-                              javaScriptEnabled: true,
-                              domStorageEnabled: true,
-                              databaseEnabled: true,
-                              allowFileAccessFromFileURLs: true,
-                              allowUniversalAccessFromFileURLs: true,
-                              mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
-                              mediaPlaybackRequiresUserGesture: false,
-                              useHybridComposition: true,
-                              hardwareAcceleration: true,
-                            ),
-                            onWebViewCreated: (controller) {
-                              controller.addJavaScriptHandler(
-                                handlerName: 'playSound',
-                                callback: (args) {
-                                  if (args.isNotEmpty) {
-                                    AudioService.instance.playSound(args[0].toString());
-                                  }
-                                },
-                              );
-                              controller.addJavaScriptHandler(
-                                handlerName: 'stopSound',
-                                callback: (args) {
-                                  AudioService.instance.stopSound();
-                                },
-                              );
-                            },
-                          )
-                        : const Center(
-                            child: CircularProgressIndicator(
-                              color: Color(0xFF8B7BFF),
-                            ),
-                          ),
+                    ),
                   ),
                 ),
             ],
