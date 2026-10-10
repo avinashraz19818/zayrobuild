@@ -240,6 +240,10 @@ async function buildFlutterApkInWorker(order, design, buildId, logCallback) {
     projectDir = path.join(buildDir, 'fproject');
     log('Preparing clean Flutter workspace...');
     copyDirRecursiveSync(TEMPLATE_PROJECT, projectDir);
+    const gradlewBin = path.join(projectDir, 'android', 'gradlew');
+    if (fs.existsSync(gradlewBin)) {
+      try { fs.chmodSync(gradlewBin, 0o755); } catch (_) {}
+    }
 
     // Assets destinations
     const assetsDir = path.join(projectDir, 'assets');

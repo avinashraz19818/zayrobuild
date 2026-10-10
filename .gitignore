@@ -60,3 +60,6 @@ keystore/*.keystore
 keystore/*.keystore.*
 database/*-wal
 database/*-shm
+.gradle/
+**/.gradle/
+
