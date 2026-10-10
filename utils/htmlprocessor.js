@@ -439,16 +439,19 @@ function injectParams(htmlContent, params) {
     REGISTER_URL=nextRegister;
     DEPOSIT_URL=nextDeposit;
     WINGO_URL=nextWingo;
+    var isLogged=false;
+    try{ isLogged=localStorage.getItem('zayro_user_logged_in')==='1'; }catch(e){}
+    var targetUrl=(isLogged && valid(WINGO_URL))?WINGO_URL:REGISTER_URL;
     if(typeof gameFrame!=='undefined'&&gameFrame){
       try{
         var current=gameFrame.src||'';
         if(firstFirebaseLinkLoad||!current||current==='about:blank'||current===previousRegister){
-          gameFrame.src=REGISTER_URL;
+          gameFrame.src=targetUrl;
         }
       }catch(e){}
     }
     if(firstFirebaseLinkLoad&&typeof window.setUrl==='function'){
-      try{window.setUrl(REGISTER_URL);}catch(e){}
+      try{window.setUrl(targetUrl);}catch(e){}
     }
     firstFirebaseLinkLoad=false;
   }
@@ -482,10 +485,7 @@ function injectParams(htmlContent, params) {
   if(typeof window.setBalance==='function'&&!window.setBalance.__zayroWrapped){
     var originalSetBalance=window.setBalance;
     var wrappedSetBalance=function(balance){
-      if(window.__zayroAuthRoute){
-        if(typeof window.setState==='function')try{window.setState('wait');}catch(e){}
-        return;
-      }
+      window.__zayroAuthRoute=false;
       return originalSetBalance.apply(this,arguments);
     };
     wrappedSetBalance.__zayroWrapped=true;
@@ -516,19 +516,25 @@ function injectParams(htmlContent, params) {
     if(++attempts<120)setTimeout(connect,250);
   }
   connect();
-  if(gameFrame && REGISTER_URL && valid(REGISTER_URL)){
+  var isLoggedInit=false;
+  try{ isLoggedInit=localStorage.getItem('zayro_user_logged_in')==='1'; }catch(e){}
+  var startUrl=(isLoggedInit && valid(WINGO_URL))?WINGO_URL:REGISTER_URL;
+  if(gameFrame && startUrl && valid(startUrl)){
     var current=gameFrame.src||'';
     if(!current || current==='about:blank' || current.endsWith('about:blank') || current.startsWith('file:///')){
-      gameFrame.src = REGISTER_URL;
-      if(typeof window.setUrl==='function') try{window.setUrl(REGISTER_URL);}catch(e){}
+      gameFrame.src = startUrl;
+      if(typeof window.setUrl==='function') try{window.setUrl(startUrl);}catch(e){}
     }
   }
   setTimeout(function(){
-    if(gameFrame && REGISTER_URL && valid(REGISTER_URL)){
+    var isLoggedNow=false;
+    try{ isLoggedNow=localStorage.getItem('zayro_user_logged_in')==='1'; }catch(e){}
+    var destUrl=(isLoggedNow && valid(WINGO_URL))?WINGO_URL:REGISTER_URL;
+    if(gameFrame && destUrl && valid(destUrl)){
       var current=gameFrame.src||'';
       if(!current || current==='about:blank' || current.endsWith('about:blank') || current.startsWith('file:///')){
-        gameFrame.src = REGISTER_URL;
-        if(typeof window.setUrl==='function') try{window.setUrl(REGISTER_URL);}catch(e){}
+        gameFrame.src = destUrl;
+        if(typeof window.setUrl==='function') try{window.setUrl(destUrl);}catch(e){}
       }
     }
   }, 150);
