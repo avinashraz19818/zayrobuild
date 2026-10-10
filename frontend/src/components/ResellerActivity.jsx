@@ -1,0 +1,12 @@
+import React from 'react';
+import {Smartphone,Bot,Globe} from './AnimatedIcon';
+export default function ResellerActivity({activity}){
+ if(!activity)return null;
+ const all=activity.lifetime||{},today=activity.today||{},period=activity.period||{};
+ const groups=[
+  {title:'APKs ready',Icon:Smartphone,key:'apk',total:(all.real_apks||0)+(all.fake_apks||0),today:(today.real_apks||0)+(today.fake_apks||0),period:(period.real_apks||0)+(period.fake_apks||0),lines:[['Real APKs','real_apks'],['Fake APKs','fake_apks'],['Build orders','apk_orders'],['Pending builds','apk_pending'],['Failed orders','apk_failed'],['Refunded orders','apk_refunded']]},
+  {title:'Bots deployed',Icon:Bot,key:'bot',total:all.bots||0,today:today.bots||0,period:period.bots||0,lines:[['New deployments','bots'],['Successful renewals','bot_renewals'],['Bot orders','bot_orders'],['Pending deployments','bot_pending'],['Failed orders','bot_failed'],['Refunded orders','bot_refunded']]},
+  {title:'Website accounts',Icon:Globe,key:'site',total:all.site_accounts||0,today:today.site_accounts||0,period:period.site_accounts||0,lines:[['Accounts purchased','site_accounts'],['Accounts renewed','site_renewals'],['Website orders','site_orders'],['Refunded orders','site_refunded']]}
+ ];
+ return <section className="rs-activity"><div className="flex-row between wrap"><h3>Service performance</h3><span className="chip">Today · {activity.today_date} · IST</span></div><div className="rs-service-grid">{groups.map(g=><article className={`rs-service-card ${g.key}`} key={g.key}><header><span><g.Icon size={24}/></span><h4>{g.title}</h4></header><div className="rs-service-numbers"><div><small>Lifetime</small><strong>{g.total}</strong></div><div><small>Today</small><strong>{g.today}</strong></div><div><small>Selected dates</small><strong>{g.period}</strong></div></div><div className="rs-service-line rs-service-legend"><span>Breakdown</span><span>Total / Today</span></div>{g.lines.map(([label,key])=><div className="rs-service-line" key={key}><span>{label}</span><b>{all[key]||0} <i>/</i> {today[key]||0}</b></div>)}</article>)}</div><p className="rs-muted">Reseller orders only. Today and selected dates use the order's purchase date (IST), with its current fulfilment state. A bundle can produce 2 APKs; website quantities count individual accounts. Renewals are separate. Refunded orders do not count as delivered. Deleted or unavailable source records cannot be counted as delivered.</p></section>;
+}

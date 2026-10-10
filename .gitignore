@@ -1,0 +1,61 @@
+# Dependencies (platform-specific binaries — VPS par `npm install` chalayein)
+node_modules/
+frontend/node_modules/
+
+# Runtime junk
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+tmp/
+.cache/
+
+# Startup DB backups (server khud banata hai, repo me rakhne ki zaroorat nahi)
+backups/
+
+# Frontend build scratch
+frontend/smoke/dist/
+frontend/smoke/out/
+frontend/dist/
+
+# ⚠️ Secrets — repo public hai, inhe tracked nahi rakhte (VPS par replace karne se
+# pull block hota tha, aur Google public keys ko disable bhi kar deta hai).
+# firebase-service-account.json: nayi key Google Cloud Console se banakar yahan rakhein.
+.env
+.env.local
+.env.*.local
+firebase-service-account.json
+*.pem
+
+# Purane recovery/backup DB artifacts
+database/*.bak.*
+database/*.old_bak
+database/*.before_recovery_*
+database/apkbuilder_backup*
+
+# Live SQLite DB (server ise har second likhta hai — tracked rakhne par har pull par
+# conflict aata hai). Pehli baar chalte waqt server khud ise apkbuilder.seed.db se
+# bana leta hai, jisme designs + settings pehle se hote hain.
+database/apkbuilder.db
+database/apkbuilder.db-wal
+database/apkbuilder.db-shm
+
+# Local binaries / build output (VPS par apne Linux binaries lein)
+cloudflared.exe
+cloudflared
+backups/
+builds/
+database/zayrobuild.db
+database/zayrobuild.db-wal
+database/zayrobuild.db-shm
+
+# Welcome Bot credentials and Python environment (never commit)
+runtime/
+services/welcome-bot/.venv/
+__pycache__/
+
+# Sensitive new artifacts: tracked historical files need a coordinated private migration.
+keystore/*.keystore
+keystore/*.keystore.*
+database/*-wal
+database/*-shm

@@ -1,0 +1,25 @@
+'use strict';
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const express=require('express');
+const Database=require('better-sqlite3');
+test('Welcome endpoints enforce customer/admin roles and expose no credentials',async t=>{
+ const db=new Database(':memory:');db.exec('CREATE TABLE users(id INTEGER PRIMARY KEY,coins INTEGER,username TEXT); CREATE TABLE settings(key TEXT PRIMARY KEY,value TEXT);');
+ const app=express();app.use(express.json());app.use((req,res,next)=>{req.session=req.headers['x-test-role']==='admin'?{isAdmin:true}:req.headers['x-test-role']==='customer'?{userId:1}:{};next();});
+ const auth=(req,res,next)=>req.session.userId||req.session.isAdmin?next():res.status(401).json({error:'Login required'});
+ const admin=(req,res,next)=>req.session.isAdmin?next():res.status(403).json({error:'Admin required'});
+ require('../utils/welcome-routes')(app,db,auth,admin,(req,res,next)=>next());
+ const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+ t.after(async()=>{await new Promise(resolve=>server.close(resolve));db.close();});
+ const base=`http://127.0.0.1:${server.address().port}`;
+ const request=(url,role,method='GET',body)=>fetch(base+url,{method,headers:{'x-test-role':role||'','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+ assert.equal((await request('/api/me/bot-deploys')).status,401);
+ assert.equal((await request('/api/deploy-bot/verify',null,'POST',{})).status,401);
+ assert.equal((await request('/api/admin/bot-deploys','customer')).status,403);
+ assert.equal((await request('/api/admin/welcome-config','customer')).status,403);
+ assert.equal((await request('/api/me/bot-deploys','admin','POST',{})).status,403);
+ const response=await request('/api/admin/welcome-config','admin');const config=await response.json();
+ assert.equal(config.plans.length,4);assert.equal(config.enabled,false);
+ assert.ok(!JSON.stringify(config).includes('token'));
+ assert.equal((await request('/api/admin/welcome-config','admin','POST',{enabled:true,plans:[]})).status,400);
+});

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="theme-color" content="#0d1024" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="Private Telegram Mini App. Open the official bot to access your panel." />
+    <title>ZAYRO BUILD — Premium APK Marketplace</title>
+
+    <style>
+      html,body{margin:0;min-height:100%;background:#0d1024;color:#fff}body{font-family:system-ui,sans-serif}
+      .boot-screen{min-height:100vh;min-height:100dvh;box-sizing:border-box;display:grid;place-items:center;padding:24px;background:radial-gradient(900px 520px at 20% 0%,rgba(103,92,236,.32),transparent 60%),linear-gradient(180deg,#0d1024,#090b1c)}
+      .boot-intro{width:100%;max-width:332px;text-align:center;box-sizing:border-box}
+      .boot-mark{position:relative;width:82px;height:82px;margin:0 auto 18px;border-radius:26px;display:grid;place-items:center;background:linear-gradient(140deg,#8b7cff,#4f46e5);box-shadow:0 24px 60px -22px #8b7cff73,inset 0 1px 0 #ffffff66;animation:boot-float 5s ease-in-out infinite}
+      .boot-mark b{font-size:34px;font-weight:800}.boot-glow{position:absolute;inset:-14px;border-radius:34px;background:radial-gradient(circle,#8b7cff73,transparent 70%);animation:boot-glow 2.6s ease-in-out infinite}.boot-ring{position:absolute;inset:-7px;border-radius:30px;border:1.5px solid transparent;background:conic-gradient(from 0deg,transparent 0 55%,#8b7cffe6 75%,transparent 100%) border-box;-webkit-mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:boot-spin 2.4s linear infinite}
+      .boot-intro h1{font-size:22px;letter-spacing:.08em;margin:0 0 4px;text-transform:uppercase}.boot-subtitle{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:#6f769b;margin:0 0 22px}
+      .boot-track{height:6px;border-radius:99px;background:#ffffff14;border:1px solid #ffffff14;overflow:hidden}.boot-progress{height:100%;width:42%;border-radius:99px;background:linear-gradient(90deg,#4f46e5,#8b7cff,#38bdf8);box-shadow:0 0 16px #8b7cff73;animation:boot-slide 1.6s ease-in-out infinite}
+      #boot-status{margin:10px 0 0;font-size:11.5px;line-height:1.6;color:#9aa0c4}.boot-help{font-size:11px;color:#6f769b;margin:18px 0 0;line-height:1.7}.boot-intro button{width:100%;margin-top:18px;padding:14px;border:0;border-radius:14px;background:#7955ed;color:#fff;font:inherit;cursor:pointer}.boot-intro button[hidden]{display:none}.boot-intro button:focus-visible{outline:2px solid #e8ce93;outline-offset:4px}
+      .boot-screen[aria-busy="false"] .boot-progress,.boot-screen[aria-busy="false"] .boot-mark,.boot-screen[aria-busy="false"] .boot-ring,.boot-screen[aria-busy="false"] .boot-glow{animation:none}
+      @keyframes boot-slide{0%{transform:translateX(-110%)}100%{transform:translateX(350%)}}@keyframes boot-spin{to{transform:rotate(360deg)}}@keyframes boot-float{50%{transform:translateY(-6px)}}@keyframes boot-glow{50%{opacity:.4}}
+      @media(prefers-reduced-motion:reduce){.boot-progress,.boot-mark,.boot-ring,.boot-glow{animation:none}}
+      .boot-screen{position:fixed;inset:0;z-index:10000;overflow:auto;transition:opacity .3s ease;--boot-progress:24%;background:radial-gradient(ellipse at 50% 36%,#6b3cc52e,transparent 52%),radial-gradient(ellipse at 15% 0%,#b7964f12,transparent 48%),#0b0d1b}
+      .boot-mark{width:132px;height:132px;margin-bottom:30px;border-radius:36px;box-shadow:0 0 70px #8b7cff33,inset 0 1px 0 #ffffff66}.boot-mark b{font-size:48px}.boot-mark img{position:absolute;width:108px;height:108px;object-fit:contain;border-radius:22px}.boot-mark img[hidden]{display:none}.boot-mark.has-logo{background:linear-gradient(145deg,#252039,#151729);border:1px solid #bca1704d}.boot-mark.has-logo b{visibility:hidden}.boot-ring{inset:-10px;border-radius:42px;background:conic-gradient(from 0deg,transparent 0 48%,#d7bb79 72%,#ae8bf3 86%,transparent 100%) border-box}.boot-glow{inset:-35px;background:radial-gradient(circle,#9b72ed3d,transparent 70%)}
+      .boot-intro h1{font-size:24px;letter-spacing:.065em}.boot-subtitle{color:#b7a57f;font-size:9px;margin-top:8px}.boot-icons{display:flex;justify-content:center;gap:22px;margin:25px 0}.boot-icons span{display:grid;place-items:center;width:38px;height:38px;border:1px solid #b898ec26;border-radius:13px;background:#b38cff09;color:#bda1ef;animation:boot-icon 2.4s ease-in-out infinite}.boot-icons span:nth-child(2){animation-delay:.4s;color:#dec28d}.boot-icons span:nth-child(3){animation-delay:.8s}.boot-icons svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+      .boot-track{height:5px;border:0;background:#b5a0d21a}.boot-progress{position:relative;width:var(--boot-progress);animation:none;transition:width .5s ease;background:linear-gradient(90deg,#7957e7,#b79bef,#ddc28a);overflow:hidden}.boot-progress::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,#fff8,transparent);animation:boot-slide 1.8s ease-in-out infinite}.boot-help{color:#77758e}.boot-complete{opacity:0;pointer-events:none}
+      @keyframes boot-icon{50%{transform:translateY(-5px);box-shadow:0 4px 18px #9970dc28}}
+      .boot-screen[aria-busy="false"] .boot-icons span,.boot-screen[aria-busy="false"] .boot-progress::after{animation:none}
+      @media(prefers-reduced-motion:reduce){.boot-icons span,.boot-progress::after{animation:none}.boot-screen,.boot-progress{transition:none}}
+    </style>
+  </head>
+  <body>
+    <div id="root"><main class="boot-screen" aria-busy="true"><section class="boot-intro"><div class="boot-mark" aria-hidden="true"><span class="boot-glow"></span><b>Z</b><img src="/brand-logo" alt="Brand logo" onload="this.parentElement.classList.add('has-logo')" onerror="this.hidden=true;this.parentElement.classList.remove('has-logo')"><span class="boot-ring"></span></div><h1>ZAYRO BUILD</h1><p class="boot-subtitle">Premium APK Marketplace</p><div class="boot-icons" aria-hidden="true"><span><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg></span><span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg></span><span><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="14" rx="4"/><path d="M12 3v3M8 12h.01M16 12h.01M9 16h6"/></svg></span></div><div class="boot-track" aria-hidden="true"><div class="boot-progress"></div></div><p id="boot-status" role="status" aria-live="polite">Loading your panel…</p><p class="boot-help">Please wait a moment.</p><button id="boot-reload" type="button" onclick="location.reload()" hidden>Reload panel</button><noscript>Enable JavaScript, then reopen from the Telegram bot.</noscript></section></main></div>
+    <!-- Independent classic-script recovery: still works if the module or its CSS never loads. -->
+    <script>
+      (function () {
+        function failed(message) {
+          var status = document.getElementById('boot-status');
+          if (!status) return;
+          status.textContent = message;
+          document.getElementById('boot-reload').hidden = false;
+          document.querySelector('.boot-help').textContent = 'Close this Mini App and open it again from the official bot if reloading does not help.';
+          var screen = document.querySelector('.boot-screen');
+          if (screen) screen.setAttribute('aria-busy', 'false');
+        }
+        window.addEventListener('error', function (event) {
+          var target = event.target;
+          if (target && target.tagName === 'SCRIPT' && target.type === 'module') failed('Panel files could not load. Check your connection and reload.');
+        }, true);
+        setTimeout(function () { failed('Taking longer than expected. Check your connection, then reload or reopen from the bot.'); }, 45000);
+      }());
+    </script>
+    <script type="module" src="/src/bootstrap.js"></script>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),Database=require('better-sqlite3'),express=require('express');
+const rs=require('../utils/resellers');
+test('reseller API enforces auth, owner scoping, hides admin notes and validates management writes',async t=>{
+ const db=new Database(':memory:');db.exec("CREATE TABLE users(id INTEGER PRIMARY KEY,username TEXT,telegram_id TEXT,coins REAL);INSERT INTO users VALUES(1,'alice','111',1000),(2,'bob','222',1000)");
+ const app=express();app.use(express.json());app.use((req,res,next)=>{req.session={userId:Number(req.headers['x-user'])||null,isAdmin:req.headers['x-admin']==='yes',username:'admin'};next();});
+ const auth=(req,res,next)=>req.session.userId?next():res.sendStatus(401),admin=(req,res,next)=>req.session.isAdmin?next():res.sendStatus(403);
+ require('../utils/reseller-routes')(app,db,auth,admin);
+ const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});t.after(async()=>{await new Promise(r=>server.close(r));db.close();});
+ const request=(p,body,headers={})=>fetch(`http://127.0.0.1:${server.address().port}${p}`,{method:body?'POST':'GET',headers:{'content-type':'application/json',...headers},...(body?{body:JSON.stringify(body)}:{})});
+ const body={status:'active',apk_percent:30,bot_percent:25,site_percent:20,note:'confidential-owner-note',version:0};
+ assert.equal((await request('/api/me/reseller')).status,401);
+ assert.equal((await request('/api/admin/resellers',null,{'x-user':'1'})).status,403);
+ assert.equal((await request('/api/admin/resellers/1',body,{'x-user':'1'})).status,403);
+ assert.equal((await request('/api/admin/resellers/1',body,{'x-admin':'yes'})).status,200);
+ assert.equal((await request('/api/admin/resellers/2',body,{'x-admin':'yes'})).status,200);
+ assert.equal((await request('/api/admin/resellers/1',{...body,apk_percent:-5},{'x-admin':'yes'})).status,400);
+ rs.record(db,1,'apk',10,'Alice order',rs.pricing(db,1,'apk',999));rs.record(db,2,'apk',11,'Bob order',rs.pricing(db,2,'apk',999));
+ const own=await request('/api/me/reseller?user_id=2',null,{'x-user':'1'});assert.equal(own.headers.get('cache-control'),'no-store');const result=await own.json();assert.equal(result.orders.length,1);assert.equal(result.orders[0].user_id,1);assert.doesNotMatch(JSON.stringify(result),/confidential-owner-note|Bob order/);
+ const all=await(await request('/api/admin/resellers',null,{'x-admin':'yes'})).json();assert.equal(all.total,2);assert.equal(all.active,2);assert.equal(all.lifetime.orders,2);
+ const detail=await(await request('/api/admin/resellers/1',null,{'x-admin':'yes'})).json();assert.equal(detail.audit.length,1);assert.equal(detail.profile.note,body.note);
+ const customers=await(await request('/api/admin/resellers/customers?q=alice',null,{'x-admin':'yes'})).json();assert.deepEqual(customers.map(c=>c.id),[1]);
+ assert.equal((await request('/api/me/reseller?from=invalid',null,{'x-user':'1'})).status,400);
+ assert.equal((await request('/api/admin/resellers/1/remove',{version:1},{'x-user':'1'})).status,403);
+ assert.equal((await request('/api/admin/resellers/1/remove',{version:0},{'x-admin':'yes'})).status,400);
+ assert.equal((await request('/api/admin/resellers/1/remove',{version:1},{'x-admin':'yes'})).status,200);
+ const listed=await(await request('/api/admin/resellers?summary=1',null,{'x-admin':'yes'})).json();assert.equal(listed.total,1);assert.equal(listed.removed,1);assert.equal(listed.rows.length,1);assert.equal(listed.lifetime,undefined);
+ const archived=await(await request('/api/admin/resellers?include_removed=1',null,{'x-admin':'yes'})).json();assert.equal(archived.rows.length,2);
+ const history=await(await request('/api/admin/resellers/1',null,{'x-admin':'yes'})).json();assert.equal(history.lifetime.orders,1);assert.equal(history.user.coins,1000);assert.ok(history.profile.removed_at);
+ const restored=await request('/api/admin/resellers/1',{...body,version:history.profile.version},{'x-admin':'yes'});assert.equal(restored.status,200);assert.equal((await restored.json()).removed_at,null);
+
+});

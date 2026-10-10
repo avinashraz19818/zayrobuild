@@ -1,0 +1,37 @@
+.hack-preview{display:flex;flex-direction:column;gap:18px;padding:4px 0 8px;min-width:0}.hack-preview-summary{display:flex;align-items:center;gap:14px}.hack-preview-summary>img{width:64px;height:72px;object-fit:cover;border-radius:16px}.hack-preview-price{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}.hack-preview-price>b{font-family:var(--font-display);font-size:24px;color:var(--gold)}.hack-preview-price>s{font-size:12px;color:var(--muted)}.hack-preview-price>span{font-size:10px;font-weight:850;border-radius:20px;color:#30213a;background:linear-gradient(120deg,#ffe5a0,#ffbe46);padding:5px 9px}.hack-media-rail{position:relative;display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#9571dd66 transparent;padding-bottom:12px;min-width:0;max-width:100%}.hack-media-slide{position:relative;flex:0 0 86%;margin:0;scroll-snap-align:start;border-radius:20px;overflow:hidden;background:#090b15;border:1px solid #aa85f42b;aspect-ratio:3/4}.hack-media-slide:only-child{flex-basis:100%}.hack-media-slide>img,.hack-media-slide>video{width:100%;height:100%;object-fit:contain;display:block}.hack-media-slide figcaption{position:absolute;left:12px;top:12px;background:#110d27ce;border:1px solid #9d7dca44;border-radius:9px;padding:6px 9px;display:flex;align-items:center;gap:5px;font-size:9px;letter-spacing:1px;pointer-events:none}.hack-media-error{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:28px 16px;min-height:160px;height:100%;color:var(--muted)}.hack-media-error small{font-size:11px}.hack-preview-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted)}.hack-preview-description{border:1px solid #ab90d82b;border-radius:16px;padding:16px;line-height:1.7;font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere;background:#ffffff03}.hack-preview-actions{display:grid;grid-template-columns:1fr 1.6fr;gap:12px;padding-top:4px}.hack-preview-actions .btn{min-height:44px}.admin-order-card{min-width:0;border:1px solid #9a83ef30;border-radius:20px;overflow:hidden;background:#7160a30a}.admin-order-card>.admin-selection-card{width:100%;border:0;border-radius:0}.admin-order-controls{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #9a83ef20}.admin-order-controls>span{margin-right:auto;color:var(--muted);font-size:11px;font-weight:750}
+@media(min-width:650px){.hack-media-slide{flex-basis:65%;max-height:450px}}
+
+/* Only the preview is viewport-bounded; checkout and other sheets retain their layout. */
+.sheet.hack-preview-sheet{height:min(600px,calc(100dvh - 12px));max-height:calc(100dvh - 12px);max-width:520px;overflow:hidden;gap:8px;padding:8px 14px max(12px,env(safe-area-inset-bottom,0px))}
+.hack-preview-sheet>.sheet-handle,.hack-preview-sheet>.sheet-head,.hack-preview-sheet>.sheet-foot{flex-shrink:0}
+.hack-preview-sheet .sheet-head>div,.hack-preview-sheet .sheet-head>div>div{min-width:0}
+.hack-preview-sheet .sheet-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px}
+.hack-preview-sheet .sheet-sub{font-size:10px;margin-top:2px}
+.hack-preview-sheet .sheet-head .icon-btn{flex-shrink:0}
+.hack-preview-sheet .hack-preview{flex:1;min-height:0;gap:7px;padding:0;overflow:hidden}
+.hack-preview-sheet .hack-preview> :not(.hack-media-rail):not(.hack-media-error){flex-shrink:0}
+.hack-preview-sheet .hack-preview-summary{gap:10px}
+.hack-preview-sheet .hack-preview-summary>img{width:36px;height:40px;border-radius:9px}
+.hack-preview-sheet .hack-preview-price{margin-top:2px;gap:8px}
+.hack-preview-sheet .hack-preview-price>b{font-size:20px}
+.hack-preview-sheet .label{font-size:9px}
+.hack-preview-sheet .hack-media-rail{flex:1;min-height:0;padding-bottom:4px;overflow-y:hidden}
+.hack-preview-sheet .hack-media-slide{aspect-ratio:auto;flex-basis:86%;height:100%;max-height:none;border-radius:12px}
+.hack-preview-sheet .hack-media-slide:only-child{flex-basis:100%}
+.hack-preview-sheet .hack-media-error{min-height:0;padding:8px;gap:4px;overflow:auto;font-size:11px}
+.hack-preview-sheet .hack-preview>.hack-media-error{flex:1}
+.hack-preview-sheet .hack-media-error p{margin:0}
+.hack-preview-sheet .hack-preview-description{max-height:44px;overflow-y:auto;padding:5px 9px;line-height:1.5;font-size:11px;border-radius:9px}
+.hack-preview-sheet .hack-preview-nav .btn{min-height:32px;padding:5px 12px}
+.hack-preview-sheet .sheet-foot{padding-top:4px;border-top:1px solid #ab90d82b}
+.hack-preview-sheet .hack-preview-actions{width:100%;padding:0;gap:10px}
+@media(max-height:480px){.sheet.hack-preview-sheet{gap:4px;padding-top:5px}.hack-preview-sheet .sheet-handle{display:none}.hack-preview-sheet .hack-preview{gap:4px}.hack-preview-sheet .hack-preview-summary>img{height:28px;width:28px}.hack-preview-sheet .hack-preview-description{max-height:27px}.hack-preview-sheet .sheet-sub{display:none}.hack-preview-sheet .hack-preview-price>b{font-size:17px}.hack-preview-sheet .hack-preview-summary .label{display:none}}
+/* Intrinsic-ratio frames: no padded black portrait/landscape boxes. */
+.hack-preview-sheet .hack-media-rail{align-items:center;scrollbar-width:none}
+.hack-preview-sheet .hack-media-rail::after{content:'';flex:0 0 var(--rail-tail,0px)}
+.hack-preview-sheet .hack-media-slide,.hack-preview-sheet .hack-media-slide:only-child{flex:0 0 auto;aspect-ratio:auto;background:transparent;border:0;max-width:100%}
+.hack-preview-sheet .hack-media-slide>img,.hack-preview-sheet .hack-media-slide>video{border-radius:12px}
+.hack-preview-sheet .hack-media-slide figcaption{left:6px;top:6px;padding:4px 6px;font-size:8px;letter-spacing:.5px}
+/* Use the free space above the old bottom sheet. Keep actions clear of Telegram chrome. */
+.overlay.hack-preview-overlay{align-items:flex-start;padding: max(12px,env(safe-area-inset-top,0px)) 0 max(18px,env(safe-area-inset-bottom,0px));box-sizing:border-box}
+.hack-preview-overlay .sheet.hack-preview-sheet{height:min(600px,calc(100dvh - 40px));max-height:calc(100dvh - 40px);border-radius:24px;border-bottom:1px solid var(--line);padding-bottom:12px}

@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#020906">
+<title>VIP PANEL</title>
+
+<!-- Modern Sci-Fi / Cyberpunk Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+
+<style>
+*{box-sizing:border-box}
+html{height:100%;background:#020906}
+body{
+  margin:0;
+  min-height:100%;
+  color:#ecfff7;
+  font-family:'JetBrains Mono', monospace;
+  background:radial-gradient(ellipse at 50% 30%, #00ff8718, transparent 65%), #020906;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+.scene{
+  min-height:100vh;
+  min-height:100svh;
+  position:relative;
+  isolation:isolate;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  padding:calc(24px + env(safe-area-inset-top,0px)) 20px calc(20px + env(safe-area-inset-bottom,0px));
+  overflow:hidden;
+}
+
+/* Cyber Grid Background Effect */
+.scene::before{
+  content:"";
+  position:absolute;
+  z-index:-2;
+  inset:0;
+  background-image:linear-gradient(#00ff870d 1px, transparent 1px), linear-gradient(90deg, #00ff870d 1px, transparent 1px);
+  background-size:32px 32px;
+  pointer-events:none;
+}
+
+/* Laser Scanline Beam */
+.scene::after{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  left:0; right:0; top:-20%;
+  height:20%;
+  background:linear-gradient(transparent, #00ff8715, transparent);
+  border-bottom:1.5px solid #00ff8733;
+  animation:screen-scan 6s linear infinite;
+  pointer-events:none;
+}
+
+.topline{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  width:100%;
+  max-width:420px;
+  color:#529372;
+  font-size:9px;
+  letter-spacing:.15em;
+  padding-bottom:12px;
+  border-bottom:1px solid #00ff871a;
+  position:relative;
+}
+.topline::after{
+  content:"";
+  position:absolute;
+  bottom:-1px;
+  left:0;
+  width:36px;
+  height:1px;
+  background:#00ff87;
+  box-shadow:0 0 10px #00ff87;
+}
+.topline strong{
+  font-family:'Orbitron', sans-serif;
+  font-size:11px;
+  letter-spacing:.2em;
+  font-weight:800;
+  color:#bcecd3;
+}
+.topline strong::before{content:"[ ";color:#00ff87;}
+.topline strong::after{content:" ]";color:#00ff87;}
+
+.edition{display:flex;align-items:center;gap:6px;color:#00ff87;font-size:9px;font-weight:600}
+.edition i{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:#00ff87;
+  box-shadow:0 0 10px #00ff87;
+  animation:blink 1.5s ease-in-out infinite;
+}
+
+.content{width:100%;max-width:380px;text-align:center;padding:18px 0}
+
+/* Emblem & Orbit Rings */
+.emblem{
+  height:230px;
+  width:230px;
+  max-width:100%;
+  margin:0 auto 20px;
+  position:relative;
+  display:grid;
+  place-items:center;
+  background:
+    linear-gradient(#00ff87,#00ff87) left 0 top 0/12px 2px no-repeat,
+    linear-gradient(#00ff87,#00ff87) left 0 top 0/2px 12px no-repeat,
+    linear-gradient(#00ff87,#00ff87) right 0 bottom 0/12px 2px no-repeat,
+    linear-gradient(#00ff87,#00ff87) right 0 bottom 0/2px 12px no-repeat;
+}
+.emblem::before{content:"HUD // 01";position:absolute;left:6px;bottom:4px;color:#3f785b;font-size:8px;letter-spacing:.15em}
+.emblem::after{content:"CYBER-CORE";position:absolute;right:6px;top:4px;color:#3f785b;font-size:8px;letter-spacing:.15em}
+
+.scanner-dial{position:absolute;inset:0;width:100%;height:100%;color:#00ff8733;pointer-events:none}
+.radar-sweep{
+  position:absolute;
+  inset:15px;
+  border-radius:50%;
+  background:conic-gradient(from 0deg, transparent 0deg 280deg, #00ff8705 310deg, #00ff8733 358deg, transparent 360deg);
+  animation:orbit 6s linear infinite;
+  pointer-events:none;
+}
+.satellite{position:absolute;inset:9px;border-radius:50%;animation:orbit 14s linear infinite reverse;pointer-events:none}
+.satellite i{position:absolute;top:14%;left:14%;width:5px;height:5px;border:1px solid #00ff87;background:#00ff87;transform:rotate(45deg);box-shadow:0 0 10px #00ff87}
+
+.halo{
+  position:absolute;
+  inset:25px;
+  border-radius:50%;
+  background:radial-gradient(circle, #00ff8722, transparent 70%);
+  box-shadow:0 0 40px #00ff871a;
+  animation:breathe 3.5s ease-in-out infinite;
+}
+.orbit{
+  position:absolute;
+  inset:12px;
+  border:1px dashed #00ff8740;
+  border-radius:50%;
+  animation:orbit 28s linear infinite;
+}
+.orbit.inner{
+  inset:34px;
+  border:1px solid #00ff8720;
+  animation:orbit 10s linear infinite reverse;
+}
+
+/* Logo Stage Container */
+.logo-stage{
+  width:120px;
+  height:120px;
+  padding:3px;
+  border-radius:24px;
+  position:relative;
+  background:linear-gradient(135deg, #00ff87, #0d3822 40%, #03120a 70%, #00ff87);
+  box-shadow:0 0 25px #00ff8733, 0 15px 30px #000000aa;
+  animation:levitate 4s ease-in-out infinite;
+}
+.logo-inner{
+  width:100%;
+  height:100%;
+  border-radius:21px;
+  background:#04120a;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  position:relative;
+}
+.logo-inner img{width:100%;height:100%;object-fit:contain;display:block;position:relative;z-index:1}
+.fallback{
+  position:absolute;
+  color:#00ff87;
+  font-family:'Orbitron', sans-serif;
+  font-size:48px;
+  font-weight:900;
+  text-shadow:0 0 20px #00ff87;
+}
+
+/* Typography & Title Styling */
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  color:#00ff87;
+  font-size:9px;
+  font-weight:600;
+  letter-spacing:.3em;
+  margin-bottom:8px;
+}
+.eyebrow::before, .eyebrow::after{content:"";width:16px;height:1px;background:#00ff8766}
+
+.brand-name{
+  margin:0 auto;
+  font-family:'Orbitron', sans-serif;
+  font-size:clamp(28px, 8vw, 36px);
+  font-weight:900;
+  letter-spacing:.08em;
+  background:linear-gradient(180deg, #ffffff 10%, #abf7d0 50%, #00ff87 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  text-shadow:0 0 30px #00ff8740;
+}
+.tagline{
+  margin:8px 0 20px;
+  font-size:9px;
+  line-height:1.5;
+  color:#5a8e73;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+}
+
+/* Terminal Console Box */
+.loading-card{
+  position:relative;
+  padding:0 16px 14px;
+  border:1px solid #00ff8733;
+  border-radius:6px;
+  background:linear-gradient(135deg, #071c12cc, #020b07fa);
+  box-shadow:0 10px 30px #00000080, inset 0 0 15px #00ff870d;
+  text-align:left;
+}
+.loading-card::before, .loading-card::after{
+  content:"";
+  position:absolute;
+  width:10px;
+  height:10px;
+  border-color:#00ff87;
+  border-style:solid;
+  pointer-events:none;
+}
+.loading-card::before{top:-1px;left:-1px;border-width:2px 0 0 2px}
+.loading-card::after{bottom:-1px;right:-1px;border-width:0 2px 2px 0}
+
+.terminal-head{
+  height:32px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid #00ff871a;
+  margin-bottom:12px;
+  font-size:9px;
+  letter-spacing:.15em;
+  color:#73b491;
+}
+.console-symbol{font-size:12px;color:#00ff87;margin-right:4px;font-weight:800}
+.terminal-lights{display:flex;gap:4px}
+.terminal-lights i{width:4px;height:4px;border-radius:50%;background:#00ff87;box-shadow:0 0 6px #00ff87}
+.terminal-lights i:nth-child(2){opacity:.5}
+.terminal-lights i:nth-child(3){opacity:.2}
+
+.logs{
+  margin:0 0 14px;
+  padding:0;
+  list-style:none;
+  display:grid;
+  gap:6px;
+  color:#609678;
+  font-size:9px;
+}
+.logs li{display:flex;gap:8px;padding-left:8px;border-left:1.5px solid #00ff8720}
+.logs em{font-style:normal;color:#00ff87aa;font-weight:600}
+.logs li:last-child{color:#d0fae5;border-left-color:#00ff87}
+.logs li:last-child span::after{content:"_";color:#00ff87;animation:blink 1s infinite}
+
+.status-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.status{font-size:9px;color:#00ff87;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+.signal{display:flex;align-items:flex-end;gap:2.5px;height:12px}
+.signal i{display:block;width:2px;background:#00ff87;animation:signal 1.2s ease-in-out infinite}
+.signal i:nth-child(1){height:4px}
+.signal i:nth-child(2){height:8px;animation-delay:.15s}
+.signal i:nth-child(3){height:12px;animation-delay:.3s}
+.signal i:nth-child(4){height:7px;animation-delay:.45s}
+
+/* Scanning Bar Indicator */
+.track{height:4px;background:#03180f;border-radius:2px;overflow:hidden;position:relative}
+.track span{
+  display:block;
+  height:100%;
+  width:45%;
+  background:linear-gradient(90deg, transparent, #00ff87, #ffffff);
+  box-shadow:0 0 10px #00ff87;
+  animation:scan 2.2s ease-in-out infinite;
+}
+
+.console-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+.loading-note{font-size:8px;letter-spacing:.08em;color:#4c7d62;margin:0}
+
+.bottom{text-align:center;width:100%;max-width:420px}
+.bottom-line{width:50px;height:2px;margin:0 auto 10px;background:repeating-linear-gradient(90deg, #00ff87 0 3px, transparent 3px 6px)}
+.bottom p{font-family:'Orbitron', sans-serif;font-size:8px;letter-spacing:.2em;color:#3f785b;margin:0}
+
+/* Keyframe Animations */
+@keyframes orbit{to{transform:rotate(360deg)}}
+@keyframes levitate{50%{transform:translateY(-6px)}}
+@keyframes breathe{50%{opacity:.3}}
+@keyframes blink{50%{opacity:.2}}
+@keyframes scan{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+@keyframes signal{50%{transform:scaleY(.3);opacity:.4}}
+@keyframes screen-scan{to{transform:translateY(600%)}}
+
+/* Mobile & Small Screen Optimizations */
+@media(max-height:700px){
+  .scene{padding-top:16px;padding-bottom:14px}
+  .content{padding:10px 0}
+  .emblem{width:180px;height:180px;margin-bottom:12px}
+  .logo-stage{width:95px;height:95px;border-radius:18px}
+  .logo-inner{border-radius:16px}
+  .brand-name{font-size:26px}
+  .tagline{margin:5px 0 14px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}}
+</style>
+</head>
+<body>
+<main class="scene" aria-busy="true">
+  <header class="topline">
+    <strong>SYSTEM // VIP_CORE</strong>
+    <span class="edition"><i aria-hidden="true"></i>ONLINE</span>
+  </header>
+
+  <section class="content" aria-label="Opening panel">
+    <div class="emblem" aria-hidden="true">
+      <svg class="scanner-dial" viewBox="0 0 240 240">
+        <circle cx="120" cy="120" r="116" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="2 10"/>
+        <path d="M120 1v10M120 229v10M1 120h10M229 120h10" stroke="#00ff87" stroke-width="1.5"/>
+        <circle cx="120" cy="120" r="108" fill="none" stroke="currentColor" stroke-width=".5"/>
+      </svg>
+      <div class="radar-sweep"></div>
+      <span class="satellite"><i></i></span>
+      <div class="halo"></div>
+      <div class="orbit"></div>
+      <div class="orbit inner"></div>
+
+      <div class="logo-stage">
+        <div class="logo-inner">
+          <span class="fallback">V</span>
+          <img src="my_icon.png" alt="" onerror="this.style.display='none'">
+        </div>
+      </div>
+    </div>
+
+    <div class="branding">
+      <div class="eyebrow">AUTHENTICATED ACCESS</div>
+      <div class="brand-name" role="heading" aria-level="1">VIP PANEL</div>
+      <p class="tagline">Custom Interface · Premium System</p>
+    </div>
+
+    <div class="loading-card">
+      <div class="terminal-head">
+        <span><b class="console-symbol">&gt;_</b> BOOT_CONSOLE</span>
+        <span class="terminal-lights" aria-hidden="true"><i></i><i></i><i></i></span>
+      </div>
+      <ul class="logs" aria-hidden="true">
+        <li><em>01</em><span>Initializing encrypted handshake...</span></li>
+        <li><em>02</em><span>Loading VIP panel workspace...</span></li>
+        <li><em>03</em><span>Establishing secure channel...</span></li>
+      </ul>
+      <div class="status-row">
+        <span class="status" role="status">SYSTEM LOADING</span>
+        <span class="signal" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      </div>
+      <div class="track" aria-hidden="true"><span></span></div>
+      <div class="console-footer">
+        <p class="loading-note">Please wait while your panel opens.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="bottom">
+    <div class="bottom-line"></div>
+    <p>STAND BY // INITIALIZING INTERFACE</p>
+  </footer>
+</main>
+<!-- Android APK loading screen integration preserved -->
+</body>
+</html>

@@ -1,0 +1,66 @@
+{
+  "_rolldown-runtime-hePW80VL.js": {
+    "file": "assets/rolldown-runtime-hePW80VL.js",
+    "name": "rolldown-runtime"
+  },
+  "index.html": {
+    "file": "assets/index-Ds-kZTZd.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "dynamicImports": [
+      "src/main.jsx"
+    ],
+    "css": [
+      "assets/index-BRLlJWPM.css"
+    ]
+  },
+  "node_modules/qrcode/lib/browser.js": {
+    "file": "assets/browser-B8ehoFP8.js",
+    "name": "browser",
+    "src": "node_modules/qrcode/lib/browser.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-hePW80VL.js"
+    ]
+  },
+  "src/assets/fonts/plus-jakarta-sans-latin.woff2": {
+    "file": "assets/plus-jakarta-sans-latin-eXO_dkmS.woff2",
+    "src": "src/assets/fonts/plus-jakarta-sans-latin.woff2"
+  },
+  "src/assets/fonts/sora-latin.woff2": {
+    "file": "assets/sora-latin-DdqRvwsR.woff2",
+    "src": "src/assets/fonts/sora-latin.woff2"
+  },
+  "src/main.jsx": {
+    "file": "assets/main-CvWWtWMl.js",
+    "name": "main",
+    "src": "src/main.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-hePW80VL.js",
+      "index.html"
+    ],
+    "dynamicImports": [
+      "node_modules/qrcode/lib/browser.js",
+      "src/views/admin/AdminApp.jsx"
+    ],
+    "css": [
+      "assets/main-BOfRdQ9c.css"
+    ],
+    "assets": [
+      "assets/plus-jakarta-sans-latin-eXO_dkmS.woff2",
+      "assets/sora-latin-DdqRvwsR.woff2"
+    ]
+  },
+  "src/views/admin/AdminApp.jsx": {
+    "file": "assets/AdminApp-BKyuVqyY.js",
+    "name": "AdminApp",
+    "src": "src/views/admin/AdminApp.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-hePW80VL.js",
+      "src/main.jsx"
+    ]
+  }
+}

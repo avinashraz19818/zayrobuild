@@ -1,0 +1,27 @@
+import React from 'react';
+import ResellerActivity from './ResellerActivity';
+import { Download } from 'lucide-react';
+export const money = value => `₹${Number(value || 0).toLocaleString('en-IN', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+export const paise = value => money(Number(value || 0)/100);
+export function DateRange({range,setRange}) {
+ return <div className="rs-filters"><label>From (IST)<input className="input" type="date" value={range.from} onChange={e=>setRange({...range,from:e.target.value})}/></label><label>To (IST)<input className="input" type="date" value={range.to} onChange={e=>setRange({...range,to:e.target.value})}/></label></div>;
+}
+export function todayRange(){const day=new Date(Date.now()+19800000).toISOString().slice(0,10);return {from:day,to:day};}
+export function Summary({stats,title}) {
+ if(!stats)return null;
+ return <section><h3>{title}</h3><div className="rs-stats">{[['Orders',stats.orders],['Wallet charged',paise(stats.charged_paise)],['Refunded',paise(stats.refunds_paise)],['Net order spend',paise(stats.charged_paise-stats.refunds_paise)]].map(([label,value])=><div className="rs-stat" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div></section>;
+}
+function exportRows(rows){const cells=x=>`"${String(x??'').replace(/^[=+@\-\t\r]/,"'$&").replace(/"/g,'""')}"`;const csv=[['Order','User ID','Service','Description','Retail INR','Charged INR','Discount %','Refund INR','Created UTC'],...rows.map(r=>[r.order_id,r.user_id,r.service,r.label,r.retail_paise/100,r.paid_paise/100,r.percent,(r.refund_paise||0)/100,r.created_at])].map(r=>r.map(cells).join(',')).join('\r\n');const url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='reseller-orders.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+export default function ResellerReport({data}){
+ return <div className="rs-report">
+ <ResellerActivity activity={data.activity}/>
+ {data.funding&&<section><h3>Lifetime wallet funding · all customer deposits</h3><div className="rs-stats">{[['Approved payment value',money(data.funding.paid_inr)],['Approved wallet credits',money(data.funding.credited_inr)],['Pending deposits',data.funding.pending||0]].map(([label,value])=><div className="rs-stat" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div><p className="rs-muted">Includes funding before reseller activation. Does not include gift/referral credits or admin adjustments. Not a full wallet reconciliation.</p></section>}
+ <Summary title="Lifetime · reseller orders only" stats={data.lifetime}/>
+ <Summary title="Selected dates · orders placed in this period" stats={data.period}/>
+ <p className="rs-muted">Refund totals above include later refunds of those orders. Daily movement below uses the actual refund date. Historical orders before reseller activation are not included.</p>
+ <section className="card card-pad"><h3>Daily wallet movement · IST</h3><div className="rs-table"><table><thead><tr><th>Date</th><th>Orders</th><th>Charged</th><th>Refunded</th><th>Net spend</th></tr></thead><tbody>{data.daily?.map(d=><tr key={d.day}><td>{d.day}</td><td>{d.orders}</td><td>{paise(d.charged_paise)}</td><td>{paise(d.refunds_paise)}</td><td>{paise(d.charged_paise-d.refunds_paise)}</td></tr>)}</tbody></table>{!data.daily?.length&&<p className="rs-muted">No reseller activity in these dates.</p>}</div></section>
+ <section className="card card-pad"><div className="flex-row between"><h3>Order ledger</h3><button className="btn btn-soft btn-sm" disabled={!data.orders?.length} onClick={()=>exportRows(data.orders)}><Download size={15}/> Export CSV</button></div><p className="rs-muted">Latest 500 orders in selected dates. Use a narrower range for exports. Discount snapshots never change with new rates.</p><div className="rs-table"><table><thead><tr><th>Order / service</th><th>Details</th><th>Retail</th><th>OFF</th><th>Charged</th><th>Refund</th></tr></thead><tbody>{data.orders?.map(r=><tr key={r.id}><td>#{r.order_id} · {r.service}<small>User #{r.user_id} · {r.created_at} UTC</small></td><td>{r.label}</td><td>{paise(r.retail_paise)}</td><td>{r.percent}%</td><td>{paise(r.paid_paise)}</td><td>{r.refund_paise?paise(r.refund_paise):'—'}</td></tr>)}</tbody></table>{!data.orders?.length&&<p className="rs-muted">No orders yet. Start from the service tabs.</p>}</div></section>
+ {!!data.deposits?.length&&<section className="card card-pad"><h3>Wallet deposits · latest 100, all dates</h3><p className="rs-muted">Wallet credit can include bonuses. Deposits are funding, not sales or profit. Pending requests are not credited.</p><div className="rs-table"><table><thead><tr><th>Request</th><th>Paid (INR)</th><th>Wallet credit / requested</th><th>Status</th></tr></thead><tbody>{data.deposits.map(d=><tr key={d.id}><td>#{d.id}<small>{d.created_at}</small></td><td>{money(d.amount_paid)}</td><td>{money(d.coins_requested)}</td><td>{d.status}</td></tr>)}</tbody></table></div></section>}
+ {!!data.adjustments?.length&&<section className="card card-pad"><h3>Admin wallet adjustments · latest 100, all dates</h3><div className="rs-table"><table><thead><tr><th>Date / action</th><th>Amount</th><th>Before</th><th>After</th></tr></thead><tbody>{data.adjustments.map(a=><tr key={a.id}><td>{a.created_at}<small>{a.action}</small></td><td>{money(a.amount)}</td><td>{money(a.balance_before)}</td><td>{money(a.balance_after)}</td></tr>)}</tbody></table></div></section>}
+ </div>;
+}

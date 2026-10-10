@@ -1,0 +1,10 @@
+.animated-icon{flex-shrink:0;overflow:visible;vertical-align:middle}
+.store-icon{color:inherit}
+.app-shell .bottomnav .store-icon{width:23px;height:23px}
+.app-shell .bottomnav .active .store-icon{color:#ccb0ff}
+.row-ico .store-icon{color:inherit}
+/* SMIL timelines are paused offscreen, under modals, in hidden tabs and for reduced motion. */
+
+.store-icon .icon-gold{color:var(--gold,#ffd27a)}
+.app-shell .bottomnav .nav-ico{border-radius:11px;padding:5px;box-sizing:content-box;background:#b598ff0b;border:1px solid #b598ff16}
+.app-shell .bottomnav .active .nav-ico{background:linear-gradient(145deg,#ab81ff24,#7050b910);border-color:#b598ff38}

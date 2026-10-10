@@ -1,0 +1,477 @@
+const Database = require('better-sqlite3');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const path = require('path');
+const fs = require('fs');
+
+const DB_PATH = path.join(__dirname, 'apkbuilder.db');
+const SEED_PATH = path.join(__dirname, 'apkbuilder.seed.db');
+
+// Live DB git me tracked nahi hai (warna har pull par conflict aata hai, kyunki
+// server use har second likhta rehta hai). Pehli baar chalne par seed se ban jaati hai,
+// jisme aapke designs + settings pehle se hote hain (users/sessions khali).
+if (!fs.existsSync(DB_PATH) && fs.existsSync(SEED_PATH)) {
+  try {
+    fs.copyFileSync(SEED_PATH, DB_PATH);
+    console.log('[db] fresh database banayi gayi — seed se (designs + settings ready)');
+  } catch (error) {
+    console.error('[db] seed copy fail:', error.message);
+  }
+}
+
+const db = new Database(DB_PATH);
+
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    coins INTEGER DEFAULT 0,
+    telegram_id TEXT,
+    auth_provider TEXT NOT NULL DEFAULT 'password',
+    email_verified_at INTEGER,
+    email_verification_token_hash TEXT,
+    email_verification_expires_at INTEGER,
+    email_verification_sent_at INTEGER,
+    password_reset_token_hash TEXT,
+    password_reset_expires_at INTEGER,
+    session_version INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS designs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    price_coins INTEGER NOT NULL DEFAULT 10,
+    type TEXT NOT NULL DEFAULT 'normal',
+    popup_html_file TEXT NOT NULL,
+    java_type TEXT NOT NULL DEFAULT 'normal',
+    preview_image TEXT,
+    preview_video TEXT,
+    active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS design_preview_images (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    design_id INTEGER NOT NULL,
+    file_name TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(design_id) REFERENCES designs(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_design_preview_images_design
+    ON design_preview_images(design_id, sort_order, id);
+
+  CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    design_id INTEGER NOT NULL,
+    app_name TEXT NOT NULL,
+    package_name TEXT NOT NULL,
+    register_url TEXT NOT NULL,
+    deposit_url TEXT NOT NULL,
+    wingo_url TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    firebase_path TEXT NOT NULL,
+    min_deposit INTEGER NOT NULL DEFAULT 300,
+    brand_title TEXT NOT NULL,
+    icon_file TEXT,
+    status TEXT DEFAULT 'pending',
+    apk_file TEXT,
+    fake_register_url TEXT,
+    fake_apk_file TEXT,
+    fake_firebase_path TEXT,
+    live_link_enabled INTEGER NOT NULL DEFAULT 0,
+    build_log TEXT,
+    coins_spent INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id),
+    FOREIGN KEY(design_id) REFERENCES designs(id)
+  );
+
+  -- Multiple fake sites per order — har fake site ka apna APK banta hai
+  -- (apna register link + firebase path). Primary fake (orders.fake_*)
+  -- alag rehta hai, ye EXTRA fake sites hain (jitne chahe utne).
+  CREATE TABLE IF NOT EXISTS order_fake_sites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    register_url TEXT NOT NULL,
+    deposit_url TEXT,
+    wingo_url TEXT,
+    domain TEXT,
+    firebase_path TEXT,
+    apk_file TEXT,
+    status TEXT DEFAULT 'pending',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS coin_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    coins_requested INTEGER NOT NULL,
+    amount_paid REAL NOT NULL,
+    utr TEXT NOT NULL,
+    telegram_msg_id INTEGER,
+    status TEXT DEFAULT 'pending',
+    approved_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    sid TEXT PRIMARY KEY,
+    sess TEXT NOT NULL,
+    expires INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires);
+
+  CREATE TABLE IF NOT EXISTS build_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    firebase_path TEXT NOT NULL,
+    key_id TEXT NOT NULL,
+    key_secret TEXT NOT NULL,
+    engine TEXT NOT NULL DEFAULT 'flutter',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_build_keys_order ON build_keys(order_id);
+
+  INSERT OR IGNORE INTO settings(key,value) VALUES
+    ('upi_qr_image',''),
+    ('upi_id',''),
+    ('coin_rate','1'),
+    ('site_name','APK Builder'),
+    ('telegram_bot_token',''),
+    ('telegram_admin_id',''),
+    ('loading_html_file','redload.html'),
+    ('addon_fake_price','5'),
+    ('invite_code_change_price','10');
+`);
+
+// Migrations — safe on existing DB
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS build_keys (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id INTEGER NOT NULL,
+        firebase_path TEXT NOT NULL,
+        key_id TEXT NOT NULL,
+        key_secret TEXT NOT NULL,
+        engine TEXT NOT NULL DEFAULT 'flutter',
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_build_keys_order ON build_keys(order_id);
+    `);
+  } catch(e) {}
+  try { db.exec("ALTER TABLE designs ADD COLUMN fake_popup_html_file TEXT DEFAULT ''"); } catch(e) {}
+  // 1 = maintenance me (store par dikhta hai par build/order block rehta hai)
+  try { db.exec("ALTER TABLE designs ADD COLUMN maintenance INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE designs ADD COLUMN original_price_coins INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE designs ADD COLUMN fake_price_coins INTEGER DEFAULT 5"); } catch(e) {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN domain_change_count INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN invite_code_change_count INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN live_link_enabled INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN fake_firebase_path TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN build_engine TEXT DEFAULT 'flutter'"); } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('domain_change_price','10')"); } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('invite_code_change_price','10')"); } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('backup_keep_count','10')"); } catch(e) {}
+  try { db.exec("ALTER TABLE coin_requests ADD COLUMN screenshot_file TEXT DEFAULT ''"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN plain_password TEXT DEFAULT ''"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'password'"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN email_verified_at INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN email_verification_token_hash TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN email_verification_expires_at INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN email_verification_sent_at INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN password_reset_token_hash TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN password_reset_expires_at INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN first_name TEXT DEFAULT ''"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN tg_username TEXT DEFAULT ''"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN photo_url TEXT DEFAULT ''"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN is_telegram INTEGER DEFAULT 0"); } catch(e) {}
+  try { db.exec("CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id)"); } catch(e) {}
+  // Google login: NULL default zaroori hai — UNIQUE index multiple NULLs
+  // allow karta hai (normal registrations me google_id khali/NA rahega).
+  try { db.exec("ALTER TABLE users ADD COLUMN google_id TEXT"); } catch(e) {}
+  try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)"); } catch(e) {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN app_name_style TEXT DEFAULT 'normal'"); } catch(e) {}
+
+  // ── Loading screen file self-heal ────────────────────────────────────────
+  // Purane databases me 'loading.html' set tha jo templates/ me exist nahi karta —
+  // uski wajah se har build "Loading HTML not found" par fail ho jaata tha.
+  // Yahan setting ko kisi maujood loading file par point kar dete hain.
+  try {
+    const templatesDir = path.join(__dirname, '..', 'templates');
+    const configured = String(db.prepare("SELECT value FROM settings WHERE key='loading_html_file'").get()?.value || '').trim();
+    const exists = configured && fs.existsSync(path.join(templatesDir, configured));
+    if (!exists) {
+      const files = fs.existsSync(templatesDir)
+        ? fs.readdirSync(templatesDir).filter(f => /^[\w.-]+\.html?$/i.test(f) && /load/i.test(f))
+        : [];
+      const pick = files.includes('redload.html') ? 'redload.html' : files[0];
+      if (pick) {
+        db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run('loading_html_file', pick);
+        console.log(`[db] loading_html_file "${configured || '(khali)'}" missing tha → "${pick}" set kar diya`);
+      }
+    }
+  } catch (e) { console.warn('[db] loading_html_file self-heal skip:', e.message); }
+
+  // ── Referral system (Refer & Earn) ───────────────────────────────────────
+  // users.referral_code: har user ka apna invite code (shareable link me jaata hai)
+  // users.referred_by  : jis user ne invite kiya tha
+  // users.referral_earned: total coins jo referrals se kamaye
+  try { db.exec("ALTER TABLE users ADD COLUMN referral_code TEXT"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN referred_by INTEGER"); } catch(e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN referral_earned INTEGER NOT NULL DEFAULT 0"); } catch(e) {}
+  try { db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code) WHERE referral_code IS NOT NULL"); } catch(e) {}
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS referrals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        referrer_id INTEGER NOT NULL,
+        referred_user_id INTEGER NOT NULL UNIQUE,
+        code TEXT NOT NULL,
+        bonus INTEGER NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(referrer_id) REFERENCES users(id),
+        FOREIGN KEY(referred_user_id) REFERENCES users(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id, id DESC);
+
+      -- Bot /start ref_<code> se aaya click — user ke pehle login par claim hota hai
+      CREATE TABLE IF NOT EXISTS referral_pending (
+        chat_id TEXT PRIMARY KEY,
+        referrer_id INTEGER NOT NULL,
+        code TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+  } catch(e) {}
+  // ── Gift Codes (admin banata hai, user profile me claim karta hai) ───────
+  // gift_codes       : code + coins value + kitne log claim kar sakte hain
+  // gift_code_claims : kis user ne kya claim kiya (ek code ek user sirf ek baar)
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS gift_codes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,
+        coins INTEGER NOT NULL DEFAULT 0,
+        max_claims INTEGER NOT NULL DEFAULT 1,
+        claimed_count INTEGER NOT NULL DEFAULT 0,
+        active INTEGER NOT NULL DEFAULT 1,
+        note TEXT DEFAULT '',
+        expires_at TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS gift_code_claims (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        code TEXT NOT NULL,
+        coins INTEGER NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(code_id, user_id),
+        FOREIGN KEY(code_id) REFERENCES gift_codes(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_gift_claims_user ON gift_code_claims(user_id, id DESC);
+    `);
+  } catch(e) {}
+
+  // ── Deploy Bot (home page ka welcome-message bot module) ─────────────────
+  // User apna bot token + admin telegram id deta hai, admin usse deploy karta
+  // hai. Request yahin store hoti hai taaki panel me status dikha sakein.
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS bot_deploy_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        bot_name TEXT NOT NULL,
+        bot_username TEXT DEFAULT '',
+        bot_token TEXT NOT NULL,
+        admin_tg_id TEXT DEFAULT '',
+        plan_key TEXT DEFAULT 'starter',
+        plan_name TEXT DEFAULT 'Starter Bot',
+        price INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'pending',
+        note TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_bot_deploy_user ON bot_deploy_requests(user_id, id DESC);
+    `);
+  } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('deploy_bot_enabled','1')"); } catch(e) {}
+  // Deploy-bot plans — admin panel settings se badle ja sakte hain (JSON array).
+  const DEFAULT_DEPLOY_PLANS = [
+    { key: 'starter', name: 'Starter Bot', price: 699, days: 30, perks: ['Welcome message bot', '1 bot token', 'Basic support'] },
+    { key: 'pro', name: 'Pro Bot', price: 1299, days: 90, perks: ['Welcome + broadcast', 'Anti-spam filters', 'Priority deploy'] },
+    { key: 'vip', name: 'VIP Bot', price: 1999, days: 365, perks: ['Full auto welcome engine', 'Custom buttons + links', 'Dedicated support'] }
+  ];
+  try {
+    db.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('deploy_bot_plans',?)")
+      .run(JSON.stringify(DEFAULT_DEPLOY_PLANS));
+  } catch(e) {}
+
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('referral_bonus','10')"); } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('telegram_bot_username','')"); } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('site_url','')"); } catch(e) {}
+  // Canonical design category. Legacy type/java_type/variant columns remain for
+  // build compatibility, but the admin now manages one clear category only.
+  try { db.exec("ALTER TABLE designs ADD COLUMN category TEXT DEFAULT 'zayro'"); } catch(e) {}
+  try { db.exec("ALTER TABLE designs ADD COLUMN variant TEXT DEFAULT 'real'"); } catch(e) {}
+  try {
+    db.exec(`
+      UPDATE designs SET category = CASE
+        WHEN LOWER(COALESCE(category,'')) = 'dhani'
+          OR LOWER(COALESCE(java_type,'')) IN ('dhani','premium')
+          OR LOWER(COALESCE(name,'')) LIKE '%dhani%' THEN 'dhani'
+        ELSE 'zayro'
+      END;
+      UPDATE designs SET
+        type='normal',
+        java_type=CASE WHEN category='dhani' THEN 'dhani' ELSE 'normal' END,
+        variant='real';
+    `);
+  } catch(e) {}
+  // Legacy order field retained for existing databases.
+  try { db.exec("ALTER TABLE orders ADD COLUMN design_variant TEXT DEFAULT 'real'"); } catch(e) {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN coupon_code TEXT DEFAULT ''"); } catch(e) {}
+  try { db.exec("ALTER TABLE orders ADD COLUMN discount_coins INTEGER DEFAULT 0"); } catch(e) {}
+
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS popup_announcements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        image_url TEXT,
+        button_text TEXT,
+        button_url TEXT,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS demo_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        user_key TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_demo_accounts_order_key ON demo_accounts(order_id, user_key);
+    `);
+  } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('telegram_support_user','')"); } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('telegram_channel_url','')"); } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('telegram_log_channel_id','')"); } catch(e) {}
+  try { db.exec("INSERT OR IGNORE INTO settings(key,value) VALUES('telegram_log_enabled','1')"); } catch(e) {}
+  // Older builds sometimes kept admin/provider credentials in settings. They
+  // are no longer a supported source of truth; erase them so the subsequent
+  // admin-settings whitelist cannot expose them.
+  try {
+    db.exec("UPDATE settings SET value='' WHERE key IN ('admin_password','admin_password_hash','session_secret','google_client_secret','resend_api_key','smtp_password','smtp_pass','email_password','restore_secret','firebase_database_auth')");
+  } catch(e) {}
+
+// These legacy columns remain only for non-destructive upgrades of old
+// databases. The email verification/password-reset workflows are disabled;
+// no new token values are written and any old pending values are cleared below.
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_users_email_verification_token ON users(email_verification_token_hash)"); } catch(e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users(password_reset_token_hash)"); } catch(e) {}
+
+// Legacy versions wrote Telegram passwords and plain_password values directly
+// to disk. Convert any non-bcrypt password value once, then erase the
+// plaintext column. Existing regular bcrypt hashes are left unchanged.
+function isBcryptHash(value) {
+  return /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(String(value || ''));
+}
+try {
+  const legacyUsers = db.prepare(`
+    SELECT id,password,plain_password,auth_provider,is_telegram,google_id,email_verified_at
+    FROM users
+  `).all();
+  const updateUser = db.prepare(`
+    UPDATE users SET password=?, plain_password='', auth_provider=?, email_verified_at=?
+    WHERE id=?
+  `);
+  const migrateUsers = db.transaction(rows => {
+    for (const user of rows) {
+      let passwordHash = user.password;
+      if (!isBcryptHash(passwordHash)) {
+        const legacyPassword = String(user.plain_password || user.password || '');
+        const passwordToHash = legacyPassword || crypto.randomBytes(32).toString('base64url');
+        passwordHash = bcrypt.hashSync(passwordToHash, 12);
+      }
+      const storedProvider = String(user.auth_provider || '').trim();
+      const provider = user.is_telegram
+        ? 'telegram'
+        : (user.google_id ? 'google' : (storedProvider || 'password'));
+      const verifiedAt = user.email_verified_at || (provider === 'telegram' || provider === 'google' ? Date.now() : null);
+      if (passwordHash !== user.password || user.plain_password || provider !== user.auth_provider || verifiedAt !== user.email_verified_at) {
+        updateUser.run(passwordHash, provider, verifiedAt, user.id);
+      }
+    }
+  });
+  migrateUsers(legacyUsers);
+} catch (error) {
+  // Do not print row data or password material. A failed migration should be
+  // visible to the operator, while login remains fail-closed for non-bcrypt
+  // credentials until the migration can run successfully.
+  console.error('[security] legacy password migration failed:', error.message);
+}
+
+// Email verification and password-reset flows are disabled. Keep the columns
+// for schema compatibility, but clear any token material left by the earlier
+// release and make password accounts immediately usable.
+try {
+  db.prepare(`
+    UPDATE users SET
+      email_verified_at=CASE
+        WHEN auth_provider='password' OR auth_provider IS NULL THEN COALESCE(email_verified_at,?)
+        ELSE email_verified_at
+      END,
+      email_verification_token_hash=NULL,
+      email_verification_expires_at=NULL,
+      email_verification_sent_at=NULL,
+      password_reset_token_hash=NULL,
+      password_reset_expires_at=NULL
+    WHERE email_verified_at IS NULL
+      OR email_verification_token_hash IS NOT NULL
+      OR email_verification_expires_at IS NOT NULL
+      OR email_verification_sent_at IS NOT NULL
+      OR password_reset_token_hash IS NOT NULL
+      OR password_reset_expires_at IS NOT NULL
+  `).run(Date.now());
+} catch (error) {
+  console.error('[security] legacy email-auth cleanup failed:', error.message);
+}
+
+// Sessions are expiring records, so remove stale rows during boot as well as
+// periodically from server.js. This is safe to run on every startup.
+try { db.prepare('DELETE FROM sessions WHERE expires<=?').run(Date.now()); } catch (_) {}
+
+require('../utils/rupee-wallet').enableRupeeWallet(db);
+
+module.exports = db;
