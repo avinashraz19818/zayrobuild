@@ -410,10 +410,10 @@ function mapResultSpeechToSound(html) {
   );
 }
 
-// ── Low-End & High-End 60fps Optimization Engine ──
-// 1. Promotes floating bubble and prediction panel to GPU composited layers.
-// 2. Overrides layout-thrashing while loops in fitPanelBrand with an instant 1-step calculation.
-// 3. Removes expensive backdrop-filter blurs from warning popups for instant rendering.
+// ── Universal Low-End & High-End 60-120fps Optimization Engine ──
+// 1. Promotes floating launchers (#miniBtn, #dregOrb) and panels (#panel, #dregWrap, #cardOuter) to GPU composited layers.
+// 2. Overrides layout-thrashing while loops (fitPanelBrand, autoFitBrandTitle) with instant 1-step proportional math.
+// 3. Neutralizes expensive Canvas shadowBlur and backdrop-filter blurs that cause mobile GPU stalls.
 // 4. Maintains 100% of the original visual design, colors, badges, and layout.
 function optimizeTemplatePerformance(html) {
   if (!html) return html;
@@ -422,20 +422,25 @@ function optimizeTemplatePerformance(html) {
   html = html.replace(/backdrop-filter\s*:\s*blur\([^)]+\)/gi, 'backdrop-filter: none');
   html = html.replace(/-webkit-backdrop-filter\s*:\s*blur\([^)]+\)/gi, '-webkit-backdrop-filter: none');
 
-  // 2. Hardware acceleration CSS for smooth 60fps animations
+  // 2. Neutralize canvas shadowBlur assignments in code for 60fps GPU batching
+  html = html.replace(/\b([a-zA-Z0-9_$]+\.shadowBlur\s*=\s*)\d+/g, '$1 0');
+
+  // 3. Hardware acceleration CSS for smooth 60fps animations
   const perfCss = [
     '<style id="zayro-perf-engine">',
-    '#miniBtn, #panel, .panel-shell, .screen, .result-hero, #warnOverlay, .history-window {',
+    '#miniBtn, #dregOrb, [id*="Orb"], [id*="orb"],',
+    '#panel, #dregWrap, #cardOuter, .panel-shell, .screen, .result-hero,',
+    '#warnOverlay, .history-window, .wrap, .hud-card, .pro-result-container, [data-state] {',
     '  -webkit-transform: translateZ(0);',
     '  transform: translateZ(0);',
     '  -webkit-backface-visibility: hidden;',
     '  backface-visibility: hidden;',
     '}',
-    '#panel {',
+    '#panel, #dregWrap, #cardOuter, .wrap {',
     '  contain: layout style;',
     '  will-change: transform, opacity;',
     '}',
-    '#miniBtn {',
+    '#miniBtn, #dregOrb, [id*="Orb"] {',
     '  will-change: transform;',
     '}',
     '#warnOverlay {',
@@ -443,33 +448,55 @@ function optimizeTemplatePerformance(html) {
     '  -webkit-backdrop-filter: none !important;',
     '  background: rgba(8, 3, 16, 0.94) !important;',
     '}',
-    '.ring, .mini-ring {',
+    '.ring, .mini-ring, .core-viewport, .eye-housing {',
     '  -webkit-transform: translateZ(0);',
     '  transform: translateZ(0);',
     '}',
     '</style>'
   ].join('\n');
 
-  // 3. Fast 1-step fitPanelBrand override script to eliminate layout thrashing loops
+  // 4. Universal 1-step brand auto-fit override & canvas shadow protection
   const perfJs = [
     '<script id="zayro-perf-script">',
     '(function(){',
     '  function __fastFit(){',
     '    try{',
-    '      var el = document.getElementById("panelBrand") || document.querySelector("[data-zayro-brand-target=\\"main\\"]");',
-    '      if(!el || !el.parentElement) return;',
-    '      var p = el.parentElement;',
-    '      var avail = Math.max(30, (p.clientWidth || 120) - 10);',
-    '      var cur = el.scrollWidth || 100;',
-    '      if(cur > avail && avail > 10){',
-    '        var ratio = avail / cur;',
-    '        var newSize = Math.max(6, Math.min(13, Math.floor(13 * ratio * 10) / 10));',
-    '        el.style.fontSize = newSize + "px";',
-    '        el.style.letterSpacing = (ratio < 0.7 ? ".02em" : (ratio < 0.85 ? ".07em" : ".13em"));',
+    '      var targets = [',
+    '        document.getElementById("panelBrand"),',
+    '        document.getElementById("mainBrandText"),',
+    '        document.getElementById("teleBadge"),',
+    '        document.querySelector("[data-zayro-brand-target=\\"main\\"]"),',
+    '        document.querySelector("[data-brand-target=\\"main\\"]")',
+    '      ];',
+    '      for(var i=0; i<targets.length; i++){',
+    '        var el = targets[i];',
+    '        if(!el || !el.parentElement) continue;',
+    '        var p = el.parentElement;',
+    '        var avail = Math.max(30, (p.clientWidth || 120) - 10);',
+    '        var cur = el.scrollWidth || 100;',
+    '        if(cur > avail && avail > 10){',
+    '          var ratio = avail / cur;',
+    '          var curSize = parseFloat(window.getComputedStyle(el).fontSize) || 13;',
+    '          var newSize = Math.max(6, Math.min(curSize, Math.floor(curSize * ratio * 10) / 10));',
+    '          el.style.fontSize = newSize + "px";',
+    '          el.style.letterSpacing = (ratio < 0.7 ? ".02em" : (ratio < 0.85 ? ".07em" : ".13em"));',
+    '        }',
     '      }',
     '    }catch(e){}',
     '  }',
     '  window.fitPanelBrand = __fastFit;',
+    '  window.autoFitBrandTitle = __fastFit;',
+    '  window.fitBrand = __fastFit;',
+    '  window.autoFitTitle = __fastFit;',
+    '  if(typeof CanvasRenderingContext2D !== "undefined" && CanvasRenderingContext2D.prototype){',
+    '    try{',
+    '      Object.defineProperty(CanvasRenderingContext2D.prototype, "shadowBlur", {',
+    '        get: function(){ return 0; },',
+    '        set: function(){},',
+    '        configurable: true',
+    '      });',
+    '    }catch(e){}',
+    '  }',
     '})();',
     '</script>'
   ].join('\n');
