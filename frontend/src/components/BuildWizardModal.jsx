@@ -10,9 +10,9 @@ import { getMediaUrl } from '../utils/media';
 import sfx from '../lib/sfx';
 
 const MODES = [
-  { key: 'real', label: 'Real app', hint: 'Sirf main APK — aapke register link ke saath', tag: 'Primary', tone: '' },
-  { key: 'both', label: 'Real + Fake', hint: 'Dono APK — main + backup fake build', tag: 'Popular', tone: 'gold' },
-  { key: 'fake', label: 'Fake only', hint: 'Sirf backup APK — main link chhupane ke liye', tag: 'Backup', tone: 'info' }
+  { key: 'real', label: 'Member Hack', hint: 'Deposit to unlock' },
+  { key: 'fake', label: 'Fake Hack', hint: 'Fake hack 1min late / prediction hack' },
+  { key: 'both', label: 'Member + Fake Hack', hint: 'Deposit to unlock hack + fake hack 1min late / prediction hack' }
 ];
 
 // Har style ka apna font look — taaki naam likhte hi input box me bhi wahi
@@ -47,21 +47,36 @@ function hostOf(value) {
   }
 }
 
-/* ── URL input: icon + paste + clear + live validation ── */
+/* ── URL input: icon + working clipboard paste + clear + live validation ── */
 function UrlField({ icon: Icon = Link2, label, value, onChange, placeholder, hint, required, tone = '' }) {
   const { addToast } = useToast();
+  const inputRef = useRef(null);
   const valid = isHttpUrl(value);
   const typed = String(value || '').trim().length > 0;
 
   const paste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) {
-        onChange(text.trim());
-        sfx.pop();
-      }
-    } catch (err) {
-      addToast('Clipboard se paste nahi ho paya — manually paste karein', 'error');
+    let text = '';
+    // 1. Telegram WebApp native clipboard API
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp?.readTextFromClipboard) {
+      try {
+        text = await new Promise((resolve) => {
+          window.Telegram.WebApp.readTextFromClipboard((res) => resolve(res || ''));
+        });
+      } catch (_) {}
+    }
+    // 2. Modern browser navigator.clipboard API
+    if (!text && typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
+      try {
+        text = await navigator.clipboard.readText();
+      } catch (_) {}
+    }
+    if (text && text.trim()) {
+      onChange(text.trim());
+      addToast('Link pasted!', 'success');
+      sfx.pop();
+    } else {
+      inputRef.current?.focus();
+      addToast('Clipboard allow karein ya box me link paste karein', 'info');
     }
   };
 
@@ -77,9 +92,10 @@ function UrlField({ icon: Icon = Link2, label, value, onChange, placeholder, hin
         )}
       </span>
       <div className={`url-field ${tone}`}>
-        <span className="url-ico"><Icon size={15} /></span>
+        <span className="url-ico"><Icon size={16} /></span>
         <input
-          className="input"
+          ref={inputRef}
+          className="url-input"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
@@ -404,7 +420,7 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
                     <span className="row-main">
                       <span className="row-title">
                         {m.label}
-                        <span className={`chip mode-tag ${m.tone ? 'chip-' + (m.tone === 'gold' ? 'gold' : m.tone) : ''}`}>{m.tag}</span>
+                        {m.tag && <span className={`chip mode-tag ${m.tone ? 'chip-' + (m.tone === 'gold' ? 'gold' : m.tone) : ''}`}>{m.tag}</span>}
                       </span>
                       <span className="row-sub">{m.hint}</span>
                       <span className="mode-price"><Coins size={11} /> {modePrice(m.key)}</span>
@@ -466,7 +482,7 @@ export default function BuildWizardModal({ design, isOpen, onClose, onOrderCreat
             <div className="url-field money">
               <span className="url-ico">₹</span>
               <input
-                className="input"
+                className="url-input"
                 type="number"
                 min={0}
                 value={minDeposit}

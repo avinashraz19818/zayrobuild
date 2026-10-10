@@ -44,7 +44,11 @@ export default function GiftCodeSheet({ open, onClose }) {
   const claim = async (e) => {
     e.preventDefault();
     const value = code.trim().toUpperCase();
-    if (value.length < 4) { addToast('Gift code daalein', 'error'); return; }
+    if (value.length < 4) {
+      addToast('Gift code enter karein (e.g. ZR-XXXX)', 'warn');
+      inputRef.current?.focus();
+      return;
+    }
     setBusy(true);
     try {
       const res = await walletApi.claimGift(value);
@@ -116,8 +120,8 @@ export default function GiftCodeSheet({ open, onClose }) {
             <span className="hint"><Sparkles size={11} style={{ verticalAlign: -1 }} /> Code mein spaces ya dash farak nahi padta.</span>
           </div>
 
-          <button className="btn btn-gold btn-block btn-lg" type="submit" disabled={busy || code.trim().length < 4}>
-            {busy ? <Spinner /> : <Gift size={16} />}
+          <button className="btn btn-gold btn-block btn-lg" type="submit" disabled={busy}>
+            {busy ? <Spinner /> : <Gift size={18} />}
             {busy ? 'Claiming…' : 'Claim gift code'}
           </button>
 
