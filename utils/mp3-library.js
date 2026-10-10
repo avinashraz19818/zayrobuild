@@ -106,6 +106,7 @@ function applyMp3Library(order, assetsDir, log = () => {}, { root = DEFAULT_ROOT
   const svc = createMp3Library({ root });
   const copied = [];
   for (const item of svc.list()) {
+    if (item.kind !== 'sound') continue;
     const bytes = fs.readFileSync(path.join(root, item.file));
     if (!validMp3(bytes)) continue;
     fs.writeFileSync(path.join(assetsDir, `${item.name}.mp3`), bytes);
@@ -113,16 +114,46 @@ function applyMp3Library(order, assetsDir, log = () => {}, { root = DEFAULT_ROOT
   }
   if (copied.length) log(`MP3 library: ${copied.map((n) => n + '.mp3').join(', ')} copy hui.`);
 
+  // Auto-detect deposit MP3 based on order minimum deposit amount
   const amount = Number(order?.min_deposit) || 300;
-  let bytes = null;
-  try { bytes = fs.readFileSync(svc.fileFor(String(amount))); } catch (_) { bytes = null; }
-  if (!bytes || !validMp3(bytes)) {
-    log(`Deposit MP3 (${amount}.mp3) nahi mili; successful.mp3 jaisa hai rahega.`);
+  let depositBytes = null;
+  let depositSource = '';
+
+  // 1. Try matching the exact order amount (e.g. 200.mp3, 300.mp3, 500.mp3)
+  try {
+    const b = fs.readFileSync(svc.fileFor(String(amount)));
+    if (validMp3(b)) { depositBytes = b; depositSource = `${amount}.mp3`; }
+  } catch (_) {}
+
+  // 2. If not found, try generic 'deposit.mp3' in the library
+  if (!depositBytes) {
+    try {
+      const b = fs.readFileSync(svc.fileFor('deposit'));
+      if (validMp3(b)) { depositBytes = b; depositSource = 'deposit.mp3'; }
+    } catch (_) {}
+  }
+
+  // 3. Fallback: try any available amount file in the library
+  if (!depositBytes) {
+    for (const alt of [200, 300, 500, 100, 400, 1000]) {
+      try {
+        const b = fs.readFileSync(svc.fileFor(String(alt)));
+        if (validMp3(b)) { depositBytes = b; depositSource = `${alt}.mp3`; break; }
+      } catch (_) {}
+    }
+  }
+
+  if (depositBytes) {
+    // Deposit audio goes to deposit.mp3, lowbalance.mp3, and low_deposit.mp3 so all templates use it!
+    fs.writeFileSync(path.join(assetsDir, 'deposit.mp3'), depositBytes);
+    fs.writeFileSync(path.join(assetsDir, 'lowbalance.mp3'), depositBytes);
+    fs.writeFileSync(path.join(assetsDir, 'low_deposit.mp3'), depositBytes);
+    log(`Deposit MP3 applied: ${depositSource} → deposit.mp3, lowbalance.mp3 & low_deposit.mp3`);
+    return { copied, deposit: { applied: true, amount, source: depositSource } };
+  } else {
+    log(`Custom deposit MP3 not found in library; default deposit sound used.`);
     return { copied, deposit: { applied: false, amount } };
   }
-  fs.writeFileSync(path.join(assetsDir, 'successful.mp3'), bytes);
-  log(`Deposit MP3 applied: ${amount}.mp3 → successful.mp3`);
-  return { copied, deposit: { applied: true, amount } };
 }
 
 module.exports = { createMp3Library, applyMp3Library, parseName, validMp3, MAX_BYTES, DEFAULT_ROOT, LEGACY_ROOT };

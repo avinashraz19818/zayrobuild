@@ -49,15 +49,9 @@ class AudioService {
 
   bool _isBlockedByGate(String fileName) {
     final lower = fileName.toLowerCase();
-    if (lower.contains('successful') ||
-        lower.contains('lowbalance') ||
-        lower.contains('low_deposit') ||
-        lower.contains('deposit')) {
-      return !_gatePassed;
-    }
     if (lower.contains('register')) {
       final now = DateTime.now().millisecondsSinceEpoch;
-      if (now - _lastRegisterSoundTime < 10000) return true;
+      if (now - _lastRegisterSoundTime < 3000) return true;
       _lastRegisterSoundTime = now;
     }
     return false;

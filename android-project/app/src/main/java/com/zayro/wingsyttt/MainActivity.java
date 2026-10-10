@@ -65,9 +65,8 @@ public class MainActivity extends Activity {
 	private android.widget.FrameLayout rootLayout;
 	private WebView mainWebView; // wP reference for back handling
 	private final java.util.concurrent.atomic.AtomicBoolean loadingDismissed = new java.util.concurrent.atomic.AtomicBoolean(false);
-	private final long appStartTime = System.currentTimeMillis();
 	private ZayroBridge soundBridgeRef;
-	private volatile boolean pendingRegisterSound = false;
+	private volatile String pendingStartupSound = null;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -503,12 +502,10 @@ public class MainActivity extends Activity {
 				final String soundName = new java.io.File(rawName).getName();
 				String lowerName = soundName.toLowerCase(java.util.Locale.US);
 				final String playableName = lowerName.equals("loginw.mp3") ? "bypass.mp3" : soundName;
-				// While splash/loading is visible, ONLY intro.mp3 can play! Remember register.mp3
+				// While splash/loading is visible, ONLY intro.mp3 can play! Save requested startup sound
 				if (!loadingDismissed.get()) {
 					if (!lowerName.equals("intro.mp3")) {
-						if (lowerName.equals("register.mp3")) {
-							pendingRegisterSound = true;
-						}
+						pendingStartupSound = playableName;
 						return;
 					}
 				}
@@ -954,14 +951,16 @@ public class MainActivity extends Activity {
 					public void onAnimationEnd(android.animation.Animator a) {
 						loadingView.setVisibility(android.view.View.GONE);
 						try { if (root != null) root.removeView(loadingView); } catch (Exception e) {}
-						// Intro finished and loading screen removed -> play register.mp3 automatically!
+						// Intro finished and loading screen removed -> play pending startup sound if requested
 						new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
 							public void run() {
-								if (soundBridgeRef != null) {
-									soundBridgeRef.playSound("register.mp3");
+								if (soundBridgeRef != null && pendingStartupSound != null) {
+									String toPlay = pendingStartupSound;
+									pendingStartupSound = null;
+									soundBridgeRef.playSound(toPlay);
 								}
 							}
-						}, 350);
+						}, 300);
 					}
 				});
 				fa.start();
