@@ -2808,38 +2808,50 @@ body::after {
   transform: translateY(-2px) scale(1.08) !important;
 }
 
-/* Active Dock Item: Floating Glowing Jewel Pill */
+/* Active Dock Item: Pure Glowing Active Icon (No box!) */
 .bottomnav button.active {
-  color: #ffffff !important;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(99, 102, 241, 0.18) 100%) !important;
-  border: 1px solid rgba(216, 180, 254, 0.48) !important;
-  border-radius: 20px !important;
-  box-shadow:
-    0 4px 18px -2px rgba(168, 85, 247, 0.58),
-    0 0 16px rgba(192, 132, 252, 0.35),
-    inset 0 1px 1.5px rgba(255, 255, 255, 0.5) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .bottomnav button.active .nav-ico {
-  transform: translateY(-2px) scale(1.15) !important;
+  transform: translateY(-3px) scale(1.22) !important;
+}
+
+.bottomnav button.active .nav-ico > svg,
+.bottomnav button.active .nav-ico > .store-icon {
+  filter: drop-shadow(0 0 10px #c084fc) drop-shadow(0 0 22px rgba(168, 85, 247, 0.9)) drop-shadow(0 0 3px #ffffff) !important;
+  animation: icon3dActiveGlow 2.5s ease-in-out infinite alternate !important;
 }
 
 .bottomnav button.active span {
   color: #ffffff !important;
-  font-weight: 750 !important;
-  text-shadow: 0 0 10px rgba(192, 132, 252, 0.85) !important;
+  font-weight: 800 !important;
+  text-shadow: 0 0 12px rgba(192, 132, 252, 0.95) !important;
 }
 
 /* Floating Laser Beam Indicator */
 .bottomnav .nav-dot {
   position: absolute !important;
-  top: 3px !important;
-  width: 20px !important;
+  top: 4px !important;
+  width: 16px !important;
   height: 3px !important;
   border-radius: 99px !important;
   background: linear-gradient(90deg, #38bdf8, #c084fc, #ec4899) !important;
   box-shadow: 0 0 10px #c084fc, 0 0 4px #ffffff !important;
   animation: navDotGlow 2s ease-in-out infinite !important;
+}
+
+@keyframes icon3dActiveGlow {
+  0% {
+    filter: drop-shadow(0 0 10px #c084fc) drop-shadow(0 0 18px rgba(168, 85, 247, 0.75)) drop-shadow(0 0 3px #ffffff);
+    transform: scale(1);
+  }
+  100% {
+    filter: drop-shadow(0 0 16px #e879f9) drop-shadow(0 0 28px rgba(168, 85, 247, 0.95)) drop-shadow(0 0 6px #ffffff);
+    transform: scale(1.08);
+  }
 }
 
 @keyframes navDotGlow {
@@ -2861,7 +2873,6 @@ body::after {
 .tpl-card,
 .service-card,
 .stat,
-.sheet,
 .admin-login,
 .admin-side,
 .admin-topbar {
@@ -2971,20 +2982,32 @@ body::after {
   filter: drop-shadow(0 2px 8px rgba(168, 85, 247, 0.45));
 }
 
-/* Glass Modals (Sheet & Dialogs) */
-.sheet {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(18, 22, 50, 0.78) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+/* ══════════════════════════════════════════════════════════════════════════
+   HIGH-CONTRAST OPAQUE POPUPS & MODALS (ZERO BACKGROUND BLEEDTHROUGH)
+   ══════════════════════════════════════════════════════════════════════════ */
+.sheet,
+.deposit-sheet,
+.hack-preview-sheet,
+.modal-body {
+  background: #111429 !important;
+  background: linear-gradient(180deg, #151936 0%, #0e1124 100%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-top: 1px solid rgba(192, 132, 252, 0.5) !important;
   box-shadow:
-    0 35px 85px -15px rgba(0, 0, 0, 0.95),
-    0 0 45px -5px rgba(168, 85, 247, 0.4),
-    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.3) !important;
+    0 -30px 90px rgba(0, 0, 0, 0.98),
+    0 0 50px rgba(139, 92, 246, 0.3),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.25) !important;
+  color: #fff !important;
 }
 
-.overlay {
-  background: rgba(4, 6, 18, 0.75) !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
+.overlay,
+.deposit-overlay,
+.hack-preview-overlay {
+  background: rgba(2, 4, 12, 0.9) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
 }
 
 /* Glassmorphic Form Controls */
