@@ -64,10 +64,18 @@ public class MainActivity extends Activity {
 	private final java.util.Map<String, Long> recentPopups = new java.util.HashMap<>();
 	private android.widget.FrameLayout rootLayout;
 	private WebView mainWebView; // wP reference for back handling
+	private final java.util.concurrent.atomic.AtomicBoolean loadingDismissed = new java.util.concurrent.atomic.AtomicBoolean(false);
+	private final long appStartTime = System.currentTimeMillis();
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		try {
+			getWindow().setFlags(
+				WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+				WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+			);
+		} catch (Exception e) {}
 		binding = MainBinding.inflate(getLayoutInflater());
 		setContentView(binding.getRoot());
 		initializeLogic();
@@ -163,6 +171,10 @@ public class MainActivity extends Activity {
 		s.setLoadWithOverviewMode(true);
 		s.setUseWideViewPort(true);
 		s.setCacheMode(WebSettings.LOAD_DEFAULT);
+		try {
+			s.setRenderPriority(WebSettings.RenderPriority.HIGH);
+			s.setEnableSmoothTransition(true);
+		} catch (Exception e) {}
 		s.setUserAgentString("Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
 	}
 
@@ -489,6 +501,12 @@ public class MainActivity extends Activity {
 				final String soundName = new java.io.File(rawName).getName();
 				String lowerName = soundName.toLowerCase(java.util.Locale.US);
 				final String playableName = lowerName.equals("loginw.mp3") ? "bypass.mp3" : soundName;
+				// While splash/loading is visible or in startup window, ONLY intro.mp3 can play! Block premature sounds
+				if (!loadingDismissed.get() || (System.currentTimeMillis() - appStartTime < 7500)) {
+					if (!lowerName.equals("intro.mp3")) {
+						return;
+					}
+				}
 				new Thread(new Runnable() { public void run() {
 						android.media.MediaPlayer p = null;
 				try {
@@ -876,20 +894,65 @@ public class MainActivity extends Activity {
 		root.addView(wL);
 		setContentView(root);
 		
-		new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+		playIntroAudioAndDismissLoading(wL, root);
+	}
+
+	private void playIntroAudioAndDismissLoading(final View loadingView, final ViewGroup root) {
+		new Thread(new Runnable() {
 			public void run() {
-				android.animation.ObjectAnimator fa = android.animation.ObjectAnimator.ofFloat(wL, "alpha", 1f, 0f);
+				MediaPlayer mp = null;
+				int dur = 7000;
+				try {
+					android.content.res.AssetFileDescriptor afd = getAssets().openFd("intro.mp3");
+					mp = new MediaPlayer();
+					mp.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+					afd.close();
+					mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+						public void onCompletion(MediaPlayer m) {
+							dismissLoadingView(loadingView, root);
+							m.release();
+						}
+					});
+					mp.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+						public boolean onError(MediaPlayer m, int what, int extra) {
+							dismissLoadingView(loadingView, root);
+							m.release();
+							return true;
+						}
+					});
+					mp.prepare();
+					dur = mp.getDuration();
+					mp.start();
+				} catch (Exception e) {
+					mp = null;
+					dur = 5000;
+				}
+				final int delayMs = (dur > 2000 && dur < 15000) ? dur : 7000;
+				new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+					public void run() {
+						dismissLoadingView(loadingView, root);
+					}
+				}, delayMs);
+			}
+		}).start();
+	}
+
+	private void dismissLoadingView(final View loadingView, final ViewGroup root) {
+		if (!loadingDismissed.compareAndSet(false, true)) return;
+		new Handler(Looper.getMainLooper()).post(new Runnable() {
+			public void run() {
+				if (loadingView == null) return;
+				android.animation.ObjectAnimator fa = android.animation.ObjectAnimator.ofFloat(loadingView, "alpha", 1f, 0f);
 				fa.setDuration(600);
 				fa.addListener(new android.animation.AnimatorListenerAdapter() {
 					public void onAnimationEnd(android.animation.Animator a) {
-						wL.setVisibility(android.view.View.GONE);
-						try { root.removeView(wL); } catch (Exception e) {}
+						loadingView.setVisibility(android.view.View.GONE);
+						try { if (root != null) root.removeView(loadingView); } catch (Exception e) {}
 					}
 				});
 				fa.start();
 			}
-		}, 5000);
-		
+		});
 	}
 
 	@Override

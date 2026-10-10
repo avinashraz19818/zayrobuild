@@ -109,20 +109,24 @@ function ensureAudioGate(html) {
     '<script>',
     '/* ZAYRO AUDIO GATE V6 — auto-injected at build time (template-agnostic) */',
     '(function(){',
-    '  var __g={on:false, played:false, regOn:false, regAt:0, homeTicks:0, noFormTicks:0, homeForced:false};',
+    '  var __g={on:false, played:false, regOn:false, regAt:0, homeTicks:0, noFormTicks:0, homeForced:false, startAt:Date.now(), wasInAuth:false};',
     '  function __blocked(f){',
     '    var n=String(f||"").toLowerCase();',
     '    return n.indexOf("successful")>=0||n.indexOf("lowbalance")>=0||n.indexOf("low_deposit")>=0||n.indexOf("deposit")>=0;',
     '  }',
     '  function __ok(f){',
     '    var n=String(f||"").toLowerCase();',
+    '    var now=Date.now();',
     '    if(n.indexOf("register")>=0){',
     '      /* Gate khud register timing handle karta hai — template ka delayed',
     '         call duplicate hota hai to 10 sec window me block */',
-    '      var now=Date.now();',
     '      if(now - __g.regAt < 10000) return false;',
     '      return true;',
     '    }',
+    '    /* Startup protection: first 10 seconds me premature successful / deposit block */',
+    '    if(now - __g.startAt < 10000 && __blocked(f)) return false;',
+    '    /* successful.mp3 requires user to have actually been on register/login screen */',
+    '    if(n.indexOf("successful")>=0 && !__g.wasInAuth) return false;',
     '    return !__blocked(f) || __g.on;',
     '  }',
     '  var __origZ=null;',
@@ -136,6 +140,12 @@ function ensureAudioGate(html) {
     '    if(typeof playAudio==="function"){',
     '      var __op=playAudio;',
     '      window.playAudio=function(f){ if(!__ok(f))return; return __op.apply(this,arguments); };',
+    '    }',
+    '  }catch(e){}',
+    '  try{',
+    '    if(typeof playAudioForce==="function"){',
+    '      var __opf=playAudioForce;',
+    '      window.playAudioForce=function(f){ if(!__ok(f))return; return __opf.apply(this,arguments); };',
     '    }',
     '  }catch(e){}',
     '  /* ── DEPOSIT FLASH FIX ──',
@@ -277,6 +287,7 @@ function ensureAudioGate(html) {
     '      var authMode=(isReg||isLogin) && !looksHome;',
     '      /* ── REGISTER PAGE ENTRY → register UI + 1 sec me register.mp3 ── */',
     '      if(authMode && isReg){',
+    '        __g.wasInAuth=true;',
     '        if(!__g.regOn){',
     '          __g.regOn=true;',
     '          var now=Date.now();',
@@ -299,7 +310,7 @@ function ensureAudioGate(html) {
     '        if(loggedNow){',
     '          if(!__g.on){',
     '            __g.on=true;',
-    '            if(!__g.played){',
+    '            if(!__g.played && __g.wasInAuth && (Date.now() - __g.startAt > 5000)){',
     '              __g.played=true;',
     '              try{ if(__origZ) __origZ.apply(window.ZAYRO,["successful.mp3"]); }catch(e){}',
     '            }',
@@ -354,6 +365,33 @@ function mapResultSpeechToSound(html) {
     /ZAYRO\.speak\(\s*([A-Za-z_$][\w$.]*)\s*\+\s*["'][ ]*["']\s*\+\s*[A-Za-z_$][\w$.]*\s*\)/g,
     (_, sizeExpr) => `ZAYRO.playSound(${sizeExpr}==="BIG"?"big.mp3":"small.mp3")`
   );
+}
+
+// ── GPU hardware layer isolation for smooth 60/120 FPS floating panel ──
+function injectPerformanceStyles(html) {
+  if (!html) return html;
+  const style = [
+    '<style id="zayro-perf-boost">',
+    '#panel, #panelShell, .panel-shell, .panel-inner, #miniBtn, #warnOverlay {',
+    '  transform: translate3d(0,0,0) !important;',
+    '  -webkit-transform: translate3d(0,0,0) !important;',
+    '  backface-visibility: hidden !important;',
+    '  -webkit-backface-visibility: hidden !important;',
+    '  will-change: transform !important;',
+    '  contain: layout style paint !important;',
+    '}',
+    '#target-game-frame, #gameFrame {',
+    '  contain: strict !important;',
+    '  transform: translate3d(0,0,0) !important;',
+    '  -webkit-transform: translate3d(0,0,0) !important;',
+    '}',
+    '* { -webkit-tap-highlight-color: transparent !important; }',
+    '</style>'
+  ].join('\n');
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head[^>]*>/i, '$&\n' + style);
+  }
+  return style + html;
 }
 
 // ── APK build implementation ──
@@ -432,7 +470,7 @@ async function buildApkInWorker(order, design, buildId, logCallback) {
     }
 
     log('Injecting parameters into HTML...');
-    const processedPopup   = mapResultSpeechToSound(normalizeRegisterDelay(ensureAudioGate(injectParams(popupHtml, params))));
+    const processedPopup   = injectPerformanceStyles(mapResultSpeechToSound(normalizeRegisterDelay(ensureAudioGate(injectParams(popupHtml, params)))));
     const processedLoading = stripFirebaseLiveScript(stripIntroSnippet(injectLoadingParams(loadingHtml, params)));
 
     // ── PER-BUILD UNIQUE ENCRYPTION PASSWORD (Java engine) ──
