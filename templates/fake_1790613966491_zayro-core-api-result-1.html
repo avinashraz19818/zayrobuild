@@ -512,6 +512,7 @@ function showNumberImage(number){
 }
 function preloadDigitImages(){for(var i=0;i<10;i++){var im=new Image();im.src=i+".png"}}
 function renderResult(result){
+  if(bypassRunning)return;
   statusText.textContent="LIVE";
   hideStatus();
   stageScanner.classList.remove("active");
@@ -523,9 +524,11 @@ function renderResult(result){
   showNumberImage(result.number);
   predPeriodBox.textContent="PERIOD: "+result.period;
 
-  predDisplay.classList.remove("active","reveal");
-  void predDisplay.offsetWidth;
-  predDisplay.classList.add("active","reveal");
+  if(!predDisplay.classList.contains("active")){
+    predDisplay.classList.remove("active","reveal");
+    void predDisplay.offsetWidth;
+    predDisplay.classList.add("active","reveal");
+  }
 
   actionBtn.textContent="EXECUTE";
   actionBtn.disabled=false;

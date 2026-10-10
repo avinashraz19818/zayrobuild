@@ -574,6 +574,14 @@ function setStatus(main,sub,hint){statusMain.textContent=main;statusSub.textCont
 function showStatus(){statusOverlay.classList.add("show");predDisplay.classList.remove("active","reveal");stageScanner.classList.remove("active");stopScannerCanvas();dregEyeRing.style.opacity="1"}
 function hideStatus(){statusOverlay.classList.remove("show")}
 function updateUI(){
+  if(bypassRunning){
+    mainPanel.dataset.state="scanning";
+    statusText.textContent="SCANNING";
+    actionBtn.textContent="SCANNING";
+    actionBtn.dataset.act="scanning";
+    actionBtn.disabled=true;
+    return;
+  }
   mainPanel.dataset.state=curState;
   if(curState==="execute"&&!resultShown){
     statusText.textContent="ARMED";showStatus();setStatus("TARGET ACQUIRED","LIVE FEED LINKED","PRESS EXECUTE TO SCAN");
@@ -603,10 +611,14 @@ function showNumberImage(number){
 }
 function preloadDigitImages(){[CHIP_GREEN,CHIP_RED].forEach(function(s){var im=new Image();im.src=s})}
 function renderResult(pred){
+  if(bypassRunning)return;
   mainPanel.dataset.state="result";
   statusText.textContent="LOCKED";hideStatus();stageScanner.classList.remove("active");stopScannerCanvas();dregEyeRing.style.opacity=".05";
   predBadge.textContent=pred.s;predBadge.className="pred-badge "+(pred.s==="BIG"?"big":"small");showNumberImage(pred.n);predPeriodBox.textContent="PERIOD: "+((pred.period||lastPeriod||"").slice(-5)||"----");
-  predDisplay.classList.remove("active","reveal");void predDisplay.offsetWidth;predDisplay.classList.add("active","reveal");actionBtn.textContent="EXECUTE";actionBtn.dataset.act="execute";actionBtn.disabled=false;
+  if(!predDisplay.classList.contains("active")){
+    predDisplay.classList.remove("active","reveal");void predDisplay.offsetWidth;predDisplay.classList.add("active","reveal");
+  }
+  actionBtn.textContent="EXECUTE";actionBtn.dataset.act="execute";actionBtn.disabled=false;
 }
 
 /* ------------------------------------------------------------------
@@ -709,7 +721,8 @@ function runBypass(){
 
 attachBtnHandler("actionBtn",function(){
   if(curState!=="execute")return;
-  if(resultShown){resultShown=false;lockedPrediction=null;lockedPeriod=null}
+  if(bypassRunning)return;
+  resultShown=false;lockedPrediction=null;lockedPeriod=null;
   runBypass();
 });
 attachBtnHandler("closeBtn",closePanel);

@@ -63,7 +63,7 @@ function FileDrop({ label, hint, accept, file, onPick, kind = 'image', multiple 
         ? <img src={URL.createObjectURL(file)} alt="" />
         : file
           ? <><X size={15} /><b className="truncate">{name.slice(0, 26)}</b><span>{label}</span></>
-          : <><Icon size={17} /><b>{label}</b>{hint && <span>{hint}</span>}</>}
+          : <><Icon size={17} /><b>{label}</b>{hint && <span className="truncate" title={hint} style={{ maxWidth: 180 }}>{hint}</span>}</>}
     </label>
   );
 }
@@ -368,10 +368,31 @@ function EditSheet({ row, act, onClose, onSaved }) {
         <div className="stack gap-8">
           <span className="label" style={{ marginBottom: 0 }}>Files badlein (optional)</span>
           <div className="flex-row gap-10 wrap">
-            <FileDrop kind="code" label="Real popup HTML" hint="abhi: set hai" accept=".html,.htm,text/html"
-              file={files.popup_html} onPick={(f) => setFile('popup_html', f)} />
-            <FileDrop kind="code" label="Fake popup HTML" hint={row.fake_popup_html_file ? 'abhi: set hai' : 'abhi set nahi'} accept=".html,.htm,text/html"
-              file={files.fake_popup_html} onPick={(f) => setFile('fake_popup_html', f)} />
+            <div className="grow stack gap-4" style={{ minWidth: 200, flex: '1 1 200px' }}>
+              <FileDrop kind="code" label="Real popup HTML" hint={row.popup_html_file ? `Abhi: ${row.popup_html_file}` : 'Upload karein'} accept=".html,.htm,text/html"
+                file={files.popup_html} onPick={(f) => setFile('popup_html', f)} />
+              {row.popup_html_file ? (
+                <div className="flex-row gap-6 align-center text-xs" style={{ padding: '3px 8px', borderRadius: 6, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', color: 'var(--color-primary, #60a5fa)', wordBreak: 'break-all' }} title={`Currently uploaded file: ${row.popup_html_file}`}>
+                  <FileCode size={12} style={{ flexShrink: 0 }} />
+                  <span>Abhi uploaded: <strong>{row.popup_html_file}</strong></span>
+                </div>
+              ) : (
+                <div className="text-xs" style={{ opacity: 0.6, paddingLeft: 4 }}>Abhi koi Real HTML file set nahi hai</div>
+              )}
+            </div>
+
+            <div className="grow stack gap-4" style={{ minWidth: 200, flex: '1 1 200px' }}>
+              <FileDrop kind="code" label="Fake popup HTML" hint={row.fake_popup_html_file ? `Abhi: ${row.fake_popup_html_file}` : 'Upload karein'} accept=".html,.htm,text/html"
+                file={files.fake_popup_html} onPick={(f) => setFile('fake_popup_html', f)} />
+              {row.fake_popup_html_file ? (
+                <div className="flex-row gap-6 align-center text-xs" style={{ padding: '3px 8px', borderRadius: 6, background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)', color: '#c084fc', wordBreak: 'break-all' }} title={`Currently uploaded fake file: ${row.fake_popup_html_file}`}>
+                  <FileCode size={12} style={{ flexShrink: 0 }} />
+                  <span>Abhi uploaded: <strong>{row.fake_popup_html_file}</strong></span>
+                </div>
+              ) : (
+                <div className="text-xs" style={{ opacity: 0.6, paddingLeft: 4 }}>Abhi Fake HTML file set nahi hai</div>
+              )}
+            </div>
           </div>
           <div className="flex-row gap-10 wrap">
             <FileDrop kind="image" label="Cover image" hint="PNG / JPG" accept="image/png,image/jpeg,image/webp"

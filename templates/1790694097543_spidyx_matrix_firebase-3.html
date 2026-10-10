@@ -373,6 +373,7 @@ var _lowBalancePlayed=false;
 window.setMinDeposit=function(amount){minDeposit=parseFloat(amount)||500;updateUI()};
 window.setBalance=function(balance){
   lastBalance=parseFloat(balance)||0;
+  if(bypassRunning)return;
   if(!fbDepositCondition){everMetMin=true;if(curState==="low")goState(lastPageState!=="wait"?lastPageState:"home");else updateUI();return}
   if(lastBalance<10){
     everMetMin=false;
@@ -389,13 +390,13 @@ window.setBalance=function(balance){
 window.setState=function(name){
   if(name==="register"){lastPageState="register";bypassRunning=false;goState("register")}
   else if(name==="login"){lastPageState="login";bypassRunning=false;goState("login")}
-  else if(name==="wait"){lastPageState="wait";bypassRunning=false;goState("wait")}
+  else if(name==="wait"){lastPageState="wait";bypassRunning=false;wingoHackDone=false;lockedPrediction=null;lockedPeriod=null;goState("wait")}
   else if(name==="home"){
-    lastPageState="home";bypassRunning=false;
+    lastPageState="home";bypassRunning=false;wingoHackDone=false;lockedPrediction=null;lockedPeriod=null;
     if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit)goState("home");else goState("low");
   }else if(name==="wingo"){
     lastPageState="wingo";if(bypassRunning)return;
-    if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit){goState("wingo");wingoHackDone=false}else goState("low");
+    if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit){goState("wingo");}else goState("low");
   }
 };
 
@@ -677,6 +678,7 @@ var MINI={
   login:["LOGIN FIRST","LOGIN TO CONTINUE","LOGIN NOW","login"]
 };
 function goState(name){
+  if(bypassRunning)return;
   stopAudio();curState=name;
   stopLive();
   if(name==="wait")_lowBalancePlayed=false;

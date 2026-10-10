@@ -559,26 +559,25 @@ var predDisplay=document.getElementById("predDisplay"),predBadge=document.getEle
 window.setMinDeposit=function(amount){minDeposit=parseFloat(amount)||500;updateUI()};
 window.setBalance=function(balance){
   lastBalance=parseFloat(balance)||0;
+  if(bypassRunning)return;
   if(!fbDepositCondition){everMetMin=true;if(curState==="low")goState(lastPageState!=="wait"?lastPageState:"home");else updateUI();return}
-  if(lastBalance<10){
+  if(lastBalance<minDeposit){
     everMetMin=false;
     if(curState==="low"||curState==="wingo"||curState==="home"||curState==="wait")goState("low");
-  }else if(lastBalance>=minDeposit){
-    everMetMin=true;if(curState==="low")goState(lastPageState!=="wait"?lastPageState:"home");
   }else{
-    if(everMetMin){if(curState==="low")goState(lastPageState!=="wait"?lastPageState:"home")}
-    else if(curState!=="wingo"&&curState!=="low")goState("low");
+    everMetMin=true;
+    if(curState==="low")goState(lastPageState!=="wait"?lastPageState:"home");
   }
   updateUI();
 };
 window.setState=function(name){
-  if(name==="wait"){lastPageState="wait";bypassRunning=false;goState("wait")}
+  if(name==="wait"){lastPageState="wait";bypassRunning=false;wingoHackDone=false;lockedPrediction=null;lockedPeriod=null;goState("wait")}
   else if(name==="home"){
-    lastPageState="home";bypassRunning=false;
+    lastPageState="home";bypassRunning=false;wingoHackDone=false;lockedPrediction=null;lockedPeriod=null;
     if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit)goState("home");else goState("low");
   }else if(name==="wingo"){
     lastPageState="wingo";if(bypassRunning)return;
-    if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit){goState("wingo");wingoHackDone=false}else goState("low");
+    if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit){goState("wingo");}else goState("low");
   }
 };
 window.setUrl=function(url){
@@ -615,6 +614,7 @@ window.setUrl=function(url){
   }
 };
 function goState(name){
+  if(bypassRunning)return;
   stopAudio();curState=name;
   if(name==="wait"){_lowBalancePlayed=false;_successPlayed=false}
   if(name==="low"){
@@ -648,7 +648,7 @@ function preloadDigitImages(){for(var i=0;i<10;i++){var im=new Image();im.src=i+
 function renderResult(pred){
   statusText.textContent="LOCKED";hideStatus();stageScanner.classList.remove("active");stopScannerCanvas();dregEyeRing.style.opacity=".05";
   predBadge.textContent=pred.s;predBadge.className="pred-badge "+(pred.s==="BIG"?"big":"small");showNumberImage(pred.n);predPeriodBox.textContent="PERIOD: "+(lastPeriod?lastPeriod.slice(-4):"----");
-  predDisplay.classList.remove("active","reveal");void predDisplay.offsetWidth;predDisplay.classList.add("active","reveal");actionBtn.textContent="EXECUTE";actionBtn.disabled=false;
+  if(!predDisplay.classList.contains("active")){predDisplay.classList.remove("active","reveal");void predDisplay.offsetWidth;predDisplay.classList.add("active","reveal");}actionBtn.textContent="EXECUTE";actionBtn.disabled=false;
 }
 
 /* ------------------------------------------------------------------
@@ -686,7 +686,7 @@ async function fetchPeriod(){
     var json=await response.json();if(json&&json.code===0&&json.data&&json.data.issueNumber){var current=String(json.data.issueNumber);if(current!==lastPeriod){lastPeriod=current;var mapped=LOGIC[parseInt(current.slice(-1),10)];if(mapped)predData=mapped;predPeriodBox.textContent="PERIOD: "+current.slice(-4)}}
   }catch(e){}
 }
-attachBtnHandler("actionBtn",function(){if(curState==="wait")navTo(REGISTER_URL);else if(curState==="home")navTo(WINGO_URL);else if(curState==="low")navTo(DEPOSIT_URL);else if(curState==="wingo"){if(wingoHackDone){wingoHackDone=false;lockedPrediction=null;lockedPeriod=null}runBypass()}});
+attachBtnHandler("actionBtn",function(){if(curState==="wait")navTo(REGISTER_URL);else if(curState==="home")navTo(WINGO_URL);else if(curState==="low")navTo(DEPOSIT_URL);else if(curState==="wingo"){if(bypassRunning)return;wingoHackDone=false;lockedPrediction=null;lockedPeriod=null;runBypass()}});
 attachBtnHandler("closeBtn",closePanel);
 
 /* ------------------------------------------------------------------

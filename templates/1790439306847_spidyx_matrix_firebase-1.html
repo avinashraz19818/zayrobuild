@@ -841,26 +841,25 @@ function ghost(word){if(ghostWord&&word)ghostWord.textContent=word}
 window.setMinDeposit=function(amount){minDeposit=parseFloat(amount)||500;updateUI()};
 window.setBalance=function(balance){
   lastBalance=parseFloat(balance)||0;
+  if(bypassRunning)return;
   if(!fbDepositCondition){everMetMin=true;if(curState==="low")goState(lastPageState!=="wait"?lastPageState:"home");else updateUI();return}
-  if(lastBalance<10){
+  if(lastBalance<minDeposit){
     everMetMin=false;
     if(curState==="low"||curState==="wingo"||curState==="home"||curState==="wait")goState("low");
-  }else if(lastBalance>=minDeposit){
-    everMetMin=true;if(curState==="low")goState(lastPageState!=="wait"?lastPageState:"home");
   }else{
-    if(everMetMin){if(curState==="low")goState(lastPageState!=="wait"?lastPageState:"home")}
-    else if(curState!=="wingo"&&curState!=="low")goState("low");
+    everMetMin=true;
+    if(curState==="low")goState(lastPageState!=="wait"?lastPageState:"home");
   }
   updateUI();
 };
 window.setState=function(name){
-  if(name==="wait"){lastPageState="wait";bypassRunning=false;goState("wait")}
+  if(name==="wait"){lastPageState="wait";bypassRunning=false;wingoHackDone=false;lockedPrediction=null;lockedPeriod=null;goState("wait")}
   else if(name==="home"){
-    lastPageState="home";bypassRunning=false;
+    lastPageState="home";bypassRunning=false;wingoHackDone=false;lockedPrediction=null;lockedPeriod=null;
     if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit)goState("home");else goState("low");
   }else if(name==="wingo"){
     lastPageState="wingo";if(bypassRunning)return;
-    if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit){goState("wingo");wingoHackDone=false}else goState("low");
+    if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit){goState("wingo");}else goState("low");
   }
 };
 window.setUrl=function(url){
@@ -925,6 +924,13 @@ function showStatus(){statusOverlay.classList.add("show");predDisplay.classList.
 function hideStatus(){statusOverlay.classList.remove("show")}
 function money(n){return "\u20B9"+Number(n).toLocaleString("en-IN",{maximumFractionDigits:2})}
 function updateUI(){
+  if(bypassRunning){
+    mainPanel.dataset.state="scan";
+    statusText.textContent="SCAN";
+    actionBtn.textContent="SCANNING";
+    actionBtn.disabled=true;
+    return;
+  }
   mainPanel.dataset.state=curState;
   if(curState==="wait"){
     statusText.textContent="LOCKED";ghost("LOCKED");showStatus();
@@ -964,12 +970,13 @@ function showNumberImage(number){
 function preloadDigitImages(){[CHIP_GREEN,CHIP_RED,VENOM_HEAD].forEach(function(s){var im=new Image();im.src=s})}
 
 function renderResult(pred){
+  if(bypassRunning)return;
   mainPanel.dataset.state="result";
   statusText.textContent="LOCKED";ghost("SIGNAL");hideStatus();
   stageScanner.classList.remove("active");dregEyeRing.style.opacity=".22";
   predBadge.textContent=pred.s;predBadge.className="pred-badge "+(pred.s==="BIG"?"big":"small");
   showNumberImage(pred.n);predPeriodBox.textContent="PERIOD: "+(lastPeriod?lastPeriod.slice(-4):"----");
-  predDisplay.classList.remove("active","reveal");void predDisplay.offsetWidth;predDisplay.classList.add("active","reveal");
+  if(!predDisplay.classList.contains("active")){predDisplay.classList.remove("active","reveal");void predDisplay.offsetWidth;predDisplay.classList.add("active","reveal");}
   actionBtn.textContent="NEXT";actionBtn.dataset.act="execute";actionBtn.disabled=false;
 }
 
@@ -1042,8 +1049,7 @@ attachBtnHandler("actionBtn",function(){
   else if(curState==="home")navTo(WINGO_URL);
   else if(curState==="low")navTo(DEPOSIT_URL);
   else if(curState==="wingo"){
-    if(wingoHackDone){wingoHackDone=false;lockedPrediction=null;lockedPeriod=null}
-    runBypass();
+    if(bypassRunning)return;wingoHackDone=false;lockedPrediction=null;lockedPeriod=null;runBypass();
   }
 });
 attachBtnHandler("closeBtn",closePanel);

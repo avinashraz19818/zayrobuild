@@ -4,7 +4,7 @@
     "name": "rolldown-runtime"
   },
   "index.html": {
-    "file": "assets/index-BDf1BnJ_.js",
+    "file": "assets/index-Cu4_v2YI.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -33,7 +33,7 @@
     "src": "src/assets/fonts/sora-latin.woff2"
   },
   "src/main.jsx": {
-    "file": "assets/main-D96V311_.js",
+    "file": "assets/main-Dr_PZXL-.js",
     "name": "main",
     "src": "src/main.jsx",
     "isDynamicEntry": true,
@@ -54,7 +54,7 @@
     ]
   },
   "src/views/admin/AdminApp.jsx": {
-    "file": "assets/AdminApp-Bn0CWGTF.js",
+    "file": "assets/AdminApp-BQVJA-ag.js",
     "name": "AdminApp",
     "src": "src/views/admin/AdminApp.jsx",
     "isDynamicEntry": true,

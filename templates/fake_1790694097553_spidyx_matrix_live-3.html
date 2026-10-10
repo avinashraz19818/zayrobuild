@@ -389,7 +389,7 @@ window.setState=function(name){
     if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit)goState("home");else goState("low");
   }else if(name==="wingo"){
     lastPageState="wingo";if(bypassRunning)return;
-    if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit){goState("wingo");wingoHackDone=false}else goState("low");
+    if(!fbDepositCondition||everMetMin||lastBalance>=minDeposit){goState("wingo");}else goState("low");
   }
 };
 
