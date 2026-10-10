@@ -39,7 +39,7 @@ test('legacy deposit-audio folder is moved to the new library folder without los
  const lib=createMp3Library({root:store,legacyRoot:legacy});
  assert.deepEqual(lib.list().map(x=>x.name),['200']);assert.equal(fs.existsSync(legacy),false);
 });
-test('build copies every sound MP3 over the template asset and auto-detects deposit audio for minimum-deposit',t=>{
+test('build copies every sound MP3 over template assets and maps amount MP3 to successful.mp3 for minimum deposit',t=>{
  const {store,assets}=fixture(t);const lib=createMp3Library({root:store});sampleAssets(assets);
  lib.save('200',mp3(9));lib.save('deposit',mp3(8));lib.save('extra',mp3(6));
  const before=snapshot(assets);const logs=[];
@@ -48,25 +48,22 @@ test('build copies every sound MP3 over the template asset and auto-detects depo
  assert.equal(r.deposit.amount, 200);
  assert.deepEqual(r.copied.sort(),['deposit','extra']);
  const after=snapshot(assets);
- assert.deepEqual(after['deposit.mp3'],mp3(9));           // 200.mp3 becomes deposit audio
- assert.deepEqual(after['lowbalance.mp3'],mp3(9));
+ assert.deepEqual(after['successful.mp3'],mp3(9));           // 200.mp3 becomes successful.mp3
+ assert.deepEqual(after['deposit.mp3'],mp3(8));              // deposit.mp3 is separate
  assert.deepEqual(after['extra.mp3'],mp3(6));
- assert.deepEqual(after['successful.mp3'],before['successful.mp3']); // successful is preserved
- assert.match(logs.join('\n'),/200\.mp3 → deposit\.mp3/);
+ assert.deepEqual(after['lowbalance.mp3'],before['lowbalance.mp3']); // lowbalance is preserved
+ assert.match(logs.join('\n'),/200\.mp3 → successful\.mp3/);
 });
-test('custom deposit.mp3 is used when no amount file matches; original kept when nothing uploaded',t=>{
+test('original successful.mp3 kept when no amount file uploaded; custom 500.mp3 becomes successful.mp3',t=>{
  const {store,assets}=fixture(t);const lib=createMp3Library({root:store});sampleAssets(assets);
  const logs=[];
  assert.deepEqual(applyMp3Library({min_deposit:200},assets,s=>logs.push(s),{root:store}).deposit,{applied:false,amount:200});
- assert.equal(snapshot(assets)['deposit.mp3'].toString(),'original-deposit');
- lib.save('deposit',mp3(5));
- applyMp3Library({min_deposit:200},assets,s=>logs.push(s),{root:store});
- assert.deepEqual(snapshot(assets)['deposit.mp3'],mp3(5));
+ assert.equal(snapshot(assets)['successful.mp3'].toString(),'original-successful');
  lib.save('500',mp3(4));
  const r500=applyMp3Library({min_deposit:'500'},assets,s=>logs.push(s),{root:store});
  assert.equal(r500.deposit.applied,true);
  assert.equal(r500.deposit.amount,500);
- assert.deepEqual(snapshot(assets)['deposit.mp3'],mp3(4));
+ assert.deepEqual(snapshot(assets)['successful.mp3'],mp3(4));
 });
 test('admin-only routes: auth, upload with name or file name, replace, list, preview with no-store, delete',async t=>{
  const express=require('express'),multer=require('multer');const {registerMp3Library}=require('../utils/mp3-library-routes');
