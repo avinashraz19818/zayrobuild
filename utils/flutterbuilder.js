@@ -253,28 +253,27 @@ async function buildFlutterApkInWorker(order, design, buildId, logCallback) {
     fs.mkdirSync(mediaDir, { recursive: true });
     fs.mkdirSync(androidAssetsDir, { recursive: true });
 
-    // Copy encrypted offline blobs into both Flutter bundle and Android assets
+    // Copy encrypted offline blobs into Flutter bundle (Dart rootBundle)
     fs.copyFileSync(zayrobin, path.join(assetsDir, 'zayro.bin'));
     fs.copyFileSync(loadingbin, path.join(assetsDir, 'loading.bin'));
-    fs.copyFileSync(zayrobin, path.join(androidAssetsDir, 'zayro.bin'));
-    fs.copyFileSync(loadingbin, path.join(androidAssetsDir, 'loading.bin'));
 
-    // Copy shared media assets (MP3s, PNG numbers, fonts)
+    // Copy shared media assets (MP3s to Flutter mediaDir; images/fonts to mediaDir & androidAssetsDir)
     const sharedAssetsDir = path.join(TEMPLATES_DIR, 'assets');
     if (fs.existsSync(sharedAssetsDir)) {
       for (const f of fs.readdirSync(sharedAssetsDir)) {
         const src = path.join(sharedAssetsDir, f);
         if (fs.statSync(src).isFile()) {
           fs.copyFileSync(src, path.join(mediaDir, f));
-          fs.copyFileSync(src, path.join(androidAssetsDir, f));
+          if (!/\.(mp3|wav|ogg|aac|m4a|bin)$/i.test(f)) {
+            fs.copyFileSync(src, path.join(androidAssetsDir, f));
+          }
         }
       }
     }
 
-    // Apply Admin MP3 library
+    // Apply Admin MP3 library (audio plays exclusively through Flutter AudioService)
     try {
       require('./mp3-library').applyMp3Library(order, mediaDir, log);
-      require('./mp3-library').applyMp3Library(order, androidAssetsDir, log);
     } catch (_) {}
 
     // Icon handling across all mipmap densities
