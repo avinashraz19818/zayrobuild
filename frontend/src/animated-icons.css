@@ -133,7 +133,6 @@
     inset 0 -2px 3px rgba(0, 0, 0, 0.35);
   color: #fff;
   transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.32s ease, border-color 0.32s ease;
-  animation: icon3dFloat 6s ease-in-out infinite;
 }
 
 .row-ico::after {
@@ -190,7 +189,6 @@
   height: 24px;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
   transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), filter 0.26s ease;
-  animation: icon3dFloat 4s ease-in-out infinite;
 }
 
 .app-shell .bottomnav button:hover .nav-ico > svg,
@@ -207,9 +205,8 @@
 
 .app-shell .bottomnav button.active .nav-ico > svg,
 .app-shell .bottomnav button.active .nav-ico > .store-icon {
-  transform: translateY(-2px) scale(1.18);
-  filter: drop-shadow(0 0 14px rgba(192, 132, 252, 0.8)) drop-shadow(0 0 4px #ffffff);
-  animation: icon3dActivePulse 2.8s ease-in-out infinite;
+  transform: translateY(-2px) scale(1.15);
+  filter: drop-shadow(0 0 12px rgba(192, 132, 252, 0.8)) drop-shadow(0 0 4px #ffffff);
 }
 
 
@@ -231,7 +228,6 @@
     inset 0 1.5px 2px rgba(255, 255, 255, 0.35),
     inset 0 -1.5px 2px rgba(0, 0, 0, 0.35);
   transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.26s ease, border-color 0.26s ease;
-  animation: icon3dFloatSubtle 6s ease-in-out infinite;
 }
 
 .admin-side-ico > svg {
@@ -256,7 +252,6 @@
     0 10px 28px -2px rgba(168, 85, 247, 0.7),
     0 0 22px 2px rgba(192, 132, 252, 0.5),
     inset 0 2px 3px rgba(255, 255, 255, 0.65);
-  animation: icon3dActivePulse 3s ease-in-out infinite;
 }
 
 .admin-side-item.active .admin-side-ico > svg {
@@ -284,7 +279,6 @@
   color: #3b2000;
   font-weight: 900;
   flex-shrink: 0;
-  animation: coin3dRotate 5s ease-in-out infinite;
 }
 
 .coin-dot::before {
@@ -317,7 +311,6 @@
     0 0 20px 2px rgba(168, 85, 247, 0.35),
     inset 0 2px 3px rgba(255, 255, 255, 0.6),
     inset 0 -2px 4px rgba(0, 0, 0, 0.4) !important;
-  animation: icon3dFloat 6.5s ease-in-out infinite;
   transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -350,7 +343,6 @@
     0 8px 22px -3px rgba(168, 85, 247, 0.55),
     inset 0 2px 3px rgba(255, 255, 255, 0.5),
     inset 0 -2px 3px rgba(0, 0, 0, 0.35);
-  animation: icon3dFloatSubtle 5.5s ease-in-out infinite;
   transition: transform 0.28s ease, box-shadow 0.28s ease;
 }
 
@@ -364,11 +356,6 @@
 }
 
 /* ── 3D Service Cards & Quick Action Tiles ── */
-.service-card .row-ico,
-.quick-action .row-ico {
-  animation: icon3dFloat 5s ease-in-out infinite;
-}
-
 .service-card:hover .row-ico,
 .quick-action:hover .row-ico {
   transform: translateY(-6px) translateZ(22px) rotateX(12deg) rotateY(-10deg) scale(1.15);
@@ -390,7 +377,6 @@
     0 10px 26px -4px rgba(124, 58, 237, 0.5),
     inset 0 2px 3px rgba(255, 255, 255, 0.5),
     inset 0 -2px 3px rgba(0, 0, 0, 0.35);
-  animation: icon3dFloat 6s ease-in-out infinite;
 }
 
 .announce-ico > svg,

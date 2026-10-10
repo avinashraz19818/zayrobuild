@@ -4,7 +4,7 @@
     "name": "rolldown-runtime"
   },
   "index.html": {
-    "file": "assets/index-CpIgipEU.js",
+    "file": "assets/index-DKdfdiQ0.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -33,7 +33,7 @@
     "src": "src/assets/fonts/sora-latin.woff2"
   },
   "src/main.jsx": {
-    "file": "assets/main-BpAMI8Ny.js",
+    "file": "assets/main-BrBw6C7i.js",
     "name": "main",
     "src": "src/main.jsx",
     "isDynamicEntry": true,
@@ -46,7 +46,7 @@
       "src/views/admin/AdminApp.jsx"
     ],
     "css": [
-      "assets/main-CuMNCamV.css"
+      "assets/main-DovyOT3x.css"
     ],
     "assets": [
       "assets/plus-jakarta-sans-latin-eXO_dkmS.woff2",
@@ -54,7 +54,7 @@
     ]
   },
   "src/views/admin/AdminApp.jsx": {
-    "file": "assets/AdminApp-D1nsi-_h.js",
+    "file": "assets/AdminApp-CXZdg2Ef.js",
     "name": "AdminApp",
     "src": "src/views/admin/AdminApp.jsx",
     "isDynamicEntry": true,
